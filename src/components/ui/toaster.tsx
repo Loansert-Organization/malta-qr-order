@@ -1,3 +1,5 @@
+
+import React from "react"
 import { useToast } from "@/hooks/use-toast"
 import {
   Toast,
@@ -9,6 +11,11 @@ import {
 } from "@/components/ui/toast"
 
 export function Toaster() {
+  // Guard against React not being available
+  if (typeof React === 'undefined') {
+    return null;
+  }
+
   const { toasts } = useToast()
 
   return (
