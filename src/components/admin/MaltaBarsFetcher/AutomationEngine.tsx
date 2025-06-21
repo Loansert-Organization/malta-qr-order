@@ -36,7 +36,14 @@ const AutomationEngine = () => {
         .limit(20);
 
       if (error) throw error;
-      setJobs(data || []);
+      
+      // Type-safe mapping to ensure status matches our interface
+      const typedJobs: AutomationJob[] = (data || []).map(job => ({
+        ...job,
+        status: job.status as 'pending' | 'running' | 'completed' | 'failed'
+      }));
+      
+      setJobs(typedJobs);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -56,12 +63,12 @@ const AutomationEngine = () => {
         description: `Launching ${jobType} automation pipeline...`
       });
 
-      if (jobType === 'full_menu_scrape') {
-        await runFullMenuScrape();
+      if (jobType === 'google_maps_fetch') {
+        await runGoogleMapsFetch();
       } else if (jobType === 'website_discovery') {
         await runWebsiteDiscovery();
-      } else if (jobType === 'image_generation') {
-        await runImageGeneration();
+      } else if (jobType === 'menu_extraction') {
+        await runMenuExtraction();
       }
 
       toast({
@@ -81,49 +88,17 @@ const AutomationEngine = () => {
     }
   };
 
-  const runFullMenuScrape = async () => {
-    // Get all bars with website URLs
-    const { data: bars, error } = await supabase
-      .from('bars')
-      .select('id, name, website_url')
-      .not('website_url', 'is', null);
-
-    if (error) throw error;
-
-    if (!bars || bars.length === 0) {
-      throw new Error('No bars with website URLs found. Run website discovery first.');
+  const runGoogleMapsFetch = async () => {
+    setProgress(25);
+    
+    // Call the existing fetch-malta-bars function
+    const response = await supabase.functions.invoke('fetch-malta-bars');
+    
+    if (response.error) {
+      throw new Error(`Google Maps fetch failed: ${response.error.message}`);
     }
-
-    const totalBars = bars.length;
-    let processed = 0;
-
-    for (const bar of bars) {
-      try {
-        setProgress((processed / totalBars) * 100);
-        
-        // Call the menu extraction function
-        const response = await fetch('/functions/v1/extract-menu-items', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabase.supabaseKey}`
-          },
-          body: JSON.stringify({
-            website_url: bar.website_url,
-            bar_id: bar.id
-          })
-        });
-
-        if (!response.ok) {
-          console.error(`Failed to process ${bar.name}:`, await response.text());
-        }
-
-        processed++;
-      } catch (error) {
-        console.error(`Error processing ${bar.name}:`, error);
-        processed++;
-      }
-    }
+    
+    setProgress(100);
   };
 
   const runWebsiteDiscovery = async () => {
@@ -165,39 +140,46 @@ const AutomationEngine = () => {
     }
   };
 
-  const runImageGeneration = async () => {
-    // Get menu items without images
-    const { data: items, error } = await supabase
-      .from('menu_items')
-      .select('id, name, description, bar_id')
-      .is('image_url', null);
+  const runMenuExtraction = async () => {
+    // Get bars with website URLs
+    const { data: bars, error } = await supabase
+      .from('bars')
+      .select('id, name, website_url')
+      .not('website_url', 'is', null);
 
     if (error) throw error;
 
-    if (!items || items.length === 0) {
-      throw new Error('All menu items already have images.');
+    if (!bars || bars.length === 0) {
+      throw new Error('No bars with website URLs found. Run website discovery first.');
     }
 
-    const totalItems = Math.min(items.length, 50); // Limit to avoid API costs
+    const totalBars = bars.length;
     let processed = 0;
 
-    for (const item of items.slice(0, 50)) {
+    for (const bar of bars) {
       try {
-        setProgress((processed / totalItems) * 100);
+        setProgress((processed / totalBars) * 100);
         
-        // Generate image using DALL-E (simplified)
-        const imageUrl = await generateMenuItemImage(item.name, item.description);
-        
-        if (imageUrl) {
-          await supabase
-            .from('menu_items')
-            .update({ image_url: imageUrl })
-            .eq('id', item.id);
+        // Call the menu extraction function
+        const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/extract-menu-items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({
+            website_url: bar.website_url,
+            bar_id: bar.id
+          })
+        });
+
+        if (!response.ok) {
+          console.error(`Failed to process ${bar.name}:`, await response.text());
         }
 
         processed++;
       } catch (error) {
-        console.error(`Error generating image for ${item.name}:`, error);
+        console.error(`Error processing ${bar.name}:`, error);
         processed++;
       }
     }
@@ -207,12 +189,6 @@ const AutomationEngine = () => {
     // This is a simplified version - in production, you'd use Google Search API
     // For now, return null to avoid API costs
     return null;
-  };
-
-  const generateMenuItemImage = async (name: string, description?: string): Promise<string | null> => {
-    // This is a simplified version - in production, you'd use DALL-E API
-    // For now, return a placeholder
-    return `https://via.placeholder.com/400x300?text=${encodeURIComponent(name)}`;
   };
 
   const getStatusColor = (status: string) => {
@@ -226,9 +202,9 @@ const AutomationEngine = () => {
 
   const getJobIcon = (jobType: string) => {
     switch (jobType) {
-      case 'menu_scrape': return <Menu className="h-4 w-4" />;
+      case 'google_maps_fetch': return <Globe className="h-4 w-4" />;
+      case 'menu_extraction': return <Menu className="h-4 w-4" />;
       case 'website_discovery': return <Globe className="h-4 w-4" />;
-      case 'image_generation': return <Image className="h-4 w-4" />;
       default: return <Brain className="h-4 w-4" />;
     }
   };
@@ -244,11 +220,20 @@ const AutomationEngine = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            AI Automation Engine
+            Malta Bars Automation Engine
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button
+              onClick={() => startAutomation('google_maps_fetch')}
+              disabled={isRunning}
+              className="flex items-center gap-2"
+            >
+              <Globe className="h-4 w-4" />
+              Fetch from Google Maps
+            </Button>
+            
             <Button
               onClick={() => startAutomation('website_discovery')}
               disabled={isRunning}
@@ -259,21 +244,12 @@ const AutomationEngine = () => {
             </Button>
             
             <Button
-              onClick={() => startAutomation('full_menu_scrape')}
+              onClick={() => startAutomation('menu_extraction')}
               disabled={isRunning}
               className="flex items-center gap-2"
             >
               <Menu className="h-4 w-4" />
-              Extract All Menus
-            </Button>
-            
-            <Button
-              onClick={() => startAutomation('image_generation')}
-              disabled={isRunning}
-              className="flex items-center gap-2"
-            >
-              <Image className="h-4 w-4" />
-              Generate Images
+              Extract Menus
             </Button>
           </div>
           

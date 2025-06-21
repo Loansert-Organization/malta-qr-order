@@ -9,7 +9,7 @@ import SystemHealth from '@/components/admin/SystemHealth';
 import AIMonitoring from '@/components/admin/AIMonitoring';
 import FinancialOverview from '@/components/admin/FinancialOverview';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
-import { MaltaBarsFetcher } from '@/components/admin/MaltaBarsFetcher';
+import MaltaBarsFetcher from '@/components/admin/MaltaBarsFetcher';
 import { 
   LayoutDashboard, 
   Store, 
