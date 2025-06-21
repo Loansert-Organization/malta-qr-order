@@ -24,6 +24,8 @@ interface CartSectionProps {
   onRemoveFromCart: (itemId: string) => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
+  vendorId: string;
+  guestSessionId: string;
 }
 
 const CartSection: React.FC<CartSectionProps> = ({
@@ -31,7 +33,9 @@ const CartSection: React.FC<CartSectionProps> = ({
   onAddToCart,
   onRemoveFromCart,
   getTotalPrice,
-  getTotalItems
+  getTotalItems,
+  vendorId,
+  guestSessionId
 }) => {
   return (
     <CartSidebar
@@ -40,6 +44,8 @@ const CartSection: React.FC<CartSectionProps> = ({
       onRemoveFromCart={onRemoveFromCart}
       getTotalPrice={getTotalPrice}
       getTotalItems={getTotalItems}
+      vendorId={vendorId}
+      guestSessionId={guestSessionId}
     />
   );
 };

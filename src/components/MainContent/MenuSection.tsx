@@ -1,26 +1,9 @@
 
 import React from 'react';
-import VoiceSearch from '@/components/VoiceSearch';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import SmartMenu from '@/components/SmartMenu';
-
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  category: string;
-  popular: boolean;
-  prep_time?: string;
-  available: boolean;
-}
-
-interface AIInsights {
-  trending_items: string[];
-  recommended_categories: string[];
-  weather_suggestions: string[];
-  time_based_priorities: string[];
-}
+import { MenuItem, AIInsights } from '@/components/MainContent/types';
 
 interface MenuSectionProps {
   menuItems: MenuItem[];
@@ -29,6 +12,7 @@ interface MenuSectionProps {
   weatherData: any;
   handleSearch: (query: string) => void;
   addToCart: (item: MenuItem) => void;
+  focusedCategory?: string;
 }
 
 const MenuSection: React.FC<MenuSectionProps> = ({
@@ -37,21 +21,51 @@ const MenuSection: React.FC<MenuSectionProps> = ({
   aiInsights,
   weatherData,
   handleSearch,
-  addToCart
+  addToCart,
+  focusedCategory
 }) => {
+  // Filter items by focused category if provided
+  const filteredItems = focusedCategory 
+    ? menuItems.filter(item => 
+        item.category.toLowerCase().includes(focusedCategory) ||
+        item.name.toLowerCase().includes(focusedCategory)
+      )
+    : menuItems;
+
   return (
-    <div id="menu-section" className="mb-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Menu</h2>
-      
-      {/* Voice Search */}
-      <VoiceSearch
-        onSearch={handleSearch}
-        placeholder="Search menu items or ask for recommendations..."
-      />
-      
+    <div id="menu-section" className="space-y-6">
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          type="text"
+          placeholder="Search menu items..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Focused Category Badge */}
+      {focusedCategory && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-800">
+              Showing items related to: <strong className="capitalize">{focusedCategory}</strong>
+            </span>
+            <button
+              onClick={() => window.location.reload()}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              Clear filter
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Smart Menu */}
       <SmartMenu
-        menuItems={menuItems}
+        menuItems={filteredItems}
         onAddToCart={addToCart}
         aiInsights={aiInsights}
         weatherData={weatherData}
