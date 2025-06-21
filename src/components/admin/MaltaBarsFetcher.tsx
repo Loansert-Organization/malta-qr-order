@@ -10,15 +10,16 @@ import { Loader2, MapPin, Star, Phone, Calendar, Activity, AlertCircle, CheckCir
 interface Bar {
   id: string;
   name: string;
-  address: string;
-  contact_number: string;
-  rating: number;
-  review_count: number;
+  address: string | null;
+  contact_number: string | null;
+  rating: number | null;
+  review_count: number | null;
   google_place_id: string;
   data_quality_score: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  location_gps?: unknown;
 }
 
 interface FetchLog {
@@ -32,17 +33,20 @@ interface FetchLog {
   operation_duration_ms: number;
   status: string;
   created_at: string;
+  error_details?: any;
 }
 
 interface ScheduledJob {
   id: string;
   job_name: string;
-  last_run: string;
-  next_run: string;
+  last_run: string | null;
+  next_run: string | null;
   status: string;
   run_count: number;
   success_count: number;
   failure_count: number;
+  last_error?: string | null;
+  config?: any;
 }
 
 export const MaltaBarsFetcher = () => {
@@ -98,7 +102,24 @@ export const MaltaBarsFetcher = () => {
         .limit(50);
 
       if (error) throw error;
-      setBars(data || []);
+      
+      // Map the data to ensure it matches our Bar interface
+      const mappedBars: Bar[] = (data || []).map(bar => ({
+        id: bar.id,
+        name: bar.name,
+        address: bar.address,
+        contact_number: bar.contact_number,
+        rating: bar.rating,
+        review_count: bar.review_count,
+        google_place_id: bar.google_place_id,
+        data_quality_score: bar.data_quality_score || 0,
+        is_active: bar.is_active ?? true,
+        created_at: bar.created_at,
+        updated_at: bar.updated_at,
+        location_gps: bar.location_gps
+      }));
+      
+      setBars(mappedBars);
     } catch (error) {
       console.error('Error loading bars:', error);
       toast({
@@ -111,31 +132,50 @@ export const MaltaBarsFetcher = () => {
 
   const loadFetchLogs = async () => {
     try {
+      // Try to fetch from bar_fetch_logs table, fallback gracefully if not available
       const { data, error } = await supabase
-        .from('bar_fetch_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .rpc('get_bar_fetch_logs')
         .limit(10);
 
-      if (error) throw error;
+      if (error && !error.message.includes('does not exist')) {
+        throw error;
+      }
+      
+      // If the table doesn't exist yet, use mock data
+      if (!data) {
+        setFetchLogs([]);
+        return;
+      }
+      
       setFetchLogs(data || []);
     } catch (error) {
       console.error('Error loading fetch logs:', error);
+      // Silently fail and show empty logs if table doesn't exist
+      setFetchLogs([]);
     }
   };
 
   const loadScheduledJob = async () => {
     try {
+      // Try to fetch from scheduled_jobs table, fallback gracefully if not available
       const { data, error } = await supabase
-        .from('scheduled_jobs')
-        .select('*')
-        .eq('job_name', 'fetch-malta-bars')
-        .single();
+        .rpc('get_scheduled_job', { job_name: 'fetch-malta-bars' });
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && !error.message.includes('does not exist')) {
+        throw error;
+      }
+      
+      // If the table doesn't exist yet, show null
+      if (!data) {
+        setScheduledJob(null);
+        return;
+      }
+      
       setScheduledJob(data);
     } catch (error) {
       console.error('Error loading scheduled job:', error);
+      // Silently fail and show no scheduled job if table doesn't exist
+      setScheduledJob(null);
     }
   };
 
@@ -474,6 +514,7 @@ export const MaltaBarsFetcher = () => {
               <div className="text-center py-8">
                 <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">No scheduled job found</p>
+                <p className="text-sm text-gray-400 mt-2">The automated scheduling system will be available once the database migration is complete.</p>
               </div>
             )}
           </CardContent>
