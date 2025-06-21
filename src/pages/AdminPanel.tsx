@@ -16,7 +16,7 @@ import {
   Users, 
   Activity, 
   Bot, 
-  Euro, 
+  DollarSign, 
   MapPin,
   BarChart3
 } from 'lucide-react';
@@ -69,7 +69,7 @@ const AdminPanel = () => {
               <span>AI Monitor</span>
             </TabsTrigger>
             <TabsTrigger value="finance" className="flex items-center space-x-2">
-              <Euro className="h-4 w-4" />
+              <DollarSign className="h-4 w-4" />
               <span>Finance</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center space-x-2">
@@ -102,7 +102,7 @@ const AdminPanel = () => {
             <SystemHealth />
           </TabsContent>
 
-          <Tab  Content value="ai">
+          <TabsContent value="ai">
             <AIMonitoring />
           </TabsContent>
 
