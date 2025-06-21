@@ -18,6 +18,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  isAnonymous: boolean;
   signIn: (email: string, password: string) => Promise<{error: any}>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{error: any}>;
   signOut: () => Promise<void>;
@@ -40,6 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Anonymous-first: users are considered anonymous by default
+  const isAnonymous = !user;
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
@@ -76,7 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
       
-      // Ensure role is properly typed
       const typedProfile: Profile = {
         ...data,
         role: (data.role as 'guest' | 'vendor' | 'admin') || 'guest'
@@ -112,11 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (session?.user) {
           // Fetch profile data asynchronously
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-            setLoading(false);
-          }
+          setTimeout(async () => {
+            if (mounted) {
+              const profileData = await fetchProfile(session.user.id);
+              if (mounted) {
+                setProfile(profileData);
+                setLoading(false);
+              }
+            }
+          }, 0);
         } else {
           if (mounted) {
             setProfile(null);
@@ -211,7 +218,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', user.id);
 
       if (!error) {
-        // Refresh profile data
         await refreshProfile();
       }
 
@@ -227,6 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     profile,
     loading,
+    isAnonymous,
     signIn,
     signUp,
     signOut,

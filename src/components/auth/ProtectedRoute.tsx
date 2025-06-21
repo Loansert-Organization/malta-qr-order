@@ -6,15 +6,17 @@ import { Navigate } from 'react-router-dom';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: Array<'guest' | 'vendor' | 'admin'>;
+  allowAnonymous?: boolean;
   redirectTo?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   allowedRoles = ['vendor', 'admin'],
+  allowAnonymous = false,
   redirectTo = '/'
 }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, isAnonymous } = useAuth();
 
   if (loading) {
     return (
@@ -24,11 +26,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  if (!user) {
+  // Allow anonymous access if specified
+  if (allowAnonymous && isAnonymous) {
+    return <>{children}</>;
+  }
+
+  // Require authentication for admin routes
+  if (allowedRoles.includes('admin') && !user) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  if (profile && !allowedRoles.includes(profile.role)) {
+  // For vendor routes, allow anonymous access (they can authenticate later if needed)
+  if (allowedRoles.includes('vendor') && !allowedRoles.includes('admin')) {
+    return <>{children}</>;
+  }
+
+  // Check role-based access for authenticated users
+  if (user && profile && !allowedRoles.includes(profile.role)) {
     return <Navigate to={redirectTo} replace />;
   }
 

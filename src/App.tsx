@@ -74,7 +74,7 @@ const App: React.FC = () => {
                     <Route 
                       path="/vendor" 
                       element={
-                        <ProtectedRoute allowedRoles={['vendor', 'admin']}>
+                        <ProtectedRoute allowedRoles={['vendor', 'admin']} allowAnonymous={true}>
                           <VendorDashboard />
                         </ProtectedRoute>
                       } 
