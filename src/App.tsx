@@ -37,11 +37,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <React.Suspense fallback={null}>
-          <OfflineIndicator />
-        </React.Suspense>
         <BrowserRouter>
           <div className="min-h-screen bg-gray-50">
             <Header />
@@ -70,11 +65,16 @@ const App = () => {
               </Routes>
             </main>
           </div>
+          <React.Suspense fallback={null}>
+            <PWAInstallPrompt />
+            <PerformanceMonitor />
+          </React.Suspense>
         </BrowserRouter>
         <React.Suspense fallback={null}>
-          <PWAInstallPrompt />
-          <PerformanceMonitor />
+          <OfflineIndicator />
         </React.Suspense>
+        <Toaster />
+        <Sonner />
       </AuthProvider>
     </QueryClientProvider>
   );
