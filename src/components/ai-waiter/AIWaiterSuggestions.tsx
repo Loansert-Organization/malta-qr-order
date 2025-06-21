@@ -9,10 +9,29 @@ interface AIWaiterSuggestionsProps {
   layoutHints: any;
   onAddToCart: (item: any) => void;
   onSuggestionAdded: (itemName: string) => void;
+  language?: 'en' | 'mt' | 'it';
 }
 
-const AIWaiterSuggestions = ({ suggestions, layoutHints, onAddToCart, onSuggestionAdded }: AIWaiterSuggestionsProps) => {
+const AIWaiterSuggestions = ({ 
+  suggestions, 
+  layoutHints, 
+  onAddToCart, 
+  onSuggestionAdded,
+  language = 'en'
+}: AIWaiterSuggestionsProps) => {
   if (!suggestions || suggestions.length === 0) return null;
+
+  const addToCartTexts = {
+    en: 'Add to Cart',
+    mt: 'Żid fil-Cart',
+    it: 'Aggiungi al Carrello'
+  };
+
+  const popularTexts = {
+    en: 'Popular',
+    mt: 'Popolari',
+    it: 'Popolare'
+  };
 
   const cardStyle = layoutHints?.cardStyle || 'horizontal';
   const highlight = layoutHints?.highlight || 'popular';
@@ -34,7 +53,7 @@ const AIWaiterSuggestions = ({ suggestions, layoutHints, onAddToCart, onSuggesti
                 {item.popular && highlight === 'popular' && (
                   <Badge variant="secondary" className="text-xs bg-gradient-to-r from-blue-500 to-purple-600 text-white">
                     <Sparkles className="h-3 w-3 mr-1" />
-                    Popular
+                    {popularTexts[language]}
                   </Badge>
                 )}
               </div>
@@ -51,7 +70,7 @@ const AIWaiterSuggestions = ({ suggestions, layoutHints, onAddToCart, onSuggesti
               }}
               className="ml-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
-              Add to Cart
+              {addToCartTexts[language]}
             </Button>
           </div>
         </Card>

@@ -1,7 +1,17 @@
 
 import { Bot } from 'lucide-react';
 
-const AIWaiterTyping = () => {
+interface AIWaiterTypingProps {
+  language?: 'en' | 'mt' | 'it';
+}
+
+const AIWaiterTyping = ({ language = 'en' }: AIWaiterTypingProps) => {
+  const typingTexts = {
+    en: 'Multi-AI processing...',
+    mt: 'AI multiplu qed jaħdem...',
+    it: 'Elaborazione multi-AI...'
+  };
+
   return (
     <div className="flex justify-start">
       <div className="flex items-center space-x-2">
@@ -15,7 +25,7 @@ const AIWaiterTyping = () => {
               <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
               <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
             </div>
-            <span className="text-xs text-gray-500 ml-2">Multi-AI processing...</span>
+            <span className="text-xs text-gray-500 ml-2">{typingTexts[language]}</span>
           </div>
         </div>
       </div>
