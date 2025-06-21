@@ -22,23 +22,36 @@ interface Vendor {
 const VendorDashboard = () => {
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Mock vendor for demonstration - in production this would come from auth/routing
-  const mockVendorId = 'ta-kris-vendor-id';
 
   const fetchVendorData = async () => {
     try {
+      console.log('Fetching vendor data for ta-kris...');
+      
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
         .eq('slug', 'ta-kris')
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.log('No vendor found with slug ta-kris');
+        setError('Vendor not found. Please check if the vendor exists.');
+        return;
+      }
+
+      console.log('Vendor data fetched:', data);
       setVendor(data);
+      
     } catch (error) {
       console.error('Error fetching vendor data:', error);
+      setError('Failed to load vendor data. Please try again.');
       toast({
         title: "Error",
         description: "Failed to load vendor data",
@@ -64,12 +77,22 @@ const VendorDashboard = () => {
     );
   }
 
-  if (!vendor) {
+  if (error || !vendor) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Vendor Not Found</h2>
-          <p className="text-gray-600">Unable to load vendor information.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            {error || 'Vendor Not Found'}
+          </h2>
+          <p className="text-gray-600 mb-4">
+            {error || 'Unable to load vendor information.'}
+          </p>
+          <button 
+            onClick={fetchVendorData}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
