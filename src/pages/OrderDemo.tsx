@@ -30,7 +30,7 @@ const OrderDemo = () => {
     removeFromCart,
     getTotalPrice,
     getTotalItems
-  } = useOrderDemo(slug);
+  } = useOrderDemo();
 
   if (loading) {
     return <LoadingState />;

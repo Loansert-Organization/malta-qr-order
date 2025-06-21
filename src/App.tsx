@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Header from "@/components/layout/Header";
 import Index from "./pages/Index";
+import VendorDirectory from "./pages/VendorDirectory";
 import OrderDemo from "./pages/OrderDemo";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminPanel from "./pages/AdminPanel";
@@ -69,6 +70,7 @@ const App: React.FC = () => {
                 <ErrorBoundary>
                   <Routes>
                     <Route path="/" element={<Index />} />
+                    <Route path="/restaurants" element={<VendorDirectory />} />
                     <Route path="/order/:slug" element={<OrderDemo />} />
                     <Route path="/register" element={<VendorRegistrationPage />} />
                     <Route 

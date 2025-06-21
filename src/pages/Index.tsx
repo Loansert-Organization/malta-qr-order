@@ -1,166 +1,139 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/components/auth/AuthProvider';
-import { 
-  QrCode, 
-  Smartphone, 
-  Bot, 
-  TrendingUp, 
-  Store, 
-  Users,
-  ArrowRight,
-  Sparkles
-} from 'lucide-react';
+import { Smartphone, Users, BarChart, MapPin, QrCode, Utensils } from 'lucide-react';
 
 const Index = () => {
-  const { user, profile } = useAuth();
-
-  const features = [
-    {
-      icon: QrCode,
-      title: 'QR Code Ordering',
-      description: 'Scan and order instantly from any table'
-    },
-    {
-      icon: Bot,
-      title: 'AI Waiter Assistant',
-      description: 'Get personalized recommendations with Kai'
-    },
-    {
-      icon: Smartphone,
-      title: 'Mobile Optimized',
-      description: 'Perfect experience on any device'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Smart Analytics',
-      description: 'AI-powered insights for vendors'
-    }
-  ];
-
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-b from-blue-50 to-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-4xl mx-auto">
-            <Badge className="mb-4 bg-blue-100 text-blue-800">
-              <Sparkles className="h-3 w-3 mr-1" />
-              AI-Powered Hospitality Platform
-            </Badge>
-            <h1 className="text-5xl font-bold text-gray-900 mb-6">
-              Revolutionizing Malta's
-              <span className="text-blue-600"> Bar & Restaurant</span> Experience
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              ICUPA Malta transforms how guests order and how venues operate with cutting-edge AI, 
-              seamless QR ordering, and intelligent insights.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg px-8" onClick={() => window.location.href = '/order/demo'}>
-                Try Demo Order
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8" onClick={() => window.location.href = '/register'}>
-                <Store className="mr-2 h-5 w-5" />
-                Join as Vendor
-              </Button>
-            </div>
-
-            {user && profile && (
-              <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200">
-                <p className="text-green-800">
-                  Welcome back, {profile.full_name || user.email}! 
-                  {profile.role === 'vendor' && (
-                    <> <a href="/vendor" className="underline font-semibold">Go to your dashboard</a></>
-                  )}
-                  {profile.role === 'admin' && (
-                    <> <a href="/admin" className="underline font-semibold">Go to admin panel</a></>
-                  )}
-                </p>
-              </div>
-            )}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Welcome to <span className="text-blue-600">ICUPA Malta</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Revolutionizing hospitality with AI-powered ordering, seamless guest experiences, 
+            and intelligent vendor management across Malta's finest restaurants and bars.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" className="text-lg px-8 py-4">
+              <Link to="/restaurants">
+                <Utensils className="mr-2 h-5 w-5" />
+                Browse Restaurants
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="text-lg px-8 py-4">
+              <Link to="/vendor">
+                <Users className="mr-2 h-5 w-5" />
+                Vendor Dashboard
+              </Link>
+            </Button>
           </div>
         </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose ICUPA Malta?
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Experience the future of hospitality with our AI-first platform designed specifically for Malta's vibrant food scene.
-            </p>
-          </div>
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <Smartphone className="h-12 w-12 text-blue-600 mb-4" />
+              <CardTitle>AI-Powered Ordering</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Smart menu recommendations, voice search, and an autonomous AI waiter 
+                that understands your preferences and dietary needs.
+              </CardDescription>
+            </CardContent>
+          </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={index} className="border-2 hover:border-blue-200 transition-colors">
-                  <CardHeader className="text-center">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                      <Icon className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-center">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <QrCode className="h-12 w-12 text-green-600 mb-4" />
+              <CardTitle>Seamless QR Experience</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Simply scan a QR code to access menus, place orders, and pay - 
+                no app downloads or account creation required.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <Users className="h-12 w-12 text-purple-600 mb-4" />
+              <CardTitle>Vendor Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Complete suite of tools for restaurant owners including menu management, 
+                order tracking, and AI-powered analytics.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <MapPin className="h-12 w-12 text-red-600 mb-4" />
+              <CardTitle>Malta-Focused</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Specially designed for Malta's hospitality scene with localized features, 
+                multilingual support, and weather-aware recommendations.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <BarChart className="h-12 w-12 text-orange-600 mb-4" />
+              <CardTitle>Smart Analytics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Real-time insights into customer behavior, menu performance, 
+                and revenue optimization powered by advanced AI.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <Smartphone className="h-12 w-12 text-indigo-600 mb-4" />
+              <CardTitle>Anonymous-First</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Start ordering immediately without creating accounts. 
+                Privacy-focused design that puts user comfort first.
+              </CardDescription>
+            </CardContent>
+          </Card>
         </div>
-      </section>
 
-      {/* Stats Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">50+</div>
-              <div className="text-gray-600">Partner Venues</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">10k+</div>
-              <div className="text-gray-600">Orders Processed</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">95%</div>
-              <div className="text-gray-600">Customer Satisfaction</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-blue-600 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Business?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Join Malta's leading hospitality platform and start serving smarter today.
+        {/* Quick Access Section */}
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Ready to Get Started?
+          </h2>
+          <p className="text-lg text-gray-600 mb-6">
+            Whether you're a guest looking to order or a restaurant owner wanting to join our platform
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="text-lg px-8" onClick={() => window.location.href = '/register'}>
-              <Users className="mr-2 h-5 w-5" />
-              Register Your Venue
+            <Button asChild size="lg">
+              <Link to="/restaurants">Start Ordering</Link>
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 text-white border-white hover:bg-white hover:text-blue-600" onClick={() => window.location.href = '/order/demo'}>
-              See Demo
+            <Button asChild variant="outline" size="lg">
+              <Link to="/register">Join as Vendor</Link>
             </Button>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 };
