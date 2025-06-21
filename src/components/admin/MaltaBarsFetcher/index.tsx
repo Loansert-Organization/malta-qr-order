@@ -18,7 +18,7 @@ const MaltaBarsFetcher = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastFetchResult, setLastFetchResult] = useState('');
   const [healthMetrics, setHealthMetrics] = useState<HealthMetrics | null>(null);
-  const [fetchLogs, setFetchLogs] = useState<FetchLog[]>([]);
+  const [operationLogs, setOperationLogs] = useState<FetchLog[]>([]);
   const { toast } = useToast();
 
   const fetchBars = async () => {
@@ -39,7 +39,7 @@ const MaltaBarsFetcher = () => {
     }
   };
 
-  const fetchLogs = async () => {
+  const fetchOperationLogs = async () => {
     // Mock fetch logs since we don't have the actual logs table yet
     const mockLogs: FetchLog[] = [
       {
@@ -55,7 +55,7 @@ const MaltaBarsFetcher = () => {
         created_at: new Date().toISOString()
       }
     ];
-    setFetchLogs(mockLogs);
+    setOperationLogs(mockLogs);
   };
 
   const handleFetchBars = async (incremental = false) => {
@@ -85,7 +85,7 @@ const MaltaBarsFetcher = () => {
 
   const handleRefreshAll = async () => {
     await fetchBars();
-    await fetchLogs();
+    await fetchOperationLogs();
   };
 
   const handleHealthCheck = async () => {
@@ -181,7 +181,7 @@ const MaltaBarsFetcher = () => {
       case 'analytics':
         return <MenuAnalytics />;
       case 'logs':
-        return <OperationLogs fetchLogs={fetchLogs} />;
+        return <OperationLogs fetchLogs={operationLogs} />;
       case 'health':
         return <HealthMonitoring healthMetrics={healthMetrics} />;
       case 'data':
@@ -199,7 +199,7 @@ const MaltaBarsFetcher = () => {
 
   useEffect(() => {
     fetchBars();
-    fetchLogs();
+    fetchOperationLogs();
   }, []);
 
   return (
