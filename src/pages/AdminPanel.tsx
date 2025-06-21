@@ -8,6 +8,7 @@ import VendorApproval from '@/components/admin/VendorApproval';
 import SystemHealth from '@/components/admin/SystemHealth';
 import AIMonitoring from '@/components/admin/AIMonitoring';
 import FinancialOverview from '@/components/admin/FinancialOverview';
+import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
 import { MaltaBarsFetcher } from '@/components/admin/MaltaBarsFetcher';
 import { 
   LayoutDashboard, 
@@ -16,7 +17,8 @@ import {
   Activity, 
   Bot, 
   Euro, 
-  MapPin
+  MapPin,
+  BarChart3
 } from 'lucide-react';
 
 const AdminPanel = () => {
@@ -45,7 +47,7 @@ const AdminPanel = () => {
 
       <div className="max-w-7xl mx-auto p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-8">
+          <TabsList className="grid w-full grid-cols-8 mb-8">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <LayoutDashboard className="h-4 w-4" />
               <span>Overview</span>
@@ -69,6 +71,10 @@ const AdminPanel = () => {
             <TabsTrigger value="finance" className="flex items-center space-x-2">
               <Euro className="h-4 w-4" />
               <span>Finance</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Analytics</span>
             </TabsTrigger>
             <TabsTrigger value="malta-data" className="flex items-center space-x-2">
               <MapPin className="h-4 w-4" />
@@ -96,12 +102,16 @@ const AdminPanel = () => {
             <SystemHealth />
           </TabsContent>
 
-          <TabsContent value="ai">
+          <Tab  Content value="ai">
             <AIMonitoring />
           </TabsContent>
 
           <TabsContent value="finance">
             <FinancialOverview />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AnalyticsLayout />
           </TabsContent>
 
           <TabsContent value="malta-data">
