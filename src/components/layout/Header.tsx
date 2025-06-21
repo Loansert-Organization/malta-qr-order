@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/AuthProvider';
 import UserMenu from '@/components/auth/UserMenu';
-import AuthModal from '@/components/auth/AuthModal';
 import { LogIn, UserPlus } from 'lucide-react';
 
 const Header: React.FC = () => {
@@ -70,11 +69,19 @@ const Header: React.FC = () => {
         </div>
       </header>
 
-      <AuthModal
-        open={authModalOpen}
-        onOpenChange={setAuthModalOpen}
-        defaultTab={authModalTab}
-      />
+      {/* Only render AuthModal when needed and ensure it's within the provider context */}
+      {authModalOpen && (
+        <React.Suspense fallback={null}>
+          {React.createElement(
+            React.lazy(() => import('@/components/auth/AuthModal')),
+            {
+              open: authModalOpen,
+              onOpenChange: setAuthModalOpen,
+              defaultTab: authModalTab
+            }
+          )}
+        </React.Suspense>
+      )}
     </>
   );
 };

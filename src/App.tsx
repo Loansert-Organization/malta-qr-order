@@ -16,17 +16,6 @@ import VendorRegistrationPage from "./pages/VendorRegistration";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
 
-// PWA components with proper error boundaries
-const PWAInstallPrompt = React.lazy(() => 
-  import("./components/PWAInstallPrompt").catch(() => ({ default: () => null }))
-);
-const OfflineIndicator = React.lazy(() => 
-  import("./components/OfflineIndicator").catch(() => ({ default: () => null }))
-);
-const PerformanceMonitor = React.lazy(() => 
-  import("./components/PerformanceMonitor").catch(() => ({ default: () => null }))
-);
-
 // Enhanced QueryClient with proper error handling
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,35 +84,15 @@ const App: React.FC = () => {
               </main>
             </div>
             
-            {/* PWA Components with Error Boundaries */}
-            <React.Suspense fallback={null}>
-              <ErrorBoundary fallback={null}>
-                <PWAInstallPrompt />
-              </ErrorBoundary>
-            </React.Suspense>
-            
-            <React.Suspense fallback={null}>
-              <ErrorBoundary fallback={null}>
-                <PerformanceMonitor />
-              </ErrorBoundary>
-            </React.Suspense>
-          </BrowserRouter>
-          
-          {/* Offline Indicator */}
-          <React.Suspense fallback={null}>
+            {/* Toast Notifications */}
             <ErrorBoundary fallback={null}>
-              <OfflineIndicator />
+              <Toaster />
             </ErrorBoundary>
-          </React.Suspense>
-          
-          {/* Toast Notifications */}
-          <ErrorBoundary fallback={null}>
-            <Toaster />
-          </ErrorBoundary>
-          
-          <ErrorBoundary fallback={null}>
-            <Sonner />
-          </ErrorBoundary>
+            
+            <ErrorBoundary fallback={null}>
+              <Sonner />
+            </ErrorBoundary>
+          </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
