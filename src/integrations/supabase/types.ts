@@ -94,6 +94,53 @@ export type Database = {
           },
         ]
       }
+      automation_jobs: {
+        Row: {
+          bar_id: string | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          progress_data: Json | null
+          started_at: string | null
+          status: string | null
+          target_url: string | null
+        }
+        Insert: {
+          bar_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type: string
+          progress_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+          target_url?: string | null
+        }
+        Update: {
+          bar_id?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          progress_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+          target_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_jobs_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bars: {
         Row: {
           address: string | null
@@ -106,6 +153,7 @@ export type Database = {
           rating: number | null
           review_count: number | null
           updated_at: string | null
+          website_url: string | null
         }
         Insert: {
           address?: string | null
@@ -118,6 +166,7 @@ export type Database = {
           rating?: number | null
           review_count?: number | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Update: {
           address?: string | null
@@ -130,6 +179,7 @@ export type Database = {
           rating?: number | null
           review_count?: number | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -218,6 +268,7 @@ export type Database = {
       menu_items: {
         Row: {
           available: boolean | null
+          bar_id: string | null
           category: string | null
           created_at: string
           description: string | null
@@ -228,10 +279,12 @@ export type Database = {
           popular: boolean | null
           prep_time: string | null
           price: number
+          source_url: string | null
           updated_at: string
         }
         Insert: {
           available?: boolean | null
+          bar_id?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
@@ -242,10 +295,12 @@ export type Database = {
           popular?: boolean | null
           prep_time?: string | null
           price: number
+          source_url?: string | null
           updated_at?: string
         }
         Update: {
           available?: boolean | null
+          bar_id?: string | null
           category?: string | null
           created_at?: string
           description?: string | null
@@ -256,14 +311,79 @@ export type Database = {
           popular?: boolean | null
           prep_time?: string | null
           price?: number
+          source_url?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "menu_items_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "menu_items_menu_id_fkey"
             columns: ["menu_id"]
             isOneToOne: false
             referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_scraping_logs: {
+        Row: {
+          ai_models_used: Json | null
+          automation_job_id: string | null
+          bar_id: string | null
+          created_at: string | null
+          id: string
+          images_generated: number | null
+          items_extracted: number | null
+          menu_links_found: Json | null
+          processing_time_ms: number | null
+          success_rate: number | null
+          website_url: string
+        }
+        Insert: {
+          ai_models_used?: Json | null
+          automation_job_id?: string | null
+          bar_id?: string | null
+          created_at?: string | null
+          id?: string
+          images_generated?: number | null
+          items_extracted?: number | null
+          menu_links_found?: Json | null
+          processing_time_ms?: number | null
+          success_rate?: number | null
+          website_url: string
+        }
+        Update: {
+          ai_models_used?: Json | null
+          automation_job_id?: string | null
+          bar_id?: string | null
+          created_at?: string | null
+          id?: string
+          images_generated?: number | null
+          items_extracted?: number | null
+          menu_links_found?: Json | null
+          processing_time_ms?: number | null
+          success_rate?: number | null
+          website_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_scraping_logs_automation_job_id_fkey"
+            columns: ["automation_job_id"]
+            isOneToOne: false
+            referencedRelation: "automation_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_scraping_logs_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
             referencedColumns: ["id"]
           },
         ]

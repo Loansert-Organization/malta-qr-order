@@ -1,17 +1,10 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface HealthIssue {
-  type: string;
-  description: string;
-  bar_id?: string;
-  severity: 'low' | 'medium' | 'high';
 }
 
 serve(async (req) => {
@@ -25,165 +18,75 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const issues: HealthIssue[] = [];
-    let issuesFixed = 0;
+    console.log('🔍 Starting health check for all bars...')
 
-    // Check 1: Find bars with missing essential data
-    const { data: barsWithIssues } = await supabaseClient
+    // Get all bars without website URLs
+    const { data: bars, error } = await supabaseClient
       .from('bars')
-      .select('*')
-      .or('name.is.null,address.is.null,google_place_id.is.null');
+      .select('id, name, address, website_url')
+      .order('name')
 
-    barsWithIssues?.forEach(bar => {
-      if (!bar.name || bar.name.trim() === '') {
-        issues.push({
-          type: 'missing_name',
-          description: `Bar ${bar.id} has missing or empty name`,
-          bar_id: bar.id,
-          severity: 'high'
-        });
-      }
-      if (!bar.address) {
-        issues.push({
-          type: 'missing_address',
-          description: `Bar ${bar.name || bar.id} has missing address`,
-          bar_id: bar.id,
-          severity: 'medium'
-        });
-      }
-      if (!bar.google_place_id) {
-        issues.push({
-          type: 'missing_place_id',
-          description: `Bar ${bar.name || bar.id} has missing Google Place ID`,
-          bar_id: bar.id,
-          severity: 'high'
-        });
-      }
-    });
+    if (error) {
+      throw error
+    }
 
-    // Check 2: Find potential duplicates by name similarity
-    const { data: allBars } = await supabaseClient
-      .from('bars')
-      .select('id, name, address');
+    console.log(`📊 Found ${bars.length} bars to check`)
 
-    const duplicates = new Map<string, string[]>();
-    allBars?.forEach(bar => {
-      const normalizedName = bar.name?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
-      if (normalizedName.length > 3) {
-        if (!duplicates.has(normalizedName)) {
-          duplicates.set(normalizedName, []);
+    let healthyBars = 0
+    let barsWithWebsites = 0
+    let barsNeedingWebsites = 0
+
+    // Check each bar
+    for (const bar of bars) {
+      try {
+        if (bar.website_url) {
+          barsWithWebsites++
+          
+          // Check if website is accessible
+          const response = await fetch(bar.website_url, { 
+            method: 'HEAD',
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+          })
+          
+          if (response.ok) {
+            healthyBars++
+            console.log(`✅ ${bar.name} - Website healthy`)
+          } else {
+            console.log(`⚠️ ${bar.name} - Website responded with ${response.status}`)
+          }
+        } else {
+          barsNeedingWebsites++
+          console.log(`❌ ${bar.name} - No website URL`)
         }
-        duplicates.get(normalizedName)?.push(bar.id);
-      }
-    });
-
-    duplicates.forEach((ids, name) => {
-      if (ids.length > 1) {
-        issues.push({
-          type: 'potential_duplicate',
-          description: `Potential duplicates found for "${name}": ${ids.length} bars`,
-          severity: 'medium'
-        });
-      }
-    });
-
-    // Check 3: Data quality scores
-    const { data: lowQualityBars } = await supabaseClient
-      .from('bars')
-      .select('id, name, data_quality_score')
-      .lt('data_quality_score', 50);
-
-    lowQualityBars?.forEach(bar => {
-      issues.push({
-        type: 'low_quality_score',
-        description: `Bar ${bar.name || bar.id} has low quality score: ${bar.data_quality_score}`,
-        bar_id: bar.id,
-        severity: 'low'
-      });
-    });
-
-    // Check 4: Stale data (older than 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const { data: staleBars } = await supabaseClient
-      .from('bars')
-      .select('id, name, updated_at')
-      .lt('updated_at', thirtyDaysAgo.toISOString());
-
-    if (staleBars && staleBars.length > 0) {
-      issues.push({
-        type: 'stale_data',
-        description: `${staleBars.length} bars have not been updated in over 30 days`,
-        severity: 'medium'
-      });
-    }
-
-    // Auto-fix: Recalculate data quality scores
-    const { data: barsToUpdate } = await supabaseClient
-      .from('bars')
-      .select('*');
-
-    for (const bar of barsToUpdate || []) {
-      let qualityScore = 0;
-      
-      if (bar.name && bar.name.trim() !== '') qualityScore += 20;
-      if (bar.address && bar.address.trim() !== '') qualityScore += 20;
-      if (bar.contact_number && bar.contact_number.trim() !== '') qualityScore += 15;
-      if (bar.rating !== null && bar.rating !== undefined) qualityScore += 15;
-      if (bar.review_count && bar.review_count > 0) qualityScore += 15;
-      if (bar.location_gps) qualityScore += 15;
-
-      if (qualityScore !== bar.data_quality_score) {
-        await supabaseClient
-          .from('bars')
-          .update({ data_quality_score: qualityScore })
-          .eq('id', bar.id);
-        issuesFixed++;
+      } catch (error) {
+        console.log(`❌ ${bar.name} - Website check failed:`, error.message)
       }
     }
 
-    // Log health check results
-    await supabaseClient
-      .from('bar_fetch_logs')
-      .insert({
-        operation_type: 'health_check',
-        total_bars_processed: allBars?.length || 0,
-        errors_count: issues.length,
-        status: 'completed',
-        error_details: { issues, issues_fixed: issuesFixed }
-      });
+    const summary = {
+      total_bars: bars.length,
+      bars_with_websites: barsWithWebsites,
+      healthy_websites: healthyBars,
+      bars_needing_websites: barsNeedingWebsites,
+      health_percentage: barsWithWebsites > 0 ? Math.round((healthyBars / barsWithWebsites) * 100) : 0
+    }
+
+    console.log('📈 Health Check Summary:', summary)
 
     return new Response(
       JSON.stringify({
         success: true,
-        issues_found: issues.length,
-        issues_fixed: issuesFixed,
-        issues: issues,
-        summary: {
-          high_severity: issues.filter(i => i.severity === 'high').length,
-          medium_severity: issues.filter(i => i.severity === 'medium').length,
-          low_severity: issues.filter(i => i.severity === 'low').length
-        }
+        summary,
+        timestamp: new Date().toISOString()
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
-    console.error('Error in health-check-bars function:', error);
-    
+    console.error('❌ Health check failed:', error)
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
-    );
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})
