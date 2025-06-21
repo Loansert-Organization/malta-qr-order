@@ -1,147 +1,132 @@
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Mic, MicOff, Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface VoiceSearchProps {
   onSearch: (query: string) => void;
   placeholder?: string;
-  disabled?: boolean;
 }
 
-const VoiceSearch = ({ onSearch, placeholder = "Search menu items...", disabled = false }: VoiceSearchProps) => {
+// Extend the Window interface to include SpeechRecognition
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+const VoiceSearch: React.FC<VoiceSearchProps> = ({ onSearch, placeholder = "Search..." }) => {
   const [isListening, setIsListening] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSupported, setIsSupported] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const { toast } = useToast();
+  const [recognition, setRecognition] = useState<any>(null);
 
   useEffect(() => {
     // Check if speech recognition is supported
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
     if (SpeechRecognition) {
       setIsSupported(true);
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
+      const recognitionInstance = new SpeechRecognition();
+      
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognitionInstance.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognitionInstance.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         setSearchQuery(transcript);
         onSearch(transcript);
-        setIsListening(false);
-        
-        toast({
-          title: "Voice search completed",
-          description: `Searching for: "${transcript}"`,
-        });
       };
 
-      recognitionRef.current.onerror = (event: any) => {
+      recognitionInstance.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
-        
-        toast({
-          title: "Voice search error",
-          description: "Could not understand the audio. Please try again.",
-          variant: "destructive"
-        });
       };
 
-      recognitionRef.current.onend = () => {
+      recognitionInstance.onend = () => {
         setIsListening(false);
       };
-    }
 
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-    };
-  }, [onSearch, toast]);
+      setRecognition(recognitionInstance);
+    }
+  }, [onSearch]);
 
   const startListening = () => {
-    if (!isSupported) {
-      toast({
-        title: "Voice search not supported",
-        description: "Your browser doesn't support voice search. Please use text search instead.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (disabled) return;
-
-    try {
-      setIsListening(true);
-      recognitionRef.current.start();
-      
-      toast({
-        title: "Listening...",
-        description: "Speak now to search the menu",
-      });
-    } catch (error) {
-      console.error('Error starting speech recognition:', error);
-      setIsListening(false);
+    if (recognition && !isListening) {
+      recognition.start();
     }
   };
 
   const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+    if (recognition && isListening) {
+      recognition.stop();
     }
   };
 
   const handleTextSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      onSearch(searchQuery.trim());
+      onSearch(searchQuery);
     }
   };
 
   return (
-    <form onSubmit={handleTextSearch} className="flex items-center space-x-2 mb-6">
-      <div className="relative flex-1">
-        <Input
-          type="text"
-          placeholder={placeholder}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          disabled={disabled}
-          className="pr-10"
-        />
-        <Button
-          type="submit"
-          variant="ghost"
-          size="sm"
-          className="absolute right-1 top-1/2 transform -translate-y-1/2"
-          disabled={disabled || !searchQuery.trim()}
-        >
-          <Search className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      {isSupported && (
-        <Button
-          type="button"
-          variant={isListening ? "default" : "outline"}
-          size="sm"
-          onClick={isListening ? stopListening : startListening}
-          disabled={disabled}
-          className={`${isListening ? 'animate-pulse bg-red-500 hover:bg-red-600' : ''}`}
-        >
-          {isListening ? (
-            <MicOff className="h-4 w-4" />
-          ) : (
-            <Mic className="h-4 w-4" />
+    <Card className="mb-6">
+      <CardContent className="p-4">
+        <form onSubmit={handleTextSearch} className="flex items-center space-x-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder={placeholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4"
+            />
+          </div>
+          
+          {isSupported && (
+            <Button
+              type="button"
+              variant={isListening ? "destructive" : "outline"}
+              size="sm"
+              onClick={isListening ? stopListening : startListening}
+              className="flex items-center space-x-1"
+            >
+              {isListening ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">
+                {isListening ? 'Stop' : 'Voice'}
+              </span>
+            </Button>
           )}
-        </Button>
-      )}
-    </form>
+          
+          <Button type="submit" size="sm">
+            Search
+          </Button>
+        </form>
+        
+        {isListening && (
+          <div className="mt-2 text-center">
+            <div className="flex items-center justify-center space-x-2 text-sm text-blue-600">
+              <div className="animate-pulse">🎤</div>
+              <span>Listening...</span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

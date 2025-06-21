@@ -74,6 +74,14 @@ const DynamicHeroSection = ({
     }
   };
 
+  // Ensure background_theme is properly typed
+  const normalizedHeroSection: HeroSection = {
+    ...heroSection,
+    background_theme: (['warm', 'cool', 'neutral'].includes(heroSection.background_theme) 
+      ? heroSection.background_theme 
+      : 'neutral') as 'warm' | 'cool' | 'neutral'
+  };
+
   return (
     <Card className={`mb-6 ${getBackgroundClass()} animate-fade-in`}>
       <CardContent className="p-6">
@@ -95,9 +103,9 @@ const DynamicHeroSection = ({
               </div>
             )}
           </div>
-          {heroSection.show_promo && heroSection.promo_text && (
+          {normalizedHeroSection.show_promo && normalizedHeroSection.promo_text && (
             <Badge variant="secondary" className="animate-pulse">
-              {heroSection.promo_text}
+              {normalizedHeroSection.promo_text}
             </Badge>
           )}
         </div>
@@ -105,10 +113,10 @@ const DynamicHeroSection = ({
         {/* Main Hero Content */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-800 mb-2 animate-scale-in">
-            {heroSection.title}
+            {normalizedHeroSection.title}
           </h1>
           <p className="text-gray-600 mb-4 text-lg">
-            {heroSection.subtitle}
+            {normalizedHeroSection.subtitle}
           </p>
           
           {/* Weather-based recommendations */}
@@ -129,7 +137,7 @@ const DynamicHeroSection = ({
             size="lg"
             className="bg-primary hover:bg-primary/90 transform hover:scale-105 transition-all duration-200"
           >
-            {heroSection.cta_text}
+            {normalizedHeroSection.cta_text}
           </Button>
         </div>
       </CardContent>
