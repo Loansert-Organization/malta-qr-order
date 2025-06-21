@@ -23,7 +23,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
 
   const [signInForm, setSignInForm] = useState({
     email: '',
@@ -125,6 +125,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as 'signin' | 'signup');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -132,7 +136,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           <DialogTitle>Welcome to ICUPA Malta</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>

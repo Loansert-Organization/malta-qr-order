@@ -50,7 +50,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching profile:', error);
         return null;
       }
-      return data;
+      
+      // Type assertion to ensure the role is properly typed
+      return {
+        ...data,
+        role: data.role as 'guest' | 'vendor' | 'admin'
+      } as Profile;
     } catch (error) {
       console.error('Error in fetchProfile:', error);
       return null;
