@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -16,15 +17,16 @@ interface Message {
 interface AIWaiterChatProps {
   onClose: () => void;
   onAddToCart: (item: any) => void;
-  menuItems: any[];
+  vendorSlug: string;
+  guestSessionId: string;
 }
 
-const AIWaiterChat = ({ onClose, onAddToCart, menuItems }: AIWaiterChatProps) => {
+const AIWaiterChat = ({ onClose, onAddToCart, vendorSlug, guestSessionId }: AIWaiterChatProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Bonġu! I'm your AI waiter for Ta' Kris Restaurant. I can help you discover authentic Maltese cuisine, suggest dishes based on your preferences, or answer any questions about our menu. What sounds good to you today?",
+      content: "Bonġu! I'm Kai, your AI waiter. I can help you discover authentic Maltese cuisine, suggest dishes based on your preferences, or answer any questions about our menu. What sounds good to you today?",
     }
   ]);
   const [input, setInput] = useState('');
@@ -40,40 +42,45 @@ const AIWaiterChat = ({ onClose, onAddToCart, menuItems }: AIWaiterChatProps) =>
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response with menu suggestions
-    setTimeout(() => {
-      let response = '';
-      let suggestions: any[] = [];
+    try {
+      // Call the AI waiter edge function
+      const { data, error } = await supabase.functions.invoke('ai-waiter-chat', {
+        body: {
+          message: currentInput,
+          vendorSlug: vendorSlug,
+          guestSessionId: guestSessionId
+        }
+      });
 
-      const lowerInput = input.toLowerCase();
-      
-      if (lowerInput.includes('traditional') || lowerInput.includes('maltese') || lowerInput.includes('local')) {
-        response = "For authentic Maltese flavors, I highly recommend our Maltese Ftira and Rabbit Stew (Fenkata). The Ftira is a traditional bread that's perfect for sharing, while our Fenkata is a beloved local dish that's been cooked the same way for generations. Both showcase the true taste of Malta!";
-        suggestions = menuItems.filter(item => item.popular);
-      } else if (lowerInput.includes('quick') || lowerInput.includes('fast') || lowerInput.includes('snack')) {
-        response = "For something quick and delicious, try our Kinnie & Pastizzi combo! It's Malta's most iconic snack - crispy pastries with our famous local soft drink. Perfect for a quick bite that's authentically Maltese.";
-        suggestions = menuItems.filter(item => item.category === 'Snacks');
-      } else if (lowerInput.includes('vegetarian') || lowerInput.includes('salad') || lowerInput.includes('fresh')) {
-        response = "Our Gbejniet Salad is perfect for you! It features fresh local goat cheese (gbejniet) - a Maltese specialty - with Mediterranean vegetables. It's light, fresh, and showcases our local produce beautifully.";
-        suggestions = menuItems.filter(item => item.category === 'Starters');
-      } else {
-        response = "Great choice coming to Ta' Kris! We specialize in authentic Maltese cuisine. Our most popular dishes are the Maltese Ftira and Fenkata (rabbit stew). Would you like to hear about our traditional dishes, or are you looking for something specific?";
-        suggestions = menuItems.slice(0, 2);
-      }
+      if (error) throw error;
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
-        suggestions: suggestions
+        content: data.response,
+        suggestions: data.suggestions || []
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error calling AI waiter:', error);
+      
+      // Fallback response
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment, or feel free to browse our menu directly!",
+        suggestions: []
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -90,7 +97,7 @@ const AIWaiterChat = ({ onClose, onAddToCart, menuItems }: AIWaiterChatProps) =>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
               <Bot className="h-5 w-5" />
-              <span>AI Waiter - Ta' Kris</span>
+              <span>Kai - AI Waiter</span>
             </CardTitle>
             <Button variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/20">
               <X className="h-4 w-4" />
@@ -134,7 +141,7 @@ const AIWaiterChat = ({ onClose, onAddToCart, menuItems }: AIWaiterChatProps) =>
                                 )}
                               </div>
                               <p className="text-xs text-gray-600 mb-1">{item.description}</p>
-                              <p className="font-bold text-blue-600">€{item.price.toFixed(2)}</p>
+                              <p className="font-bold text-blue-600">€{parseFloat(item.price).toFixed(2)}</p>
                             </div>
                             <Button
                               size="sm"

@@ -1,57 +1,49 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Minus, MessageCircle, ShoppingCart, Star, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import AIWaiterChat from '@/components/AIWaiterChat';
 
 const OrderDemo = () => {
+  const { slug } = useParams<{ slug: string }>();
   const [cart, setCart] = useState<any[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [quantities, setQuantities] = useState<{ [key: string]: number }>({});
+  const [guestSessionId] = useState(() => `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
-  const menuItems = [
-    {
-      id: '1',
-      name: 'Maltese Ftira',
-      description: 'Traditional Maltese bread with tomatoes, olives, capers, and local cheese',
-      price: 8.50,
-      image: 'photo-1506744038136-46273834b3fb',
-      category: 'Mains',
-      popular: true,
-      prep_time: '15 min'
-    },
-    {
-      id: '2', 
-      name: 'Rabbit Stew (Fenkata)',
-      description: 'Traditional Maltese rabbit stew with wine, herbs, and vegetables',
-      price: 16.00,
-      image: 'photo-1500673922987-e212871fec22',
-      category: 'Mains',
-      popular: true,
-      prep_time: '25 min'
-    },
-    {
-      id: '3',
-      name: 'Kinnie & Pastizzi',
-      description: 'Malta\'s iconic soft drink with traditional pastry filled with ricotta or peas',
-      price: 4.50,
-      image: 'photo-1461749280684-dccba630e2f6',
-      category: 'Snacks',
-      prep_time: '5 min'
-    },
-    {
-      id: '4',
-      name: 'Gbejniet Salad',
-      description: 'Fresh local goat cheese with Mediterranean vegetables and olive oil',
-      price: 12.00,
-      image: 'photo-1518770660439-4636190af475',
-      category: 'Starters',
-      prep_time: '10 min'
+  // Fetch vendor and menu data
+  const { data: vendorData, isLoading } = useQuery({
+    queryKey: ['vendor', slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select(`
+          id,
+          name,
+          location,
+          description,
+          menus!inner(
+            id,
+            name,
+            menu_items(*)
+          )
+        `)
+        .eq('slug', slug || 'ta-kris')
+        .eq('active', true)
+        .eq('menus.active', true)
+        .single();
+
+      if (error) throw error;
+      return data;
     }
-  ];
+  });
+
+  const menuItems = vendorData?.menus?.[0]?.menu_items || [];
 
   const addToCart = (item: any) => {
     const quantity = quantities[item.id] || 1;
@@ -78,6 +70,31 @@ const OrderDemo = () => {
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading menu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vendorData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Restaurant Not Found</h2>
+          <p className="text-gray-600 mb-4">The restaurant you're looking for doesn't exist.</p>
+          <Button asChild>
+            <Link to="/">Back to Home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -90,8 +107,8 @@ const OrderDemo = () => {
               </Link>
             </Button>
             <div>
-              <h1 className="font-bold text-lg">Ta' Kris Restaurant</h1>
-              <p className="text-sm text-gray-500">Valletta, Malta</p>
+              <h1 className="font-bold text-lg">{vendorData.name}</h1>
+              <p className="text-sm text-gray-500">{vendorData.location}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -125,7 +142,7 @@ const OrderDemo = () => {
                 <MessageCircle className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="font-bold text-lg">Welcome to Ta' Kris!</h2>
+                <h2 className="font-bold text-lg">Welcome to {vendorData.name}!</h2>
                 <p className="text-gray-600">Chat with our AI waiter for personalized recommendations, or browse our authentic Maltese menu below.</p>
               </div>
             </div>
@@ -139,7 +156,7 @@ const OrderDemo = () => {
               <div className="md:flex">
                 <div className="md:w-48 h-48 md:h-auto">
                   <img
-                    src={`https://images.unsplash.com/${item.image}?w=400&h=300&fit=crop`}
+                    src={item.image_url || `https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=300&fit=crop`}
                     alt={item.name}
                     className="w-full h-full object-cover"
                   />
@@ -158,16 +175,18 @@ const OrderDemo = () => {
                       </div>
                       <p className="text-gray-600 mb-3">{item.description}</p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{item.prep_time}</span>
-                        </div>
-                        <Badge variant="outline">{item.category}</Badge>
+                        {item.prep_time && (
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-4 w-4" />
+                            <span>{item.prep_time}</span>
+                          </div>
+                        )}
+                        {item.category && <Badge variant="outline">{item.category}</Badge>}
                       </div>
                     </div>
                     <div className="text-right ml-4">
                       <div className="text-2xl font-bold text-blue-600 mb-3">
-                        €{item.price.toFixed(2)}
+                        €{parseFloat(item.price).toFixed(2)}
                       </div>
                       <div className="flex items-center space-x-2 mb-3">
                         <Button
@@ -230,7 +249,8 @@ const OrderDemo = () => {
         <AIWaiterChat
           onClose={() => setShowChat(false)}
           onAddToCart={addToCart}
-          menuItems={menuItems}
+          vendorSlug={slug || 'ta-kris'}
+          guestSessionId={guestSessionId}
         />
       )}
     </div>
