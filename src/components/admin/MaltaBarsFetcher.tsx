@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, MapPin, Star, Phone, Calendar, Activity, AlertCircle, CheckCircle, Clock, BarChart3 } from 'lucide-react';
+import { Loader2, MapPin, Star, Phone, Calendar, Activity, AlertCircle, CheckCircle, Clock, BarChart3, Download, Upload, Database, Shield, TrendingUp } from 'lucide-react';
 
 interface Bar {
   id: string;
@@ -15,8 +15,8 @@ interface Bar {
   rating: number | null;
   review_count: number | null;
   google_place_id: string;
-  data_quality_score: number;
-  is_active: boolean;
+  data_quality_score?: number;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
   location_gps?: unknown;
@@ -49,20 +49,34 @@ interface ScheduledJob {
   config?: any;
 }
 
+interface HealthMetrics {
+  api_quota_used: number;
+  api_quota_limit: number;
+  success_rate: number;
+  avg_response_time: number;
+  last_successful_fetch: string | null;
+  data_freshness_hours: number;
+}
+
 export const MaltaBarsFetcher = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [bars, setBars] = useState<Bar[]>([]);
   const [fetchLogs, setFetchLogs] = useState<FetchLog[]>([]);
   const [scheduledJob, setScheduledJob] = useState<ScheduledJob | null>(null);
+  const [healthMetrics, setHealthMetrics] = useState<HealthMetrics | null>(null);
   const [lastFetchResult, setLastFetchResult] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'bars' | 'logs' | 'scheduling'>('bars');
+  const [activeTab, setActiveTab] = useState<'bars' | 'logs' | 'scheduling' | 'health' | 'management'>('bars');
   const { toast } = useToast();
 
-  const fetchBarsFromGoogle = async () => {
+  const fetchBarsFromGoogle = async (incrementalOnly = false) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('fetch-malta-bars', {
-        body: { source: 'manual_admin', timestamp: new Date().toISOString() }
+        body: { 
+          source: 'manual_admin', 
+          timestamp: new Date().toISOString(),
+          incremental: incrementalOnly
+        }
       });
       
       if (error) {
@@ -77,7 +91,7 @@ export const MaltaBarsFetcher = () => {
         });
         
         // Refresh all data
-        await Promise.all([loadBars(), loadFetchLogs(), loadScheduledJob()]);
+        await Promise.all([loadBars(), loadFetchLogs(), loadScheduledJob(), loadHealthMetrics()]);
       } else {
         throw new Error(data.error || 'Unknown error occurred');
       }
@@ -99,7 +113,7 @@ export const MaltaBarsFetcher = () => {
         .from('bars')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (error) throw error;
       
@@ -132,55 +146,160 @@ export const MaltaBarsFetcher = () => {
 
   const loadFetchLogs = async () => {
     try {
-      // Try to fetch from bar_fetch_logs table, fallback gracefully if not available
       const { data, error } = await supabase
-        .rpc('get_bar_fetch_logs')
-        .limit(10);
+        .from('bar_fetch_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
 
       if (error && !error.message.includes('does not exist')) {
         throw error;
       }
       
-      // If the table doesn't exist yet, use mock data
-      if (!data) {
-        setFetchLogs([]);
-        return;
-      }
-      
       setFetchLogs(data || []);
     } catch (error) {
       console.error('Error loading fetch logs:', error);
-      // Silently fail and show empty logs if table doesn't exist
       setFetchLogs([]);
     }
   };
 
   const loadScheduledJob = async () => {
     try {
-      // Try to fetch from scheduled_jobs table, fallback gracefully if not available
       const { data, error } = await supabase
-        .rpc('get_scheduled_job', { job_name: 'fetch-malta-bars' });
+        .from('scheduled_jobs')
+        .select('*')
+        .eq('job_name', 'fetch-malta-bars')
+        .single();
 
-      if (error && !error.message.includes('does not exist')) {
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
       
-      // If the table doesn't exist yet, show null
-      if (!data) {
-        setScheduledJob(null);
-        return;
-      }
-      
-      setScheduledJob(data);
+      setScheduledJob(data || null);
     } catch (error) {
       console.error('Error loading scheduled job:', error);
-      // Silently fail and show no scheduled job if table doesn't exist
       setScheduledJob(null);
     }
   };
 
+  const loadHealthMetrics = async () => {
+    try {
+      // Calculate health metrics from existing data
+      const successfulLogs = fetchLogs.filter(log => log.status === 'completed');
+      const failedLogs = fetchLogs.filter(log => log.status === 'failed');
+      
+      const successRate = fetchLogs.length > 0 
+        ? (successfulLogs.length / fetchLogs.length) * 100 
+        : 0;
+      
+      const avgResponseTime = successfulLogs.length > 0
+        ? successfulLogs.reduce((sum, log) => sum + log.operation_duration_ms, 0) / successfulLogs.length
+        : 0;
+
+      const lastSuccessfulFetch = successfulLogs.length > 0 
+        ? successfulLogs[0].created_at 
+        : null;
+
+      const dataFreshnessHours = lastSuccessfulFetch 
+        ? Math.floor((Date.now() - new Date(lastSuccessfulFetch).getTime()) / (1000 * 60 * 60))
+        : 999;
+
+      setHealthMetrics({
+        api_quota_used: successfulLogs.reduce((sum, log) => sum + log.api_calls_made, 0),
+        api_quota_limit: 1000, // Google Places API daily limit
+        success_rate: successRate,
+        avg_response_time: avgResponseTime,
+        last_successful_fetch: lastSuccessfulFetch,
+        data_freshness_hours: dataFreshnessHours
+      });
+    } catch (error) {
+      console.error('Error calculating health metrics:', error);
+    }
+  };
+
+  const exportBarsData = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('export-bars-data');
+      
+      if (error) throw error;
+      
+      // Create and download CSV file
+      const blob = new Blob([data.csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `malta-bars-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Export Complete",
+        description: "Bars data exported successfully"
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export bars data",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const runHealthCheck = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('health-check-bars');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Health Check Complete",
+        description: `${data.issues_found} issues found and ${data.issues_fixed} fixed`
+      });
+      
+      await loadHealthMetrics();
+    } catch (error) {
+      console.error('Health check error:', error);
+      toast({
+        title: "Health Check Failed",
+        description: "Failed to run health check",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cleanupDuplicates = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('cleanup-duplicate-bars');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Cleanup Complete",
+        description: `${data.duplicates_removed} duplicate bars removed`
+      });
+      
+      await loadBars();
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      toast({
+        title: "Cleanup Failed",
+        description: "Failed to cleanup duplicates",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    Promise.all([loadBars(), loadFetchLogs(), loadScheduledJob()]);
+    Promise.all([loadBars(), loadFetchLogs(), loadScheduledJob(), loadHealthMetrics()]);
   }, []);
 
   const getQualityBadgeColor = (score: number) => {
@@ -198,6 +317,25 @@ export const MaltaBarsFetcher = () => {
     }
   };
 
+  const getHealthStatusColor = (metric: string, value: number) => {
+    switch (metric) {
+      case 'success_rate':
+        if (value >= 95) return 'text-green-600';
+        if (value >= 80) return 'text-yellow-600';
+        return 'text-red-600';
+      case 'data_freshness':
+        if (value <= 24) return 'text-green-600';
+        if (value <= 48) return 'text-yellow-600';
+        return 'text-red-600';
+      case 'quota_usage':
+        if (value <= 70) return 'text-green-600';
+        if (value <= 90) return 'text-yellow-600';
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Control Panel */}
@@ -205,13 +343,13 @@ export const MaltaBarsFetcher = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            Malta Bars Data Management
+            Malta Bars Data Management System
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Button 
-              onClick={fetchBarsFromGoogle}
+              onClick={() => fetchBarsFromGoogle(false)}
               disabled={isLoading}
               className="flex items-center gap-2"
             >
@@ -223,17 +361,34 @@ export const MaltaBarsFetcher = () => {
               ) : (
                 <>
                   <MapPin className="h-4 w-4" />
-                  Fetch Bars from Google Maps
+                  Full Fetch from Google Maps
                 </>
               )}
             </Button>
             
             <Button 
               variant="outline"
-              onClick={() => Promise.all([loadBars(), loadFetchLogs(), loadScheduledJob()])}
+              onClick={() => fetchBarsFromGoogle(true)}
+              disabled={isLoading}
+            >
+              Incremental Update
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => Promise.all([loadBars(), loadFetchLogs(), loadScheduledJob(), loadHealthMetrics()])}
               disabled={isLoading}
             >
               Refresh All Data
+            </Button>
+
+            <Button 
+              variant="outline"
+              onClick={runHealthCheck}
+              disabled={isLoading}
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Health Check
             </Button>
           </div>
 
@@ -243,8 +398,8 @@ export const MaltaBarsFetcher = () => {
             </div>
           )}
 
-          {/* Statistics Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          {/* Enhanced Statistics Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-blue-600" />
@@ -259,7 +414,7 @@ export const MaltaBarsFetcher = () => {
                 <span className="font-semibold text-green-800">High Quality</span>
               </div>
               <p className="text-2xl font-bold text-green-900">
-                {bars.filter(bar => bar.data_quality_score >= 85).length}
+                {bars.filter(bar => (bar.data_quality_score || 0) >= 85).length}
               </p>
             </div>
 
@@ -279,51 +434,47 @@ export const MaltaBarsFetcher = () => {
             <div className="bg-purple-50 p-4 rounded-lg">
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-purple-600" />
-                <span className="font-semibold text-purple-800">Last Fetch</span>
+                <span className="font-semibold text-purple-800">Success Rate</span>
               </div>
-              <p className="text-sm font-bold text-purple-900">
-                {fetchLogs.length > 0 
-                  ? new Date(fetchLogs[0].created_at).toLocaleDateString()
-                  : 'Never'
-                }
+              <p className="text-2xl font-bold text-purple-900">
+                {healthMetrics ? `${Math.round(healthMetrics.success_rate)}%` : '0%'}
+              </p>
+            </div>
+
+            <div className="bg-indigo-50 p-4 rounded-lg">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-indigo-600" />
+                <span className="font-semibold text-indigo-800">Data Freshness</span>
+              </div>
+              <p className="text-sm font-bold text-indigo-900">
+                {healthMetrics ? `${healthMetrics.data_freshness_hours}h ago` : 'Unknown'}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tab Navigation */}
+      {/* Enhanced Tab Navigation */}
       <div className="flex space-x-1 border-b">
-        <button
-          onClick={() => setActiveTab('bars')}
-          className={`px-4 py-2 font-medium text-sm rounded-t-lg ${
-            activeTab === 'bars' 
-              ? 'bg-white border-b-2 border-blue-500 text-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Bars ({bars.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('logs')}
-          className={`px-4 py-2 font-medium text-sm rounded-t-lg ${
-            activeTab === 'logs' 
-              ? 'bg-white border-b-2 border-blue-500 text-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Operation Logs ({fetchLogs.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('scheduling')}
-          className={`px-4 py-2 font-medium text-sm rounded-t-lg ${
-            activeTab === 'scheduling' 
-              ? 'bg-white border-b-2 border-blue-500 text-blue-600' 
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          Scheduling
-        </button>
+        {[
+          { key: 'bars', label: `Bars (${bars.length})` },
+          { key: 'logs', label: `Operation Logs (${fetchLogs.length})` },
+          { key: 'scheduling', label: 'Scheduling' },
+          { key: 'health', label: 'Health & Monitoring' },
+          { key: 'management', label: 'Data Management' }
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as any)}
+            className={`px-4 py-2 font-medium text-sm rounded-t-lg ${
+              activeTab === tab.key 
+                ? 'bg-white border-b-2 border-blue-500 text-blue-600' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
@@ -366,8 +517,8 @@ export const MaltaBarsFetcher = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getQualityBadgeColor(bar.data_quality_score)}`}>
-                            {bar.data_quality_score}%
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getQualityBadgeColor(bar.data_quality_score || 0)}`}>
+                            {bar.data_quality_score || 0}%
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-gray-500">
@@ -517,6 +668,173 @@ export const MaltaBarsFetcher = () => {
                 <p className="text-sm text-gray-400 mt-2">The automated scheduling system will be available once the database migration is complete.</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* New Health & Monitoring Tab */}
+      {activeTab === 'health' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              System Health & Monitoring
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {healthMetrics ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2">API Quota Usage</h4>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold">{healthMetrics.api_quota_used}</span>
+                      <span className="text-sm text-gray-500">/ {healthMetrics.api_quota_limit}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                      <div 
+                        className={`h-2 rounded-full ${getHealthStatusColor('quota_usage', (healthMetrics.api_quota_used / healthMetrics.api_quota_limit) * 100) === 'text-red-600' ? 'bg-red-500' : getHealthStatusColor('quota_usage', (healthMetrics.api_quota_used / healthMetrics.api_quota_limit) * 100) === 'text-yellow-600' ? 'bg-yellow-500' : 'bg-green-500'}`}
+                        style={{ width: `${Math.min((healthMetrics.api_quota_used / healthMetrics.api_quota_limit) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2">Success Rate</h4>
+                    <div className={`text-2xl font-bold ${getHealthStatusColor('success_rate', healthMetrics.success_rate)}`}>
+                      {Math.round(healthMetrics.success_rate)}%
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">Last 20 operations</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-2">Data Freshness</h4>
+                    <div className={`text-2xl font-bold ${getHealthStatusColor('data_freshness', healthMetrics.data_freshness_hours)}`}>
+                      {healthMetrics.data_freshness_hours}h
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">Since last update</p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Performance Metrics</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Avg Response Time:</span>
+                      <span className="ml-1 font-medium">{Math.round(healthMetrics.avg_response_time / 1000)}s</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Last Successful Fetch:</span>
+                      <span className="ml-1 font-medium">
+                        {healthMetrics.last_successful_fetch 
+                          ? new Date(healthMetrics.last_successful_fetch).toLocaleString()
+                          : 'Never'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">Loading health metrics...</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* New Data Management Tab */}
+      {activeTab === 'management' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Data Management & Operations
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Export & Backup
+                </h4>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={exportBarsData}
+                    className="w-full justify-start"
+                  >
+                    Export Bars to CSV
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => toast({ title: "Coming Soon", description: "Database backup feature" })}
+                    className="w-full justify-start"
+                  >
+                    Create Database Backup
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="border rounded-lg p-4">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Data Quality
+                </h4>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={cleanupDuplicates}
+                    disabled={isLoading}
+                    className="w-full justify-start"
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Remove Duplicates
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => toast({ title: "Coming Soon", description: "Data validation feature" })}
+                    className="w-full justify-start"
+                  >
+                    Validate Data Quality
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="border rounded-lg p-4">
+              <h4 className="font-semibold mb-3">System Maintenance</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => toast({ title: "Coming Soon", description: "Performance optimization" })}
+                >
+                  Optimize Performance
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => toast({ title: "Coming Soon", description: "Cache management" })}
+                >
+                  Clear Cache
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => toast({ title: "Coming Soon", description: "Analytics report" })}
+                >
+                  Generate Analytics
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
