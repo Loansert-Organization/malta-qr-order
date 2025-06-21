@@ -3,8 +3,9 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useOrderDemo } from '@/hooks/useOrderDemo';
 import LoadingState from '@/components/LoadingState';
-import NotFoundState from '@/components/NotFoundState';
+import NoDataState from '@/components/NoDataState';
 import MainContent from '@/components/MainContent';
+import { Store } from 'lucide-react';
 
 const OrderDemo = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -38,7 +39,8 @@ const OrderDemo = () => {
 
   if (!vendor) {
     return (
-      <NotFoundState
+      <NoDataState
+        icon={Store}
         title="Restaurant Not Found"
         description={`No restaurant found with the identifier "${slug}"`}
         suggestions={[
@@ -46,7 +48,8 @@ const OrderDemo = () => {
           "Try scanning the QR code again",
           "Contact the restaurant for the correct link"
         ]}
-        onRetry={() => window.location.reload()}
+        actionText="Try Again"
+        onAction={() => window.location.reload()}
       />
     );
   }

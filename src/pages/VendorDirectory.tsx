@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, MapPin, Clock, Star } from 'lucide-react';
+import { Search, MapPin, Clock, Star, Store } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import LoadingState from '@/components/LoadingState';
+import NoDataState from '@/components/NoDataState';
 import { useToast } from '@/hooks/use-toast';
 
 interface Vendor {
@@ -86,11 +87,32 @@ const VendorDirectory = () => {
           </div>
         </div>
 
-        {/* Vendor Grid */}
-        {filteredVendors.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No restaurants found matching your search.</p>
-          </div>
+        {/* Vendor Grid or No Data State */}
+        {vendors.length === 0 ? (
+          <NoDataState
+            icon={Store}
+            title="No Restaurants Available"
+            description="There are currently no restaurants registered on the platform."
+            suggestions={[
+              "Check back later for new restaurant additions",
+              "Contact support if you're a restaurant owner wanting to join"
+            ]}
+            actionText="Refresh Page"
+            onAction={() => window.location.reload()}
+          />
+        ) : filteredVendors.length === 0 ? (
+          <NoDataState
+            icon={Search}
+            title="No Restaurants Found"
+            description={`No restaurants match your search for "${searchQuery}"`}
+            suggestions={[
+              "Try different search terms",
+              "Check for typos in your search",
+              "Browse all available restaurants by clearing the search"
+            ]}
+            actionText="Clear Search"
+            onAction={() => setSearchQuery('')}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredVendors.map((vendor) => (

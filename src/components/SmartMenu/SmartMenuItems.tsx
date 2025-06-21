@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Clock, ChefHat } from 'lucide-react';
 import { MenuItem, AIInsights, WeatherData } from './types';
 import { SmartMenuBadges } from './SmartMenuBadges';
+import NoDataState from '../NoDataState';
 
 interface SmartMenuItemsProps {
   items: MenuItem[];
@@ -15,18 +16,15 @@ interface SmartMenuItemsProps {
 export const SmartMenuItems = ({ items, onAddToCart, aiInsights, weatherData }: SmartMenuItemsProps) => {
   if (items.length === 0) {
     return (
-      <Card className="border-dashed border-2 border-gray-200">
-        <CardContent className="p-12 text-center">
-          <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">No Menu Items Available</h3>
-          <p className="text-gray-500 mb-4">
-            This restaurant hasn't added any menu items yet, or they may be temporarily unavailable.
-          </p>
-          <p className="text-sm text-gray-400">
-            Please check back later or contact the restaurant directly.
-          </p>
-        </CardContent>
-      </Card>
+      <NoDataState
+        icon={ChefHat}
+        title="No Menu Items Available"
+        description="This restaurant hasn't added any menu items yet, or they may be temporarily unavailable."
+        suggestions={[
+          "Check back later for updated menu items",
+          "Contact the restaurant directly for current offerings"
+        ]}
+      />
     );
   }
 
