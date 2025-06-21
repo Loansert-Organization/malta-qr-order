@@ -1,37 +1,56 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, QrCode, BarChart3, Settings, Upload, Eye, Edit, Trash2, Download } from 'lucide-react';
+import { ArrowLeft, Plus, QrCode, BarChart3, Settings, Upload, Eye, Edit, Trash2, Download, Menu, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import MenuBuilder from '@/components/vendor/MenuBuilder';
+import QRGenerator from '@/components/vendor/QRGenerator';
+import OrderManagement from '@/components/vendor/OrderManagement';
+import AIAnalytics from '@/components/vendor/AIAnalytics';
 
 const VendorDashboard = () => {
+  // Mock data - in real app this would come from Supabase
+  const vendor = {
+    id: 'vendor-123',
+    name: "Ta' Kris Restaurant",
+    slug: 'ta-kris',
+    location: 'Valletta, Malta'
+  };
+
+  const menuId = 'menu-123';
+
   const [menuItems] = useState([
     {
       id: '1',
       name: 'Maltese Ftira',
+      description: 'Traditional Maltese bread with tomatoes, olives, capers, and local cheese',
       price: 8.50,
       category: 'Mains',
-      status: 'active',
-      orders: 45
+      available: true,
+      popular: true,
+      prep_time: '15 min'
     },
     {
       id: '2',
       name: 'Rabbit Stew (Fenkata)',
+      description: 'Traditional Maltese rabbit stew with wine, herbs, and vegetables',
       price: 16.00,
-      category: 'Mains', 
-      status: 'active',
-      orders: 32
+      category: 'Mains',
+      available: true,
+      popular: true,
+      prep_time: '25 min'
     },
     {
       id: '3',
       name: 'Kinnie & Pastizzi',
+      description: "Malta's iconic soft drink with traditional pastry filled with ricotta or peas",
       price: 4.50,
       category: 'Snacks',
-      status: 'active',
-      orders: 67
+      available: true,
+      popular: false,
+      prep_time: '5 min'
     }
   ]);
 
@@ -87,8 +106,8 @@ const VendorDashboard = () => {
               </Link>
             </Button>
             <div>
-              <h1 className="font-bold text-xl">Ta' Kris Restaurant</h1>
-              <p className="text-sm text-gray-500">Vendor Dashboard</p>
+              <h1 className="font-bold text-xl">{vendor.name}</h1>
+              <p className="text-sm text-gray-500">Comprehensive Vendor Dashboard</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -98,14 +117,14 @@ const VendorDashboard = () => {
             </Button>
             <Button className="bg-amber-600 hover:bg-amber-700">
               <QrCode className="h-4 w-4 mr-2" />
-              Generate QR
+              Quick QR
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
-        {/* Stats Overview */}
+      <div className="container mx-auto px-4 py-6 max-w-7xl">
+        {/* Enhanced Stats Overview */}
         <div className="grid md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4">
@@ -113,8 +132,9 @@ const VendorDashboard = () => {
                 <div>
                   <p className="text-sm text-gray-600">Today's Revenue</p>
                   <p className="text-2xl font-bold text-green-600">€{totalRevenue.toFixed(2)}</p>
+                  <p className="text-xs text-green-500">↑ 12% vs yesterday</p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-green-500" />
+                <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
@@ -123,12 +143,11 @@ const VendorDashboard = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Orders Today</p>
-                  <p className="text-2xl font-bold text-blue-600">{todayOrders}</p>
+                  <p className="text-sm text-gray-600">Active Orders</p>
+                  <p className="text-2xl font-bold text-blue-600">{orders.filter(o => o.status !== 'completed').length}</p>
+                  <p className="text-xs text-blue-500">Live updates</p>
                 </div>
-                <div className="bg-blue-100 p-2 rounded-full">
-                  <span className="text-blue-600 font-bold text-lg">{todayOrders}</span>
-                </div>
+                <Users className="h-8 w-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
@@ -139,10 +158,9 @@ const VendorDashboard = () => {
                 <div>
                   <p className="text-sm text-gray-600">Avg Order Value</p>
                   <p className="text-2xl font-bold text-purple-600">€{avgOrderValue.toFixed(2)}</p>
+                  <p className="text-xs text-purple-500">↑ 8% this week</p>
                 </div>
-                <div className="bg-purple-100 p-2 rounded-full">
-                  <span className="text-purple-600 text-sm">€</span>
-                </div>
+                <BarChart3 className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
@@ -153,235 +171,117 @@ const VendorDashboard = () => {
                 <div>
                   <p className="text-sm text-gray-600">Menu Items</p>
                   <p className="text-2xl font-bold text-amber-600">{menuItems.length}</p>
+                  <p className="text-xs text-amber-500">AI optimized</p>
                 </div>
-                <div className="bg-amber-100 p-2 rounded-full">
-                  <Plus className="h-5 w-5 text-amber-600" />
-                </div>
+                <Menu className="h-8 w-8 text-amber-500" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
+        {/* Enhanced Main Content Tabs */}
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="orders">Live Orders</TabsTrigger>
-            <TabsTrigger value="menu">Menu Management</TabsTrigger>
-            <TabsTrigger value="qr">QR Codes</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Live Orders
+            </TabsTrigger>
+            <TabsTrigger value="menu" className="flex items-center gap-2">
+              <Menu className="h-4 w-4" />
+              Menu Builder
+            </TabsTrigger>
+            <TabsTrigger value="qr" className="flex items-center gap-2">
+              <QrCode className="h-4 w-4" />
+              QR & Posters
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              AI Analytics
+            </TabsTrigger>
+            <TabsTrigger value="legacy" className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Legacy View
+            </TabsTrigger>
           </TabsList>
 
-          {/* Live Orders */}
+          {/* Real-time Order Management */}
           <TabsContent value="orders" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Live Orders</h2>
-              <Badge className="bg-green-100 text-green-800">
-                {orders.filter(o => o.status !== 'completed').length} Active
-              </Badge>
-            </div>
-
-            <div className="grid gap-4">
-              {orders.map((order) => (
-                <Card key={order.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-bold">{order.id}</h3>
-                          <Badge className={getStatusColor(order.status)}>
-                            {order.status}
-                          </Badge>
-                          <span className="text-sm text-gray-500">{order.table}</span>
-                        </div>
-                        <p className="text-gray-600 mb-1">{order.items.join(', ')}</p>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span>€{order.total.toFixed(2)}</span>
-                          <span>{order.time}</span>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        {order.status === 'preparing' && (
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            Mark Ready
-                          </Button>
-                        )}
-                        {order.status === 'ready' && (
-                          <Button size="sm" variant="outline">
-                            Complete
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <OrderManagement vendorId={vendor.id} />
           </TabsContent>
 
-          {/* Menu Management */}
+          {/* Enhanced Menu Builder */}
           <TabsContent value="menu" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Menu Management</h2>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-
-            <div className="grid gap-4">
-              {menuItems.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-bold text-lg">{item.name}</h3>
-                          <Badge variant="outline">{item.category}</Badge>
-                          <Badge className="bg-green-100 text-green-800">
-                            {item.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className="font-medium text-blue-600">€{item.price.toFixed(2)}</span>
-                          <span>{item.orders} orders today</span>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Upload className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <MenuBuilder
+              vendorId={vendor.id}
+              menuId={menuId}
+              initialItems={menuItems}
+            />
           </TabsContent>
 
-          {/* QR Codes */}
+          {/* Advanced QR & Poster Generation */}
           <TabsContent value="qr" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">QR Code Generator</h2>
-              <Button className="bg-amber-600 hover:bg-amber-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Generate New QR
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Table QR Codes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {['Table A1', 'Table A2', 'Table A3', 'Table B1', 'Table B2'].map((table) => (
-                    <div key={table} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <QrCode className="h-6 w-6 text-gray-600" />
-                        <span className="font-medium">{table}</span>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Poster Templates</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <QrCode className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                    <h3 className="font-bold text-lg mb-2">Preview Your QR Poster</h3>
-                    <p className="text-gray-600 mb-4">
-                      Auto-generated branded posters with your restaurant's QR codes
-                    </p>
-                    <Button variant="outline">
-                      Generate Preview
-                    </Button>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button className="flex-1" variant="outline">
-                      Download PDF
-                    </Button>
-                    <Button className="flex-1" variant="outline">
-                      Download PNG
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <QRGenerator
+              vendorId={vendor.id}
+              vendorName={vendor.name}
+              vendorSlug={vendor.slug}
+            />
           </TabsContent>
 
-          {/* Analytics */}
+          {/* AI-Powered Analytics */}
           <TabsContent value="analytics" className="space-y-4">
-            <h2 className="text-2xl font-bold">Analytics & Insights</h2>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Popular Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {menuItems.sort((a, b) => b.orders - a.orders).map((item, index) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <span className="font-bold text-lg text-amber-600">#{index + 1}</span>
-                          <span className="font-medium">{item.name}</span>
-                        </div>
-                        <span className="text-sm text-gray-600">{item.orders} orders</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            <AIAnalytics vendorId={vendor.id} />
+          </TabsContent>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Recommendations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                      <h4 className="font-medium text-blue-800">Menu Optimization</h4>
-                      <p className="text-sm text-blue-600">
-                        Consider featuring Kinnie & Pastizzi more prominently - it's your most ordered item!
-                      </p>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <h4 className="font-medium text-green-800">Peak Hours</h4>
-                      <p className="text-sm text-green-600">
-                        Most orders come between 7-9 PM. Consider prep time for popular items.
-                      </p>
-                    </div>
-                    <div className="p-3 bg-amber-50 rounded-lg border-l-4 border-amber-500">
-                      <h4 className="font-medium text-amber-800">Customer Preferences</h4>
-                      <p className="text-sm text-amber-600">
-                        AI Waiter suggests traditional Maltese dishes 73% of the time successfully.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          {/* Legacy View for Reference */}
+          <TabsContent value="legacy" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Legacy Dashboard View</CardTitle>
+                <p className="text-sm text-gray-600">Previous dashboard layout for reference</p>
+              </CardHeader>
+              <CardContent>
+                {/* ... keep existing code (previous dashboard content) */}
+                <div className="grid gap-4">
+                  {orders.map((order) => (
+                    <Card key={order.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h3 className="font-bold">{order.id}</h3>
+                              <Badge className={getStatusColor(order.status)}>
+                                {order.status}
+                              </Badge>
+                              <span className="text-sm text-gray-500">{order.table}</span>
+                            </div>
+                            <p className="text-gray-600 mb-1">{order.items.join(', ')}</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                              <span>€{order.total.toFixed(2)}</span>
+                              <span>{order.time}</span>
+                            </div>
+                          </div>
+                          <div className="flex space-x-2">
+                            {order.status === 'preparing' && (
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                Mark Ready
+                              </Button>
+                            )}
+                            {order.status === 'ready' && (
+                              <Button size="sm" variant="outline">
+                                Complete
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
