@@ -62,4 +62,4 @@ class LayoutService {
 }
 
 export const layoutService = new LayoutService();
-export { LayoutContext, DynamicLayout } from '@/types/layout';
+export type { LayoutContext, DynamicLayout } from '@/types/layout';
