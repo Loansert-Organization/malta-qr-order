@@ -1,13 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Plus, Minus, ShoppingCart, MessageCircle } from 'lucide-react';
+import { ShoppingCart, MessageCircle } from 'lucide-react';
 import AIWaiterChat from '@/components/AIWaiterChat';
+import DynamicHeroSection from '@/components/DynamicHeroSection';
+import VoiceSearch from '@/components/VoiceSearch';
+import SmartMenu from '@/components/SmartMenu';
+import { useDynamicLayout } from '@/hooks/useDynamicLayout';
+import { weatherService } from '@/services/weatherService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Clock, Plus, Minus } from 'lucide-react';
 
 interface MenuItem {
   id: string;
@@ -42,6 +47,16 @@ const OrderDemo = () => {
   const [showAIChat, setShowAIChat] = useState(false);
   const [guestSessionId] = useState(() => `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [weatherData, setWeatherData] = useState<any>(null);
+
+  // Dynamic layout integration
+  const { 
+    layout, 
+    loading: layoutLoading, 
+    trackInteraction,
+    contextData
+  } = useDynamicLayout(vendor?.id || '');
 
   useEffect(() => {
     const fetchVendorAndMenu = async () => {
@@ -82,6 +97,12 @@ const OrderDemo = () => {
 
         if (menuError) throw menuError;
         setMenuItems(menuData.menu_items || []);
+
+        // Fetch weather data
+        const weather = await weatherService.getWeatherData('Malta');
+        if (weather) {
+          setWeatherData(weather);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
@@ -97,7 +118,7 @@ const OrderDemo = () => {
     fetchVendorAndMenu();
   }, [slug, toast]);
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = async (item: MenuItem) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
       if (existingItem) {
@@ -110,10 +131,44 @@ const OrderDemo = () => {
       return [...prevCart, { ...item, quantity: 1 }];
     });
 
+    // Track interaction for AI insights
+    await trackInteraction('add_to_cart', {
+      item_id: item.id,
+      item_name: item.name,
+      category: item.category,
+      price: item.price
+    });
+
     toast({
       title: "Added to cart",
       description: `${item.name} has been added to your cart`,
     });
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    
+    // Track search interaction
+    await trackInteraction('search', {
+      query,
+      results_count: menuItems.filter(item => 
+        item.name.toLowerCase().includes(query.toLowerCase()) ||
+        item.description.toLowerCase().includes(query.toLowerCase())
+      ).length
+    });
+  };
+
+  const handleHeroCtaClick = async () => {
+    await trackInteraction('hero_cta_click', {
+      cta_text: layout?.hero_section?.cta_text,
+      section: 'hero'
+    });
+
+    // Scroll to menu
+    const menuElement = document.getElementById('menu-section');
+    if (menuElement) {
+      menuElement.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const removeFromCart = (itemId: string) => {
@@ -139,15 +194,7 @@ const OrderDemo = () => {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const groupedMenuItems = menuItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, MenuItem[]>);
-
-  if (loading) {
+  if (loading || layoutLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -169,6 +216,13 @@ const OrderDemo = () => {
     );
   }
 
+  const aiInsights = {
+    trending_items: contextData?.ai_insights?.trending_items || [],
+    recommended_categories: contextData?.ai_insights?.recommended_categories || [],
+    weather_suggestions: contextData?.weather?.recommendations || [],
+    time_based_priorities: contextData?.ai_insights?.time_based_priorities || []
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -183,83 +237,37 @@ const OrderDemo = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Dynamic Hero Section */}
+        {layout?.hero_section && (
+          <DynamicHeroSection
+            heroSection={layout.hero_section}
+            onCtaClick={handleHeroCtaClick}
+            vendorName={vendor.name}
+            location={vendor.location || 'Malta'}
+            weatherData={weatherData}
+          />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Menu Items */}
           <div className="lg:col-span-2">
-            <div className="mb-6">
+            <div id="menu-section" className="mb-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Menu</h2>
               
-              {Object.entries(groupedMenuItems).map(([category, items]) => (
-                <div key={category} className="mb-8">
-                  <h3 className="text-xl font-semibold text-gray-700 mb-4 border-b pb-2">
-                    {category}
-                  </h3>
-                  <div className="grid gap-4">
-                    {items.map((item) => (
-                      <Card key={item.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <h4 className="font-semibold text-lg">{item.name}</h4>
-                                {item.popular && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Popular
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-gray-600 text-sm mb-2">{item.description}</p>
-                              <div className="flex items-center space-x-4">
-                                <span className="font-bold text-blue-600">
-                                  €{parseFloat(item.price.toString()).toFixed(2)}
-                                </span>
-                                {item.prep_time && (
-                                  <div className="flex items-center space-x-1 text-gray-500">
-                                    <Clock className="h-4 w-4" />
-                                    <span className="text-xs">{item.prep_time}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="ml-4 flex items-center space-x-2">
-                              {cart.find(cartItem => cartItem.id === item.id) ? (
-                                <div className="flex items-center space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => removeFromCart(item.id)}
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                  <span className="font-semibold">
-                                    {cart.find(cartItem => cartItem.id === item.id)?.quantity || 0}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => addToCart(item)}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  onClick={() => addToCart(item)}
-                                  size="sm"
-                                  disabled={!item.available}
-                                >
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  Add
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              {/* Voice Search */}
+              <VoiceSearch
+                onSearch={handleSearch}
+                placeholder="Search menu items or ask for recommendations..."
+              />
+              
+              {/* Smart Menu */}
+              <SmartMenu
+                menuItems={menuItems}
+                onAddToCart={addToCart}
+                aiInsights={aiInsights}
+                weatherData={weatherData}
+                searchQuery={searchQuery}
+              />
             </div>
           </div>
 

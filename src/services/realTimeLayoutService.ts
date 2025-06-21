@@ -90,8 +90,18 @@ class RealTimeLayoutService {
       
       if (typeof layoutSuggestion.layout_config === 'string') {
         layout = JSON.parse(layoutSuggestion.layout_config);
+      } else if (layoutSuggestion.layout_config && typeof layoutSuggestion.layout_config === 'object') {
+        // Type assertion with proper validation
+        const config = layoutSuggestion.layout_config as any;
+        if (this.isValidDynamicLayout(config)) {
+          layout = config as DynamicLayout;
+        } else {
+          console.error('Invalid layout configuration structure');
+          return;
+        }
       } else {
-        layout = layoutSuggestion.layout_config;
+        console.error('Layout configuration is not in expected format');
+        return;
       }
 
       const callbacks = this.layoutUpdateCallbacks.get(vendorId) || [];
@@ -106,6 +116,15 @@ class RealTimeLayoutService {
     } catch (error) {
       console.error('Failed to process database layout update:', error);
     }
+  }
+
+  private isValidDynamicLayout(obj: any): boolean {
+    return obj && 
+           typeof obj === 'object' && 
+           'hero_section' in obj && 
+           'menu_sections' in obj && 
+           'promotional_zones' in obj && 
+           'ui_enhancements' in obj;
   }
 
   async triggerLayoutRegeneration(vendorId: string, context?: any) {
@@ -163,7 +182,11 @@ class RealTimeLayoutService {
         return JSON.parse(data.layout_config);
       }
       
-      return data.layout_config as DynamicLayout;
+      if (this.isValidDynamicLayout(data.layout_config)) {
+        return data.layout_config as DynamicLayout;
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error fetching latest layout:', error);
       return null;
