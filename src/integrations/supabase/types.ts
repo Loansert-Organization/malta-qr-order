@@ -11,35 +11,164 @@ export type Database = {
     Tables: {
       ai_waiter_logs: {
         Row: {
+          ai_model_used: string | null
           content: string
           created_at: string
           guest_session_id: string
           id: string
           message_type: string
+          processing_metadata: Json | null
+          satisfaction_score: number | null
           suggestions: Json | null
           vendor_id: string
         }
         Insert: {
+          ai_model_used?: string | null
           content: string
           created_at?: string
           guest_session_id: string
           id?: string
           message_type: string
+          processing_metadata?: Json | null
+          satisfaction_score?: number | null
           suggestions?: Json | null
           vendor_id: string
         }
         Update: {
+          ai_model_used?: string | null
           content?: string
           created_at?: string
           guest_session_id?: string
           id?: string
           message_type?: string
+          processing_metadata?: Json | null
+          satisfaction_score?: number | null
           suggestions?: Json | null
           vendor_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "ai_waiter_logs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analytics: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          metadata: Json | null
+          metric_type: string
+          metric_value: number
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          metric_value: number
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          metric_value?: number
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_ui_sessions: {
+        Row: {
+          created_at: string
+          device_fingerprint: string | null
+          id: string
+          interaction_history: Json | null
+          location_context: Json | null
+          preferences: Json | null
+          session_id: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          interaction_history?: Json | null
+          location_context?: Json | null
+          preferences?: Json | null
+          session_id: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          device_fingerprint?: string | null
+          id?: string
+          interaction_history?: Json | null
+          location_context?: Json | null
+          preferences?: Json | null
+          session_id?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_ui_sessions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      layout_suggestions: {
+        Row: {
+          ai_model_used: string | null
+          context_data: Json
+          created_at: string
+          effectiveness_score: number | null
+          id: string
+          layout_config: Json
+          vendor_id: string
+        }
+        Insert: {
+          ai_model_used?: string | null
+          context_data: Json
+          created_at?: string
+          effectiveness_score?: number | null
+          id?: string
+          layout_config: Json
+          vendor_id: string
+        }
+        Update: {
+          ai_model_used?: string | null
+          context_data?: Json
+          created_at?: string
+          effectiveness_score?: number | null
+          id?: string
+          layout_config?: Json
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "layout_suggestions_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
@@ -252,6 +381,233 @@ export type Database = {
             columns: ["menu_item_id"]
             isOneToOne: false
             referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posters: {
+        Row: {
+          created_at: string
+          file_type: string | null
+          file_url: string | null
+          id: string
+          poster_data: Json
+          template_name: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          poster_data: Json
+          template_name: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          poster_data?: Json
+          template_name?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posters_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      privacy_policy: {
+        Row: {
+          active: boolean | null
+          content: string
+          created_at: string
+          effective_date: string
+          id: string
+          version: string
+        }
+        Insert: {
+          active?: boolean | null
+          content: string
+          created_at?: string
+          effective_date: string
+          id?: string
+          version: string
+        }
+        Update: {
+          active?: boolean | null
+          content?: string
+          created_at?: string
+          effective_date?: string
+          id?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string | null
+          updated_at: string
+          user_id: string
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id: string
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qr_codes: {
+        Row: {
+          active: boolean | null
+          code_type: string | null
+          created_at: string
+          generated_url: string
+          id: string
+          qr_data: string
+          scan_count: number | null
+          table_number: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          code_type?: string | null
+          created_at?: string
+          generated_url: string
+          id?: string
+          qr_data: string
+          scan_count?: number | null
+          table_number?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          active?: boolean | null
+          code_type?: string | null
+          created_at?: string
+          generated_url?: string
+          id?: string
+          qr_data?: string
+          scan_count?: number | null
+          table_number?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_codes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      terms_and_conditions: {
+        Row: {
+          active: boolean | null
+          content: string
+          created_at: string
+          effective_date: string
+          id: string
+          version: string
+        }
+        Insert: {
+          active?: boolean | null
+          content: string
+          created_at?: string
+          effective_date: string
+          id?: string
+          version: string
+        }
+        Update: {
+          active?: boolean | null
+          content?: string
+          created_at?: string
+          effective_date?: string
+          id?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      vendor_config: {
+        Row: {
+          ai_waiter_enabled: boolean | null
+          config_data: Json | null
+          created_at: string
+          dynamic_ui_enabled: boolean | null
+          happy_hour_enabled: boolean | null
+          happy_hour_end: string | null
+          happy_hour_start: string | null
+          id: string
+          updated_at: string
+          vendor_id: string
+          voice_search_enabled: boolean | null
+          weather_suggestions_enabled: boolean | null
+        }
+        Insert: {
+          ai_waiter_enabled?: boolean | null
+          config_data?: Json | null
+          created_at?: string
+          dynamic_ui_enabled?: boolean | null
+          happy_hour_enabled?: boolean | null
+          happy_hour_end?: string | null
+          happy_hour_start?: string | null
+          id?: string
+          updated_at?: string
+          vendor_id: string
+          voice_search_enabled?: boolean | null
+          weather_suggestions_enabled?: boolean | null
+        }
+        Update: {
+          ai_waiter_enabled?: boolean | null
+          config_data?: Json | null
+          created_at?: string
+          dynamic_ui_enabled?: boolean | null
+          happy_hour_enabled?: boolean | null
+          happy_hour_end?: string | null
+          happy_hour_start?: string | null
+          id?: string
+          updated_at?: string
+          vendor_id?: string
+          voice_search_enabled?: boolean | null
+          weather_suggestions_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_config_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
