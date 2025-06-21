@@ -30,6 +30,7 @@ interface CartSidebarProps {
   getTotalItems: () => number;
   vendorId: string;
   guestSessionId: string;
+  onOrderComplete?: (orderId: string) => void;
 }
 
 const CartSidebar: React.FC<CartSidebarProps> = ({
@@ -39,7 +40,8 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
   getTotalPrice,
   getTotalItems,
   vendorId,
-  guestSessionId
+  guestSessionId,
+  onOrderComplete
 }) => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
@@ -54,6 +56,10 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
         onRemoveFromCart(item.id);
       }
     });
+    // Call parent callback if provided
+    if (onOrderComplete) {
+      onOrderComplete(orderId);
+    }
   };
 
   const removeAllOfItem = (itemId: string) => {

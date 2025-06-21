@@ -351,8 +351,12 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
           guest_session_id: string
           id: string
+          notes: string | null
           payment_method: string | null
           payment_status: string | null
           status: string | null
@@ -362,8 +366,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           guest_session_id: string
           id?: string
+          notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
           status?: string | null
@@ -373,8 +381,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
           guest_session_id?: string
           id?: string
+          notes?: string | null
           payment_method?: string | null
           payment_status?: string | null
           status?: string | null
