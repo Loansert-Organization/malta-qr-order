@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import DynamicHeroSection from '@/components/DynamicHeroSection';
 import MenuSection from '@/components/MainContent/MenuSection';
 import CartSection from '@/components/MainContent/CartSection';
-import AIInsightsPanel from '@/components/AIIns}ghtsPanel';
+import AIInsightsPanel from '@/components/AIInsightsPanel';
 import { MenuItem, CartItem, Vendor, AIInsights } from '@/components/MainContent/types';
 
 interface AIInsight {
