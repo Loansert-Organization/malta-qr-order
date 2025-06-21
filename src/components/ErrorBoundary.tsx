@@ -25,11 +25,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error('🚨 Error caught by boundary:', error, errorInfo);
     this.setState({ errorInfo });
     
-    // Log error to console for debugging
-    console.group('🚨 Error Boundary Caught Error');
+    // Log error details for debugging
+    console.group('🚨 Error Boundary Details');
     console.error('Error:', error);
     console.error('Component Stack:', errorInfo.componentStack);
     console.error('Error Boundary Props:', this.props);
@@ -37,10 +37,12 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   handleRetry = () => {
+    console.log('🔄 Error boundary retry triggered');
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
   handleGoHome = () => {
+    console.log('🏠 Navigating to home from error boundary');
     window.location.href = '/';
   };
 

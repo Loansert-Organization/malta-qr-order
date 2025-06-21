@@ -9,7 +9,6 @@ import { Search, MapPin, Clock, Star, Store } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import LoadingState from '@/components/LoadingState';
 import NoDataState from '@/components/NoDataState';
-import { useToast } from '@/hooks/use-toast';
 
 interface Vendor {
   id: string;
@@ -25,7 +24,6 @@ const VendorDirectory = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchVendors();
@@ -33,21 +31,24 @@ const VendorDirectory = () => {
 
   const fetchVendors = async () => {
     try {
+      console.log('🔍 Fetching vendors from Supabase...');
+      
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
         .eq('active', true)
         .order('name');
 
-      if (error) throw error;
-      setVendors(data || []);
+      if (error) {
+        console.error('❌ Error fetching vendors:', error);
+        setVendors([]);
+      } else {
+        console.log('✅ Vendors loaded:', data?.length || 0);
+        setVendors(data || []);
+      }
     } catch (error) {
-      console.error('Error fetching vendors:', error);
-      toast({
-        title: "Error Loading Vendors",
-        description: "Unable to load restaurant listings",
-        variant: "destructive"
-      });
+      console.error('❌ Unexpected error fetching vendors:', error);
+      setVendors([]);
     } finally {
       setLoading(false);
     }
@@ -98,9 +99,9 @@ const VendorDirectory = () => {
               "Contact support if you're a restaurant owner wanting to join"
             ]}
             actionText="Refresh Page"
-            onAction={() => window.location.reload()}
+            onAction={fetchVendors}
           />
-        ) : filteredVendors.length === 0 ? (
+        ) : filteredVendors.length === 0 && searchQuery ? (
           <NoDataState
             icon={Search}
             title="No Restaurants Found"

@@ -21,9 +21,9 @@ export const useVendorData = (slug: string | undefined) => {
       }
 
       try {
-        console.log('Fetching vendor data for slug:', slug);
+        console.log('🔍 Fetching vendor data for slug:', slug);
 
-        // Use maybeSingle() instead of single() to handle no results gracefully
+        // Use maybeSingle() to handle no results gracefully
         const { data: vendorData, error: vendorError } = await supabase
           .from('vendors')
           .select('*')
@@ -32,44 +32,26 @@ export const useVendorData = (slug: string | undefined) => {
           .maybeSingle();
 
         if (vendorError) {
-          console.error('Vendor fetch error:', vendorError);
-          throw new Error(`Failed to fetch vendor: ${vendorError.message}`);
-        }
-
-        if (!vendorData) {
-          console.log('No vendor found with slug:', slug);
-          
-          // Check what vendors actually exist
-          const { data: availableVendors, error: listError } = await supabase
-            .from('vendors')
-            .select('slug, name')
-            .eq('active', true)
-            .limit(5);
-          
-          if (!listError && availableVendors?.length > 0) {
-            console.log('Available vendors:', availableVendors.map(v => v.slug));
-            toast({
-              title: "Vendor Not Found",
-              description: `No active vendor found with slug "${slug}". Try: ${availableVendors.map(v => v.slug).join(', ')}`,
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "No Vendors Available",
-              description: "No active vendors found in the system.",
-              variant: "destructive"
-            });
-          }
-          
+          console.error('❌ Vendor fetch error:', vendorError);
+          setVendor(null);
+          setMenuItems([]);
           setLoading(false);
           return;
         }
 
-        console.log('Vendor found:', vendorData.name);
+        if (!vendorData) {
+          console.log('⚠️  No vendor found with slug:', slug);
+          setVendor(null);
+          setMenuItems([]);
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Vendor found:', vendorData.name);
         setVendor(vendorData);
 
         // Fetch menu and menu items
-        console.log('Fetching menu for vendor ID:', vendorData.id);
+        console.log('🔍 Fetching menu for vendor ID:', vendorData.id);
         const { data: menuData, error: menuError } = await supabase
           .from('menus')
           .select(`
@@ -91,42 +73,32 @@ export const useVendorData = (slug: string | undefined) => {
           .maybeSingle();
 
         if (menuError) {
-          console.error('Menu fetch error:', menuError);
-          throw new Error(`Failed to fetch menu: ${menuError.message}`);
-        }
-
-        if (!menuData) {
-          console.log('No active menu found for vendor:', vendorData.name);
-          toast({
-            title: "No Menu Available",
-            description: `No active menu found for ${vendorData.name}`,
-            variant: "destructive"
-          });
+          console.error('❌ Menu fetch error:', menuError);
+          setMenuItems([]);
+        } else if (!menuData) {
+          console.log('⚠️  No active menu found for vendor:', vendorData.name);
           setMenuItems([]);
         } else {
-          console.log('Menu items loaded:', menuData.menu_items?.length || 0);
+          console.log('✅ Menu items loaded:', menuData.menu_items?.length || 0);
           setMenuItems(menuData.menu_items || []);
         }
 
-        // Fetch weather data
+        // Fetch weather data (non-blocking)
         try {
           const weather = await weatherService.getWeatherData('Malta');
           if (weather) {
             setWeatherData(weather);
-            console.log('Weather data loaded');
+            console.log('✅ Weather data loaded');
           }
         } catch (weatherError) {
-          console.warn('Failed to load weather data:', weatherError);
+          console.warn('⚠️  Failed to load weather data:', weatherError);
           // Don't fail the whole operation for weather data
         }
 
       } catch (error: any) {
-        console.error('Error in fetchVendorAndMenu:', error);
-        toast({
-          title: "Error Loading Data",
-          description: error?.message || "Failed to load menu data",
-          variant: "destructive"
-        });
+        console.error('❌ Error in fetchVendorAndMenu:', error);
+        setVendor(null);
+        setMenuItems([]);
       } finally {
         setLoading(false);
       }
