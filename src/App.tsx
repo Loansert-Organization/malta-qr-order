@@ -13,6 +13,7 @@ import AdminPanel from "./pages/AdminPanel";
 import VendorRegistrationPage from "./pages/VendorRegistration";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { Toaster } from "@/components/ui/toaster";
 
 // Enhanced QueryClient with proper error handling
 const queryClient = new QueryClient({
@@ -35,13 +36,6 @@ const queryClient = new QueryClient({
         return failureCount < 2;
       },
     },
-  },
-});
-
-// Global error handler
-queryClient.setMutationDefaults(['*'], {
-  onError: (error) => {
-    console.error('Mutation error:', error);
   },
 });
 
@@ -81,6 +75,7 @@ const App: React.FC = () => {
                 </ErrorBoundary>
               </main>
             </div>
+            <Toaster />
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>

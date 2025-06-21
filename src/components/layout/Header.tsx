@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/AuthProvider';
 import UserMenu from '@/components/auth/UserMenu';
-import AuthModal from '@/components/auth/AuthModal';
 import { LogIn, UserPlus } from 'lucide-react';
 
 const Header: React.FC = () => {
@@ -37,45 +36,51 @@ const Header: React.FC = () => {
   }
 
   return (
-    <>
-      <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <h1 className="text-xl font-bold text-blue-600">ICUPA Malta</h1>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <UserMenu />
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleSignInClick}
-                >
-                  <LogIn className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleSignUpClick}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Sign Up
-                </Button>
-              </div>
-            )}
-          </div>
+    <header className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <h1 className="text-xl font-bold text-blue-600">ICUPA Malta</h1>
         </div>
-      </header>
 
-      <AuthModal
-        open={authModalOpen}
-        onOpenChange={setAuthModalOpen}
-        defaultTab={authModalTab}
-      />
-    </>
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <UserMenu />
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleSignInClick}
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+              <Button 
+                size="sm"
+                onClick={handleSignUpClick}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Sign Up
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Lazy load AuthModal only when needed */}
+      {authModalOpen && (
+        <React.Suspense fallback={<div className="hidden" />}>
+          {React.createElement(
+            React.lazy(() => import('@/components/auth/AuthModal')),
+            {
+              open: authModalOpen,
+              onOpenChange: setAuthModalOpen,
+              defaultTab: authModalTab
+            }
+          )}
+        </React.Suspense>
+      )}
+    </header>
   );
 };
 
