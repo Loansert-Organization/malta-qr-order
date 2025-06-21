@@ -8,8 +8,9 @@ import { Loader2 } from 'lucide-react';
 import { CartItem } from '@/hooks/useOrderDemo/types';
 import OrderSummary from './OrderSummary';
 import CustomerInfoForm from './CustomerInfoForm';
-import PaymentMethodSelector from './PaymentMethodSelector';
 import TermsAgreement from './TermsAgreement';
+import PaymentMethodSelector from '../payment/PaymentMethodSelector';
+import PaymentStatusTracker from '../payment/PaymentStatusTracker';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -37,11 +38,33 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     email: '',
     notes: ''
   });
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'revolut'>('stripe');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string>('');
+  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
+  const [showPayment, setShowPayment] = useState(false);
+  const [vendorRevolutLink, setVendorRevolutLink] = useState<string>('');
   const { toast } = useToast();
 
-  const handleSubmitOrder = async () => {
+  React.useEffect(() => {
+    // Fetch vendor Revolut link
+    const fetchVendorInfo = async () => {
+      const { data: vendor } = await supabase
+        .from('vendors')
+        .select('revolut_link')
+        .eq('id', vendorId)
+        .single();
+      
+      if (vendor?.revolut_link) {
+        setVendorRevolutLink(vendor.revolut_link);
+      }
+    };
+
+    if (vendorId) {
+      fetchVendorInfo();
+    }
+  }, [vendorId]);
+
+  const handleCreateOrder = async () => {
     if (!customerInfo.name || !customerInfo.phone) {
       toast({
         title: "Missing Information",
@@ -71,8 +94,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           guest_session_id: guestSessionId,
           total_amount: totalPrice,
           status: 'pending',
-          payment_method: paymentMethod,
-          payment_status: 'pending'
+          payment_status: 'pending',
+          customer_name: customerInfo.name,
+          customer_phone: customerInfo.phone,
+          customer_email: customerInfo.email,
+          notes: customerInfo.notes
         })
         .select()
         .single();
@@ -94,37 +120,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       if (itemsError) throw itemsError;
 
-      // Process payment based on method
-      if (paymentMethod === 'stripe') {
-        // Simulate Stripe payment processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Update order status
-        await supabase
-          .from('orders')
-          .update({ 
-            status: 'confirmed',
-            payment_status: 'paid',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', order.id);
-      } else {
-        // For Revolut, we'll redirect to their payment link
-        window.open('https://revolut.me/example', '_blank');
-      }
+      setCurrentOrderId(order.id);
+      setShowPayment(true);
 
       toast({
-        title: "Order Placed Successfully!",
-        description: `Order #${order.id.slice(-8)} has been submitted`,
+        title: "Order Created!",
+        description: "Please proceed with payment to confirm your order",
       });
-
-      onOrderComplete(order.id);
-      onClose();
     } catch (error) {
-      console.error('Order submission error:', error);
+      console.error('Order creation error:', error);
       toast({
         title: "Order Failed",
-        description: "There was an error processing your order. Please try again.",
+        description: "There was an error creating your order. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -132,46 +139,92 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   };
 
+  const handlePaymentSuccess = (paymentIntentId?: string) => {
+    if (paymentIntentId) {
+      setPaymentIntentId(paymentIntentId);
+    }
+    
+    toast({
+      title: "Payment Initiated!",
+      description: "Your payment is being processed. Please wait for confirmation.",
+    });
+  };
+
+  const handlePaymentError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive"
+    });
+  };
+
+  const handleStatusUpdate = (status: string) => {
+    if (status === 'confirmed') {
+      onOrderComplete(currentOrderId);
+      onClose();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Complete Your Order</DialogTitle>
+          <DialogTitle>
+            {!showPayment ? 'Complete Your Order' : 'Payment & Status'}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          <OrderSummary cart={cart} totalPrice={totalPrice} />
-          
-          <CustomerInfoForm 
-            customerInfo={customerInfo}
-            setCustomerInfo={setCustomerInfo}
-          />
+          {!showPayment ? (
+            <>
+              <OrderSummary cart={cart} totalPrice={totalPrice} />
+              
+              <CustomerInfoForm 
+                customerInfo={customerInfo}
+                setCustomerInfo={setCustomerInfo}
+              />
 
-          <PaymentMethodSelector
-            paymentMethod={paymentMethod}
-            setPaymentMethod={setPaymentMethod}
-          />
+              <TermsAgreement
+                agreedToTerms={agreedToTerms}
+                setAgreedToTerms={setAgreedToTerms}
+              />
 
-          <TermsAgreement
-            agreedToTerms={agreedToTerms}
-            setAgreedToTerms={setAgreedToTerms}
-          />
+              <Button
+                onClick={handleCreateOrder}
+                disabled={isProcessing}
+                className="w-full"
+                size="lg"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Order...
+                  </>
+                ) : (
+                  `Create Order - €${totalPrice.toFixed(2)}`
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <PaymentMethodSelector
+                amount={totalPrice}
+                currency="eur"
+                orderId={currentOrderId}
+                vendorRevolutLink={vendorRevolutLink}
+                customerInfo={customerInfo}
+                onPaymentSuccess={handlePaymentSuccess}
+                onPaymentError={handlePaymentError}
+              />
 
-          <Button
-            onClick={handleSubmitOrder}
-            disabled={isProcessing}
-            className="w-full"
-            size="lg"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              `Place Order - €${totalPrice.toFixed(2)}`
-            )}
-          </Button>
+              <PaymentStatusTracker
+                orderId={currentOrderId}
+                paymentIntentId={paymentIntentId}
+                paymentMethod={paymentIntentId ? 'stripe' : 'revolut'}
+                onStatusUpdate={handleStatusUpdate}
+              />
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
