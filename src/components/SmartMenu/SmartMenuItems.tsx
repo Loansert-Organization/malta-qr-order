@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Clock } from 'lucide-react';
+import { Plus, Clock, ChefHat } from 'lucide-react';
 import { MenuItem, AIInsights, WeatherData } from './types';
 import { SmartMenuBadges } from './SmartMenuBadges';
 
@@ -15,9 +15,16 @@ interface SmartMenuItemsProps {
 export const SmartMenuItems = ({ items, onAddToCart, aiInsights, weatherData }: SmartMenuItemsProps) => {
   if (items.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <p className="text-gray-500">No items found matching your search.</p>
+      <Card className="border-dashed border-2 border-gray-200">
+        <CardContent className="p-12 text-center">
+          <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">No Menu Items Available</h3>
+          <p className="text-gray-500 mb-4">
+            This restaurant hasn't added any menu items yet, or they may be temporarily unavailable.
+          </p>
+          <p className="text-sm text-gray-400">
+            Please check back later or contact the restaurant directly.
+          </p>
         </CardContent>
       </Card>
     );

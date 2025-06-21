@@ -51,22 +51,8 @@ const OrderDemo = () => {
     );
   }
 
-  if (menuItems.length === 0) {
-    return (
-      <NotFoundState
-        title="Menu Not Available"
-        description={`${vendor.name} doesn't have an active menu at the moment`}
-        suggestions={[
-          "Contact the restaurant directly",
-          "Try again later",
-          "Check if they're currently open"
-        ]}
-        onRetry={() => window.location.reload()}
-        showHomeButton={false}
-      />
-    );
-  }
-
+  // Always render the MainContent, even with empty menu items
+  // The SmartMenu component will handle the empty state gracefully
   return (
     <MainContent
       vendor={vendor}
