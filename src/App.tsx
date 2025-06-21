@@ -11,6 +11,7 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import OfflineIndicator from "./components/OfflineIndicator";
+import PerformanceMonitor from "./components/PerformanceMonitor";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +43,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
       <PWAInstallPrompt />
+      <PerformanceMonitor />
     </TooltipProvider>
   </QueryClientProvider>
 );
