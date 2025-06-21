@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -82,11 +81,6 @@ const App: React.FC = () => {
                 </ErrorBoundary>
               </main>
             </div>
-            
-            {/* Single Toast Notification System */}
-            <ErrorBoundary fallback={null}>
-              <Toaster />
-            </ErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>

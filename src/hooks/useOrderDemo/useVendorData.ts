@@ -2,11 +2,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { weatherService } from '@/services/weatherService';
-import { useToast } from '@/hooks/use-toast';
+import { useNativeNotifications } from '@/hooks/useNativeNotifications';
 import { MenuItem, Vendor } from './types';
 
 export const useVendorData = (slug: string | undefined) => {
-  const { toast } = useToast();
+  const { showNotification } = useNativeNotifications();
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,7 @@ export const useVendorData = (slug: string | undefined) => {
 
         if (vendorError) {
           console.error('❌ Vendor fetch error:', vendorError);
+          showNotification('Error loading restaurant', 'Please try again later', 'error');
           setVendor(null);
           setMenuItems([]);
           setLoading(false);
@@ -97,6 +98,7 @@ export const useVendorData = (slug: string | undefined) => {
 
       } catch (error: any) {
         console.error('❌ Error in fetchVendorAndMenu:', error);
+        showNotification('Error loading data', 'Please refresh the page', 'error');
         setVendor(null);
         setMenuItems([]);
       } finally {
@@ -105,7 +107,7 @@ export const useVendorData = (slug: string | undefined) => {
     };
 
     fetchVendorAndMenu();
-  }, [slug, toast]);
+  }, [slug, showNotification]);
 
   return {
     vendor,
