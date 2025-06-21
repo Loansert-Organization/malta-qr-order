@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { layoutService, DynamicLayout, LayoutContext } from '@/services/layoutService';
+import { layoutService } from '@/services/layoutService';
+import { LayoutContext, DynamicLayout } from '@/types/layout';
 import { contextService } from '@/services/contextService';
 
 export const useDynamicLayout = (vendorId: string) => {
