@@ -180,8 +180,8 @@ class BackupService {
     console.log('Automated backup scheduling would be implemented via pg_cron');
   }
 
-  getBackupStats() {
-    const backups = this.listBackups();
+  async getBackupStats() {
+    const backups = await this.listBackups();
     return {
       totalBackups: backups.length,
       latestBackup: backups[0]?.timestamp || null,
