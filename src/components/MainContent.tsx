@@ -1,38 +1,34 @@
-
 import React, { useState } from 'react';
-import DynamicHeroSection from '@/components/DynamicHeroSection';
-import MenuSection from '@/components/MainContent/MenuSection';
-import CartSection from '@/components/MainContent/CartSection';
-import AIInsightsPanel from '@/components/AIInsightsPanel';
-import OrderSuccess from '@/components/checkout/OrderSuccess';
-import { MenuItem, CartItem, Vendor, AIInsights } from '@/components/MainContent/types';
-
-interface AIInsight {
-  type: 'trending' | 'weather' | 'time' | 'social';
-  title: string;
-  description: string;
-  items: string[];
-  confidence: number;
-}
+import { Link } from 'react-router-dom';
+import { MapPin, MessageCircle, X, Bot } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import HeroSection from './HeroSection';
+import SearchSection from './SearchSection';
+import AIInsightsPanel from './AIInsightsPanel';
+import SmartMenu from './SmartMenu';
+import CartSection from './CartSidebar';
+import AIWaiterChat from './AIWaiterChat';
+import AIWaiterButton from './AIWaiterButton';
+import AISystemVerification from './AISystemVerification';
 
 interface MainContentProps {
-  vendor: Vendor;
+  vendor: any;
   layout: any;
   weatherData: any;
-  menuItems: MenuItem[];
-  cart: CartItem[];
+  menuItems: any[];
+  cart: any[];
   searchQuery: string;
   contextData: any;
   handleHeroCtaClick: () => void;
   handleSearch: (query: string) => void;
-  addToCart: (item: MenuItem) => void;
+  addToCart: (item: any) => void;
   removeFromCart: (itemId: string) => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
   guestSessionId: string;
 }
 
-const MainContent: React.FC<MainContentProps> = ({
+const MainContent = ({
   vendor,
   layout,
   weatherData,
@@ -47,87 +43,110 @@ const MainContent: React.FC<MainContentProps> = ({
   getTotalPrice,
   getTotalItems,
   guestSessionId
-}) => {
-  const [focusedCategory, setFocusedCategory] = useState<string>('');
-  const [completedOrderId, setCompletedOrderId] = useState<string>('');
-
-  const aiInsights: AIInsights = {
-    trending_items: contextData?.ai_insights?.trending_items || [],
-    recommended_categories: contextData?.ai_insights?.recommended_categories || [],
-    weather_suggestions: contextData?.weather?.recommendations || [],
-    time_based_priorities: contextData?.ai_insights?.time_based_priorities || []
-  };
-
-  const handleInsightClick = (insight: AIInsight) => {
-    // Focus on the relevant category or items
-    if (insight.items && insight.items.length > 0) {
-      const category = insight.items[0];
-      setFocusedCategory(category.toLowerCase());
-      
-      // Scroll to menu section
-      const menuElement = document.getElementById('menu-section');
-      if (menuElement) {
-        menuElement.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  };
+}: MainContentProps) => {
+  const [showAIWaiter, setShowAIWaiter] = useState(false);
+  const [showAIVerification, setShowAIVerification] = useState(false);
 
   const handleOrderComplete = (orderId: string) => {
-    setCompletedOrderId(orderId);
+    console.log('Order completed:', orderId);
+    // Additional order completion logic can be added here
   };
-
-  const handleOrderSuccessClose = () => {
-    setCompletedOrderId('');
-    // Optionally clear cart here if needed
-  };
-
-  if (completedOrderId) {
-    return (
-      <OrderSuccess 
-        orderId={completedOrderId} 
-        onClose={handleOrderSuccessClose} 
-      />
-    );
-  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Dynamic Hero Section */}
-      {layout?.hero_section && (
-        <DynamicHeroSection
-          heroSection={layout.hero_section}
-          onCtaClick={handleHeroCtaClick}
-          vendorName={vendor.name}
-          location={vendor.location || 'Malta'}
-          weatherData={weatherData}
-        />
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* AI Insights Panel */}
-        <div className="lg:col-span-1 order-2 lg:order-1">
-          <AIInsightsPanel
-            vendorId={vendor.id}
-            contextData={contextData}
-            onInsightClick={handleInsightClick}
-          />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Link to="/" className="text-primary hover:text-primary/80">
+                ← Back to Restaurants
+              </Link>
+              {vendor.logo_url && (
+                <img 
+                  src={vendor.logo_url} 
+                  alt={vendor.name}
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              )}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{vendor.name}</h1>
+                {vendor.location && (
+                  <p className="text-sm text-gray-600 flex items-center">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    {vendor.location}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {/* AI System Verification Button (Admin/Development) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAIVerification(true)}
+                className="hidden md:flex"
+              >
+                <Bot className="h-4 w-4 mr-2" />
+                AI System Test
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAIWaiter(true)}
+                className="flex items-center space-x-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Ask Kai AI</span>
+              </Button>
+            </div>
+          </div>
         </div>
+      </header>
 
-        {/* Menu Items */}
-        <div className="lg:col-span-2 order-1 lg:order-2">
-          <MenuSection
-            menuItems={menuItems}
-            searchQuery={searchQuery}
-            aiInsights={aiInsights}
-            weatherData={weatherData}
-            handleSearch={handleSearch}
-            addToCart={addToCart}
-            focusedCategory={focusedCategory}
-          />
-        </div>
+      {/* Main Content Grid */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left Column - Menu and Content */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Hero Section */}
+            <HeroSection
+              layout={layout}
+              vendor={vendor}
+              weatherData={weatherData}
+              contextData={contextData}
+              onCtaClick={handleHeroCtaClick}
+            />
 
-        {/* Cart Sidebar */}
-        <div className="lg:col-span-1 order-3">
+            {/* Search and Filters */}
+            <SearchSection
+              searchQuery={searchQuery}
+              onSearch={handleSearch}
+              contextData={contextData}
+            />
+
+            {/* AI Insights Panel */}
+            <AIInsightsPanel
+              vendorId={vendor.id}
+              contextData={contextData}
+              onInsightClick={(insight) => {
+                console.log('AI Insight clicked:', insight);
+              }}
+            />
+
+            {/* Menu Items */}
+            <SmartMenu
+              menuItems={menuItems}
+              onAddToCart={addToCart}
+              aiInsights={contextData?.ai_insights}
+              weatherData={weatherData}
+              searchQuery={searchQuery}
+            />
+          </div>
+
+          {/* Right Column - Cart */}
           <CartSection
             cart={cart}
             onAddToCart={addToCart}
@@ -140,6 +159,40 @@ const MainContent: React.FC<MainContentProps> = ({
           />
         </div>
       </div>
+
+      {/* AI Waiter Chat */}
+      {showAIWaiter && (
+        <AIWaiterChat
+          onClose={() => setShowAIWaiter(false)}
+          onAddToCart={addToCart}
+          vendorSlug={vendor.slug}
+          guestSessionId={guestSessionId}
+        />
+      )}
+
+      {/* AI System Verification Modal */}
+      {showAIVerification && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-xl font-bold">AI System Verification</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAIVerification(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(90vh-100px)]">
+              <AISystemVerification />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Waiter Button */}
+      <AIWaiterButton onClick={() => setShowAIWaiter(true)} />
     </div>
   );
 };
