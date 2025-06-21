@@ -115,7 +115,7 @@ const Index = () => {
                     <CardDescription className="text-center">
                       {feature.description}
                     </CardDescription>
-                  </Car dContent>
+                  </CardContent>
                 </Card>
               );
             })}
