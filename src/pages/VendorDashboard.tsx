@@ -27,42 +27,81 @@ const VendorDashboard = () => {
 
   const fetchVendorData = async () => {
     try {
-      console.log('Fetching vendor data for ta-kris...');
+      setLoading(true);
+      setError(null);
       
-      const { data, error } = await supabase
+      console.log('=== VENDOR DASHBOARD DEBUG ===');
+      console.log('Starting vendor data fetch...');
+      
+      // First, let's check if we can connect to Supabase at all
+      const { data: testConnection, error: connectionError } = await supabase
         .from('vendors')
-        .select('*')
+        .select('count')
+        .limit(1);
+      
+      console.log('Connection test result:', { testConnection, connectionError });
+      
+      if (connectionError) {
+        console.error('Connection error:', connectionError);
+        throw new Error(`Database connection failed: ${connectionError.message}`);
+      }
+      
+      // Now fetch the specific vendor
+      console.log('Fetching vendor with slug: ta-kris');
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendors')
+        .select('id, name, slug, location, active, created_at')
         .eq('slug', 'ta-kris')
         .maybeSingle();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      console.log('Vendor query result:', { vendorData, vendorError });
+
+      if (vendorError) {
+        console.error('Vendor fetch error:', vendorError);
+        throw new Error(`Failed to fetch vendor: ${vendorError.message}`);
       }
 
-      if (!data) {
+      if (!vendorData) {
         console.log('No vendor found with slug ta-kris');
-        setError('Vendor not found. Please check if the vendor exists.');
+        
+        // Let's check what vendors actually exist
+        const { data: allVendors, error: allVendorsError } = await supabase
+          .from('vendors')
+          .select('slug, name')
+          .limit(10);
+        
+        console.log('Available vendors:', { allVendors, allVendorsError });
+        
+        setError('Vendor "ta-kris" not found. Available vendors: ' + 
+                 (allVendors?.map(v => v.slug).join(', ') || 'None'));
         return;
       }
 
-      console.log('Vendor data fetched:', data);
-      setVendor(data);
+      console.log('Successfully fetched vendor:', vendorData);
+      setVendor(vendorData);
       
-    } catch (error) {
-      console.error('Error fetching vendor data:', error);
-      setError('Failed to load vendor data. Please try again.');
+    } catch (error: any) {
+      console.error('=== VENDOR FETCH ERROR ===');
+      console.error('Error type:', typeof error);
+      console.error('Error message:', error?.message);
+      console.error('Full error:', error);
+      
+      const errorMessage = error?.message || 'Unknown error occurred';
+      setError(`Failed to load vendor data: ${errorMessage}`);
+      
       toast({
         title: "Error",
-        description: "Failed to load vendor data",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setLoading(false);
+      console.log('=== VENDOR DASHBOARD DEBUG END ===');
     }
   };
 
   useEffect(() => {
+    console.log('VendorDashboard component mounted, starting data fetch...');
     fetchVendorData();
   }, []);
 
@@ -72,6 +111,7 @@ const VendorDashboard = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading vendor dashboard...</p>
+          <p className="mt-2 text-sm text-gray-500">Connecting to database...</p>
         </div>
       </div>
     );
@@ -80,19 +120,29 @@ const VendorDashboard = () => {
   if (error || !vendor) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-2xl">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            {error || 'Vendor Not Found'}
+            {error ? 'Database Error' : 'Vendor Not Found'}
           </h2>
-          <p className="text-gray-600 mb-4">
-            {error || 'Unable to load vendor information.'}
-          </p>
-          <button 
-            onClick={fetchVendorData}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Try Again
-          </button>
+          <div className="bg-red-50 p-4 rounded-lg mb-4">
+            <p className="text-red-800 text-sm font-mono whitespace-pre-wrap">
+              {error || 'Unable to load vendor information.'}
+            </p>
+          </div>
+          <div className="space-x-4">
+            <button 
+              onClick={fetchVendorData}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Retry Connection
+            </button>
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            >
+              Go Home
+            </button>
+          </div>
         </div>
       </div>
     );
