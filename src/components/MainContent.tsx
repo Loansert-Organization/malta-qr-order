@@ -4,6 +4,7 @@ import DynamicHeroSection from '@/components/DynamicHeroSection';
 import MenuSection from '@/components/MainContent/MenuSection';
 import CartSection from '@/components/MainContent/CartSection';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
+import OrderSuccess from '@/components/checkout/OrderSuccess';
 import { MenuItem, CartItem, Vendor, AIInsights } from '@/components/MainContent/types';
 
 interface AIInsight {
@@ -48,6 +49,7 @@ const MainContent: React.FC<MainContentProps> = ({
   guestSessionId
 }) => {
   const [focusedCategory, setFocusedCategory] = useState<string>('');
+  const [completedOrderId, setCompletedOrderId] = useState<string>('');
 
   const aiInsights: AIInsights = {
     trending_items: contextData?.ai_insights?.trending_items || [],
@@ -69,6 +71,24 @@ const MainContent: React.FC<MainContentProps> = ({
       }
     }
   };
+
+  const handleOrderComplete = (orderId: string) => {
+    setCompletedOrderId(orderId);
+  };
+
+  const handleOrderSuccessClose = () => {
+    setCompletedOrderId('');
+    // Optionally clear cart here if needed
+  };
+
+  if (completedOrderId) {
+    return (
+      <OrderSuccess 
+        orderId={completedOrderId} 
+        onClose={handleOrderSuccessClose} 
+      />
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -116,6 +136,7 @@ const MainContent: React.FC<MainContentProps> = ({
             getTotalItems={getTotalItems}
             vendorId={vendor.id}
             guestSessionId={guestSessionId}
+            onOrderComplete={handleOrderComplete}
           />
         </div>
       </div>

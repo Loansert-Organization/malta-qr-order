@@ -9,8 +9,7 @@ import { CartItem } from '@/hooks/useOrderDemo/types';
 import OrderSummary from './OrderSummary';
 import CustomerInfoForm from './CustomerInfoForm';
 import TermsAgreement from './TermsAgreement';
-import PaymentMethodSelector from '../payment/PaymentMethodSelector';
-import PaymentStatusTracker from '../payment/PaymentStatusTracker';
+import PaymentMethodSelector from './PaymentMethodSelector';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -39,9 +38,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     notes: ''
   });
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [currentOrderId, setCurrentOrderId] = useState<string>('');
-  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
-  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'revolut'>('revolut');
   const [vendorRevolutLink, setVendorRevolutLink] = useState<string>('');
   const { toast } = useToast();
 
@@ -95,10 +92,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           total_amount: totalPrice,
           status: 'pending',
           payment_status: 'pending',
-          customer_name: customerInfo.name,
-          customer_phone: customerInfo.phone,
-          customer_email: customerInfo.email,
-          notes: customerInfo.notes
+          payment_method: paymentMethod
         })
         .select()
         .single();
@@ -120,13 +114,32 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       if (itemsError) throw itemsError;
 
-      setCurrentOrderId(order.id);
-      setShowPayment(true);
+      // Handle payment based on method
+      if (paymentMethod === 'revolut' && vendorRevolutLink) {
+        // Open Revolut payment link
+        window.open(vendorRevolutLink, '_blank');
+        
+        toast({
+          title: "Payment Opened",
+          description: "Complete your payment in the new tab, then return here.",
+        });
 
-      toast({
-        title: "Order Created!",
-        description: "Please proceed with payment to confirm your order",
-      });
+        // Simulate order completion for demo purposes
+        setTimeout(() => {
+          onOrderComplete(order.id);
+          onClose();
+        }, 3000);
+      } else {
+        // For stripe or when no revolut link, simulate success
+        toast({
+          title: "Order Created!",
+          description: "Your order has been submitted successfully.",
+        });
+        
+        onOrderComplete(order.id);
+        onClose();
+      }
+
     } catch (error) {
       console.error('Order creation error:', error);
       toast({
@@ -139,92 +152,46 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   };
 
-  const handlePaymentSuccess = (paymentIntentId?: string) => {
-    if (paymentIntentId) {
-      setPaymentIntentId(paymentIntentId);
-    }
-    
-    toast({
-      title: "Payment Initiated!",
-      description: "Your payment is being processed. Please wait for confirmation.",
-    });
-  };
-
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: "Payment Failed",
-      description: error,
-      variant: "destructive"
-    });
-  };
-
-  const handleStatusUpdate = (status: string) => {
-    if (status === 'confirmed') {
-      onOrderComplete(currentOrderId);
-      onClose();
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {!showPayment ? 'Complete Your Order' : 'Payment & Status'}
-          </DialogTitle>
+          <DialogTitle>Complete Your Order</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {!showPayment ? (
-            <>
-              <OrderSummary cart={cart} totalPrice={totalPrice} />
-              
-              <CustomerInfoForm 
-                customerInfo={customerInfo}
-                setCustomerInfo={setCustomerInfo}
-              />
+          <OrderSummary cart={cart} totalPrice={totalPrice} />
+          
+          <CustomerInfoForm 
+            customerInfo={customerInfo}
+            setCustomerInfo={setCustomerInfo}
+          />
 
-              <TermsAgreement
-                agreedToTerms={agreedToTerms}
-                setAgreedToTerms={setAgreedToTerms}
-              />
+          <PaymentMethodSelector
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+          />
 
-              <Button
-                onClick={handleCreateOrder}
-                disabled={isProcessing}
-                className="w-full"
-                size="lg"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Order...
-                  </>
-                ) : (
-                  `Create Order - €${totalPrice.toFixed(2)}`
-                )}
-              </Button>
-            </>
-          ) : (
-            <>
-              <PaymentMethodSelector
-                amount={totalPrice}
-                currency="eur"
-                orderId={currentOrderId}
-                vendorRevolutLink={vendorRevolutLink}
-                customerInfo={customerInfo}
-                onPaymentSuccess={handlePaymentSuccess}
-                onPaymentError={handlePaymentError}
-              />
+          <TermsAgreement
+            agreedToTerms={agreedToTerms}
+            setAgreedToTerms={setAgreedToTerms}
+          />
 
-              <PaymentStatusTracker
-                orderId={currentOrderId}
-                paymentIntentId={paymentIntentId}
-                paymentMethod={paymentIntentId ? 'stripe' : 'revolut'}
-                onStatusUpdate={handleStatusUpdate}
-              />
-            </>
-          )}
+          <Button
+            onClick={handleCreateOrder}
+            disabled={isProcessing}
+            className="w-full"
+            size="lg"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing Order...
+              </>
+            ) : (
+              `Place Order - €${totalPrice.toFixed(2)}`
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
