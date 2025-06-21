@@ -94,6 +94,45 @@ export type Database = {
           },
         ]
       }
+      bars: {
+        Row: {
+          address: string | null
+          contact_number: string | null
+          created_at: string | null
+          google_place_id: string | null
+          id: string
+          location_gps: unknown | null
+          name: string
+          rating: number | null
+          review_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_number?: string | null
+          created_at?: string | null
+          google_place_id?: string | null
+          id?: string
+          location_gps?: unknown | null
+          name: string
+          rating?: number | null
+          review_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_number?: string | null
+          created_at?: string | null
+          google_place_id?: string | null
+          id?: string
+          location_gps?: unknown | null
+          name?: string
+          rating?: number | null
+          review_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       guest_ui_sessions: {
         Row: {
           created_at: string
