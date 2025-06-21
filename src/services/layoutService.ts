@@ -175,15 +175,24 @@ Focus on Malta hospitality warmth and local appeal.`;
   }
 
   private async cacheLayout(context: LayoutContext, layout: DynamicLayout) {
-    const { error } = await supabase.from('layout_suggestions').insert({
-      vendor_id: context.vendor_id,
-      context_data: context,
-      layout_config: layout,
-      ai_model_used: 'gpt-4o'
-    });
+    try {
+      // Use a more generic approach to avoid type conflicts
+      const insertData = {
+        vendor_id: context.vendor_id,
+        context_data: context as any,
+        layout_config: layout as any,
+        ai_model_used: 'gpt-4o'
+      };
 
-    if (error) {
-      console.error('Failed to cache layout:', error);
+      const { error } = await supabase
+        .from('layout_suggestions')
+        .insert(insertData);
+
+      if (error) {
+        console.error('Failed to cache layout:', error);
+      }
+    } catch (error) {
+      console.error('Error caching layout:', error);
     }
   }
 
