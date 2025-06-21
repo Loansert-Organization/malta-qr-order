@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AdminOverview } from '@/components/admin/AdminOverview';
-import { VendorManagement } from '@/components/admin/VendorManagement';
-import { FinancialOverview } from '@/components/admin/FinancialOverview';
-import { AIMonitoring } from '@/components/admin/AIMonitoring';
-import { SystemHealth } from '@/components/admin/SystemHealth';
-import { LegalCompliance } from '@/components/admin/LegalCompliance';
+import AdminOverview from '@/components/admin/AdminOverview';
+import VendorManagement from '@/components/admin/VendorManagement';
+import FinancialOverview from '@/components/admin/FinancialOverview';
+import AIMonitoring from '@/components/admin/AIMonitoring';
+import SystemHealth from '@/components/admin/SystemHealth';
+import LegalCompliance from '@/components/admin/LegalCompliance';
 import { MaltaBarsFetcher } from '@/components/admin/MaltaBarsFetcher';
 
 const AdminPanel = () => {
