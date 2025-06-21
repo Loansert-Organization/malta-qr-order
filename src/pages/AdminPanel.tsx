@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AdminOverview from '@/components/admin/AdminOverview';
 import VendorManagement from '@/components/admin/VendorManagement';
@@ -9,7 +8,7 @@ import VendorApproval from '@/components/admin/VendorApproval';
 import SystemHealth from '@/components/admin/SystemHealth';
 import AIMonitoring from '@/components/admin/AIMonitoring';
 import FinancialOverview from '@/components/admin/FinancialOverview';
-import MaltaBarsFetcher from '@/components/admin/MaltaBarsFetcher';
+import { MaltaBarsFetcher } from '@/components/admin/MaltaBarsFetcher';
 import { 
   LayoutDashboard, 
   Store, 
@@ -17,8 +16,7 @@ import {
   Activity, 
   Bot, 
   Euro, 
-  MapPin,
-  Shield
+  MapPin
 } from 'lucide-react';
 
 const AdminPanel = () => {
@@ -83,7 +81,11 @@ const AdminPanel = () => {
           </TabsContent>
 
           <TabsContent value="vendors">
-            <VendorManagement />
+            <VendorManagement 
+              vendors={[]} 
+              onToggleVendorStatus={() => {}} 
+              onSelectVendor={() => {}} 
+            />
           </TabsContent>
 
           <TabsContent value="approval">

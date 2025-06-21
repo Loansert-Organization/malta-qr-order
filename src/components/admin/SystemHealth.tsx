@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +39,7 @@ const SystemHealth = () => {
 
   useEffect(() => {
     runHealthCheck();
-    const interval = setInterval(runHealthCheck, 60000); // Check every minute
+    const interval = setInterval(runHealthCheck, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -55,17 +54,6 @@ const SystemHealth = () => {
         .limit(1);
       const dbLatency = performance.now() - dbStart;
 
-      // Edge Functions health check
-      const efStart = performance.now();
-      try {
-        const { data: efTest, error: efError } = await supabase.functions.invoke('health-check-bars', {
-          body: { test: true }
-        });
-        const efLatency = performance.now() - efStart;
-      } catch (efError) {
-        console.error('Edge function health check failed:', efError);
-      }
-
       // AI Services health check (check recent AI waiter logs)
       const { data: aiLogs } = await supabase
         .from('ai_waiter_logs')
@@ -75,9 +63,10 @@ const SystemHealth = () => {
         .limit(10);
 
       const aiSuccessRate = aiLogs ? 
-        (aiLogs.filter(log => !log.processing_metadata?.error).length / aiLogs.length) * 100 : 100;
-
-      // Storage and Realtime checks would be similar...
+        (aiLogs.filter(log => {
+          const metadata = log.processing_metadata as any;
+          return !metadata?.error;
+        }).length / aiLogs.length) * 100 : 100;
       
       const newStatus: SystemStatus = {
         database: {
@@ -211,44 +200,75 @@ const SystemHealth = () => {
 
       {/* Service Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {systemStatus && Object.values(systemStatus).map((service, index) => (
-          <Card key={index}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {getServiceIcon(service.name)}
-                  <CardTitle className="text-lg">{service.name}</CardTitle>
+        {systemStatus && Object.values(systemStatus).map((service, index) => {
+          const getStatusIcon = (status: string) => {
+            switch (status) {
+              case 'healthy': return <CheckCircle className="h-4 w-4 text-green-500" />;
+              case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+              case 'critical': return <AlertTriangle className="h-4 w-4 text-red-500" />;
+              default: return <Activity className="h-4 w-4 text-gray-500" />;
+            }
+          };
+
+          const getStatusColor = (status: string) => {
+            switch (status) {
+              case 'healthy': return 'bg-green-100 text-green-800';
+              case 'warning': return 'bg-yellow-100 text-yellow-800';
+              case 'critical': return 'bg-red-100 text-red-800';
+              default: return 'bg-gray-100 text-gray-800';
+            }
+          };
+
+          const getServiceIcon = (serviceName: string) => {
+            switch (serviceName) {
+              case 'Database': return <Database className="h-5 w-5" />;
+              case 'Edge Functions': return <Zap className="h-5 w-5" />;
+              case 'AI Services': return <Server className="h-5 w-5" />;
+              case 'Storage': return <Server className="h-5 w-5" />;
+              case 'Realtime': return <Globe className="h-5 w-5" />;
+              default: return <Activity className="h-5 w-5" />;
+            }
+          };
+
+          return (
+            <Card key={index}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    {getServiceIcon(service.name)}
+                    <CardTitle className="text-lg">{service.name}</CardTitle>
+                  </div>
+                  {getStatusIcon(service.status)}
                 </div>
-                {getStatusIcon(service.status)}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">
-                  {service.value}{service.unit}
-                </span>
-                <Badge className={getStatusColor(service.status)}>
-                  {service.status}
-                </Badge>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm text-gray-600 mb-1">
-                  <span>{service.description}</span>
-                  <span>{service.status === 'healthy' ? '100%' : '85%'}</span>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold">
+                    {service.value}{service.unit}
+                  </span>
+                  <Badge className={getStatusColor(service.status)}>
+                    {service.status}
+                  </Badge>
                 </div>
-                <Progress 
-                  value={service.status === 'healthy' ? 100 : 85} 
-                  className="h-2"
-                />
-              </div>
-              
-              <div className="text-xs text-gray-500">
-                Last check: {new Date(service.lastCheck).toLocaleTimeString()}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                
+                <div>
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>{service.description}</span>
+                    <span>{service.status === 'healthy' ? '100%' : '85%'}</span>
+                  </div>
+                  <Progress 
+                    value={service.status === 'healthy' ? 100 : 85} 
+                    className="h-2"
+                  />
+                </div>
+                
+                <div className="text-xs text-gray-500">
+                  Last check: {new Date(service.lastCheck).toLocaleTimeString()}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Recent Incidents */}

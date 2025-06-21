@@ -48,7 +48,7 @@ const AdminOverview = () => {
       // Get vendor stats
       const { data: vendors } = await supabase
         .from('vendors')
-        .select('id, status, created_at');
+        .select('id, active, created_at');
 
       // Get today's orders
       const today = new Date().toISOString().split('T')[0];
@@ -64,8 +64,8 @@ const AdminOverview = () => {
         .gte('created_at', today);
 
       const totalVendors = vendors?.length || 0;
-      const activeVendors = vendors?.filter(v => v.status === 'active').length || 0;
-      const pendingVendors = vendors?.filter(v => v.status === 'pending').length || 0;
+      const activeVendors = vendors?.filter(v => v.active).length || 0;
+      const pendingVendors = vendors?.filter(v => !v.active).length || 0;
       const todayRevenue = orders?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
 
       setStats({
@@ -106,9 +106,9 @@ const AdminOverview = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
+      case 'confirmed': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

@@ -67,9 +67,10 @@ const AIMonitoring = () => {
 
       if (logs) {
         const totalInteractions = logs.length;
-        const successfulLogs = logs.filter(log => 
-          !log.processing_metadata?.error && log.message_type === 'assistant'
-        );
+        const successfulLogs = logs.filter(log => {
+          const metadata = log.processing_metadata as any;
+          return !metadata?.error && log.message_type === 'assistant';
+        });
         const successRate = totalInteractions > 0 ? (successfulLogs.length / totalInteractions) * 100 : 0;
 
         // Calculate language usage
@@ -77,9 +78,10 @@ const AIMonitoring = () => {
         const modelCount: { [key: string]: number } = {};
 
         logs.forEach(log => {
-          if (log.processing_metadata?.language) {
-            languageCount[log.processing_metadata.language] = 
-              (languageCount[log.processing_metadata.language] || 0) + 1;
+          const metadata = log.processing_metadata as any;
+          if (metadata?.language) {
+            languageCount[metadata.language] = 
+              (languageCount[metadata.language] || 0) + 1;
           }
           if (log.ai_model_used) {
             modelCount[log.ai_model_used] = (modelCount[log.ai_model_used] || 0) + 1;
@@ -223,6 +225,14 @@ const AIMonitoring = () => {
             <div className="space-y-4">
               {Object.entries(metrics.popularLanguages).map(([lang, count]) => {
                 const percentage = (count / metrics.totalInteractions) * 100;
+                const getLanguageFlag = (lang: string) => {
+                  switch (lang) {
+                    case 'en': return '🇬🇧';
+                    case 'mt': return '🇲🇹';
+                    case 'it': return '🇮🇹';
+                    default: return '🌐';
+                  }
+                };
                 return (
                   <div key={lang} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
@@ -253,6 +263,12 @@ const AIMonitoring = () => {
             <div className="space-y-4">
               {Object.entries(metrics.modelUsage).map(([model, count]) => {
                 const percentage = (count / metrics.totalInteractions) * 100;
+                const getModelBadgeColor = (model: string) => {
+                  if (model.includes('gpt-4')) return 'bg-blue-100 text-blue-800';
+                  if (model.includes('claude')) return 'bg-purple-100 text-purple-800';
+                  if (model.includes('gemini')) return 'bg-green-100 text-green-800';
+                  return 'bg-gray-100 text-gray-800';
+                };
                 return (
                   <div key={model} className="flex items-center justify-between">
                     <Badge className={getModelBadgeColor(model)}>
@@ -280,34 +296,51 @@ const AIMonitoring = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recentLogs.map((log, index) => (
-              <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <Bot className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-medium">
-                      {log.vendors?.name || 'Unknown Venue'}
-                    </span>
-                  </div>
-                  <Badge className={getModelBadgeColor(log.ai_model_used)}>
-                    {log.ai_model_used}
-                  </Badge>
-                  <Badge variant="outline">
-                    {log.message_type}
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">
-                    {new Date(log.created_at).toLocaleTimeString()}
-                  </div>
-                  {log.processing_metadata?.language && (
-                    <div className="text-xs">
-                      {getLanguageFlag(log.processing_metadata.language)} {log.processing_metadata.language}
+            {recentLogs.map((log, index) => {
+              const metadata = log.processing_metadata as any;
+              const getModelBadgeColor = (model: string) => {
+                if (model.includes('gpt-4')) return 'bg-blue-100 text-blue-800';
+                if (model.includes('claude')) return 'bg-purple-100 text-purple-800';
+                if (model.includes('gemini')) return 'bg-green-100 text-green-800';
+                return 'bg-gray-100 text-gray-800';
+              };
+              const getLanguageFlag = (lang: string) => {
+                switch (lang) {
+                  case 'en': return '🇬🇧';
+                  case 'mt': return '🇲🇹';
+                  case 'it': return '🇮🇹';
+                  default: return '🌐';
+                }
+              };
+              return (
+                <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <Bot className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-medium">
+                        {log.vendors?.name || 'Unknown Venue'}
+                      </span>
                     </div>
-                  )}
+                    <Badge className={getModelBadgeColor(log.ai_model_used)}>
+                      {log.ai_model_used}
+                    </Badge>
+                    <Badge variant="outline">
+                      {log.message_type}
+                    </Badge>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">
+                      {new Date(log.created_at).toLocaleTimeString()}
+                    </div>
+                    {metadata?.language && (
+                      <div className="text-xs">
+                        {getLanguageFlag(metadata.language)} {metadata.language}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

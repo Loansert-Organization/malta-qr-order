@@ -2,14 +2,14 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CreditCard, Smartphone } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { CartItem } from '@/hooks/useOrderDemo/types';
+import OrderSummary from './OrderSummary';
+import CustomerInfoForm from './CustomerInfoForm';
+import PaymentMethodSelector from './PaymentMethodSelector';
+import TermsAgreement from './TermsAgreement';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -110,7 +110,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           .eq('id', order.id);
       } else {
         // For Revolut, we'll redirect to their payment link
-        // This would typically come from vendor settings
         window.open('https://revolut.me/example', '_blank');
       }
 
@@ -141,108 +140,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Order Summary */}
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-3">Order Summary</h3>
-              <div className="space-y-2">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span>{item.quantity}x {item.name}</span>
-                    <span>€{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-              <Separator className="my-3" />
-              <div className="flex justify-between font-semibold">
-                <span>Total</span>
-                <span>€{totalPrice.toFixed(2)}</span>
-              </div>
-            </CardContent>
-          </Card>
+          <OrderSummary cart={cart} totalPrice={totalPrice} />
+          
+          <CustomerInfoForm 
+            customerInfo={customerInfo}
+            setCustomerInfo={setCustomerInfo}
+          />
 
-          {/* Customer Information */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Contact Information</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={customerInfo.name}
-                  onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
-                  placeholder="Your name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  value={customerInfo.phone}
-                  onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
-                  placeholder="+356..."
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="email">Email (optional)</Label>
-              <Input
-                id="email"
-                type="email"
-                value={customerInfo.email}
-                onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
-                placeholder="your@email.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="notes">Special Notes</Label>
-              <Input
-                id="notes"
-                value={customerInfo.notes}
-                onChange={(e) => setCustomerInfo({...customerInfo, notes: e.target.value})}
-                placeholder="Any special requests..."
-              />
-            </div>
-          </div>
+          <PaymentMethodSelector
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+          />
 
-          {/* Payment Method */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Payment Method</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant={paymentMethod === 'stripe' ? 'default' : 'outline'}
-                onClick={() => setPaymentMethod('stripe')}
-                className="flex items-center space-x-2"
-              >
-                <CreditCard className="h-4 w-4" />
-                <span>Card</span>
-              </Button>
-              <Button
-                variant={paymentMethod === 'revolut' ? 'default' : 'outline'}
-                onClick={() => setPaymentMethod('revolut')}
-                className="flex items-center space-x-2"
-              >
-                <Smartphone className="h-4 w-4" />
-                <span>Revolut</span>
-              </Button>
-            </div>
-          </div>
+          <TermsAgreement
+            agreedToTerms={agreedToTerms}
+            setAgreedToTerms={setAgreedToTerms}
+          />
 
-          {/* Terms Agreement */}
-          <div className="flex items-start space-x-2">
-            <input
-              type="checkbox"
-              id="terms"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-1"
-            />
-            <Label htmlFor="terms" className="text-sm">
-              I agree to the terms and conditions and privacy policy
-            </Label>
-          </div>
-
-          {/* Submit Button */}
           <Button
             onClick={handleSubmitOrder}
             disabled={isProcessing}
