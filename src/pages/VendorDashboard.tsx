@@ -100,7 +100,7 @@ const VendorDashboard = () => {
           </TabsList>
 
           <TabsContent value="menu">
-            <MenuBuilder />
+            <MenuBuilder vendorId={vendor.id} menuId="default" />
           </TabsContent>
 
           <TabsContent value="orders">
@@ -112,7 +112,7 @@ const VendorDashboard = () => {
           </TabsContent>
 
           <TabsContent value="analytics">
-            <AIAnalytics />
+            <AIAnalytics vendorId={vendor.id} />
           </TabsContent>
         </Tabs>
       </div>
