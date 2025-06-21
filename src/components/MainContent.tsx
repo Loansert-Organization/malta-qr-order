@@ -1,33 +1,9 @@
 
 import React from 'react';
 import DynamicHeroSection from '@/components/DynamicHeroSection';
-import VoiceSearch from '@/components/VoiceSearch';
-import SmartMenu from '@/components/SmartMenu';
-import CartSidebar from '@/components/CartSidebar';
-
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  category: string;
-  popular: boolean;
-  prep_time?: string;
-  available: boolean;
-}
-
-interface CartItem extends MenuItem {
-  quantity: number;
-}
-
-interface Vendor {
-  id: string;
-  name: string;
-  slug: string;
-  location: string;
-  description: string;
-}
+import MenuSection from '@/components/MainContent/MenuSection';
+import CartSection from '@/components/MainContent/CartSection';
+import { MenuItem, CartItem, Vendor, AIInsights } from '@/components/MainContent/types';
 
 interface MainContentProps {
   vendor: Vendor;
@@ -60,7 +36,7 @@ const MainContent: React.FC<MainContentProps> = ({
   getTotalPrice,
   getTotalItems
 }) => {
-  const aiInsights = {
+  const aiInsights: AIInsights = {
     trending_items: contextData?.ai_insights?.trending_items || [],
     recommended_categories: contextData?.ai_insights?.recommended_categories || [],
     weather_suggestions: contextData?.weather?.recommendations || [],
@@ -83,29 +59,19 @@ const MainContent: React.FC<MainContentProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Menu Items */}
         <div className="lg:col-span-2">
-          <div id="menu-section" className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Our Menu</h2>
-            
-            {/* Voice Search */}
-            <VoiceSearch
-              onSearch={handleSearch}
-              placeholder="Search menu items or ask for recommendations..."
-            />
-            
-            {/* Smart Menu */}
-            <SmartMenu
-              menuItems={menuItems}
-              onAddToCart={addToCart}
-              aiInsights={aiInsights}
-              weatherData={weatherData}
-              searchQuery={searchQuery}
-            />
-          </div>
+          <MenuSection
+            menuItems={menuItems}
+            searchQuery={searchQuery}
+            aiInsights={aiInsights}
+            weatherData={weatherData}
+            handleSearch={handleSearch}
+            addToCart={addToCart}
+          />
         </div>
 
         {/* Cart Sidebar */}
         <div className="lg:col-span-1">
-          <CartSidebar
+          <CartSection
             cart={cart}
             onAddToCart={addToCart}
             onRemoveFromCart={removeFromCart}
