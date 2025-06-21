@@ -127,7 +127,7 @@ class AIAssistantService {
       
       // Run all three AI systems in parallel
       const [codeEvaluation, errorAnalysis, uxRecommendations] = await Promise.allSettled([
-        this.evaluate TaskCode(taskData),
+        this.evaluateTaskCode(taskData),
         this.checkForErrors(taskData),
         this.validateUXScreens(taskData)
       ]);
