@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from './AuthProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, User } from 'lucide-react';
+import { Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AuthModalProps {
   open: boolean;
@@ -24,6 +25,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const [signInForm, setSignInForm] = useState({
     email: '',
@@ -37,17 +39,44 @@ const AuthModal: React.FC<AuthModalProps> = ({
     confirmPassword: '',
   });
 
+  const clearError = () => setAuthError(null);
+
+  const getErrorMessage = (error: any) => {
+    if (!error) return null;
+    
+    const message = error.message || error.error_description || 'An unexpected error occurred';
+    
+    // Provide user-friendly error messages
+    if (message.includes('Invalid login credentials')) {
+      return 'Invalid email or password. Please check your credentials and try again.';
+    }
+    if (message.includes('Email not confirmed')) {
+      return 'Please check your email and click the confirmation link before signing in.';
+    }
+    if (message.includes('User already registered')) {
+      return 'An account with this email already exists. Please sign in instead.';
+    }
+    if (message.includes('Password should be at least')) {
+      return 'Password must be at least 6 characters long.';
+    }
+    
+    return message;
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAuthError(null);
 
     try {
       const { error } = await signIn(signInForm.email, signInForm.password);
       
       if (error) {
+        const errorMessage = getErrorMessage(error);
+        setAuthError(errorMessage);
         toast({
           title: "Sign In Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -56,11 +85,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
           description: "You have been successfully signed in.",
         });
         onOpenChange(false);
+        // Reset form
+        setSignInForm({ email: '', password: '' });
       }
     } catch (error) {
+      const errorMessage = "An unexpected error occurred. Please try again.";
+      setAuthError(errorMessage);
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -71,12 +104,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAuthError(null);
 
     // Validate passwords match
     if (signUpForm.password !== signUpForm.confirmPassword) {
+      const errorMessage = "Passwords do not match.";
+      setAuthError(errorMessage);
       toast({
         title: "Password Mismatch",
-        description: "Passwords do not match.",
+        description: errorMessage,
         variant: "destructive",
       });
       setLoading(false);
@@ -85,9 +121,11 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
     // Validate password strength
     if (signUpForm.password.length < 6) {
+      const errorMessage = "Password must be at least 6 characters long.";
+      setAuthError(errorMessage);
       toast({
         title: "Weak Password",
-        description: "Password must be at least 6 characters long.",
+        description: errorMessage,
         variant: "destructive",
       });
       setLoading(false);
@@ -102,22 +140,28 @@ const AuthModal: React.FC<AuthModalProps> = ({
       );
       
       if (error) {
+        const errorMessage = getErrorMessage(error);
+        setAuthError(errorMessage);
         toast({
           title: "Sign Up Failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
         toast({
           title: "Account Created!",
-          description: "Please check your email to verify your account.",
+          description: "Please check your email to verify your account before signing in.",
         });
         onOpenChange(false);
+        // Reset form
+        setSignUpForm({ email: '', password: '', fullName: '', confirmPassword: '' });
       }
     } catch (error) {
+      const errorMessage = "An unexpected error occurred. Please try again.";
+      setAuthError(errorMessage);
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -127,6 +171,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'signin' | 'signup');
+    setAuthError(null);
   };
 
   return (
@@ -135,6 +180,13 @@ const AuthModal: React.FC<AuthModalProps> = ({
         <DialogHeader>
           <DialogTitle>Welcome to ICUPA Malta</DialogTitle>
         </DialogHeader>
+
+        {authError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{authError}</AlertDescription>
+          </Alert>
+        )}
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -153,7 +205,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     type="email"
                     placeholder="Enter your email"
                     value={signInForm.email}
-                    onChange={(e) => setSignInForm({...signInForm, email: e.target.value})}
+                    onChange={(e) => {
+                      setSignInForm({...signInForm, email: e.target.value});
+                      clearError();
+                    }}
                     className="pl-10"
                     required
                     disabled={loading}
@@ -170,7 +225,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     type="password"
                     placeholder="Enter your password"
                     value={signInForm.password}
-                    onChange={(e) => setSignInForm({...signInForm, password: e.target.value})}
+                    onChange={(e) => {
+                      setSignInForm({...signInForm, password: e.target.value});
+                      clearError();
+                    }}
                     className="pl-10"
                     required
                     disabled={loading}
@@ -202,7 +260,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     type="text"
                     placeholder="Enter your full name"
                     value={signUpForm.fullName}
-                    onChange={(e) => setSignUpForm({...signUpForm, fullName: e.target.value})}
+                    onChange={(e) => {
+                      setSignUpForm({...signUpForm, fullName: e.target.value});
+                      clearError();
+                    }}
                     className="pl-10"
                     disabled={loading}
                   />
@@ -218,7 +279,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     type="email"
                     placeholder="Enter your email"
                     value={signUpForm.email}
-                    onChange={(e) => setSignUpForm({...signUpForm, email: e.target.value})}
+                    onChange={(e) => {
+                      setSignUpForm({...signUpForm, email: e.target.value});
+                      clearError();
+                    }}
                     className="pl-10"
                     required
                     disabled={loading}
@@ -233,9 +297,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     value={signUpForm.password}
-                    onChange={(e) => setSignUpForm({...signUpForm, password: e.target.value})}
+                    onChange={(e) => {
+                      setSignUpForm({...signUpForm, password: e.target.value});
+                      clearError();
+                    }}
                     className="pl-10"
                     required
                     disabled={loading}
@@ -252,7 +319,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     type="password"
                     placeholder="Confirm your password"
                     value={signUpForm.confirmPassword}
-                    onChange={(e) => setSignUpForm({...signUpForm, confirmPassword: e.target.value})}
+                    onChange={(e) => {
+                      setSignUpForm({...signUpForm, confirmPassword: e.target.value});
+                      clearError();
+                    }}
                     className="pl-10"
                     required
                     disabled={loading}
