@@ -46,7 +46,19 @@ const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
 
         if (error) throw error;
 
-        setPaymentStatus(data.paymentStatus === 'succeeded' ? 'paid' : 'pending');
+        // Fix the type issue by properly handling the payment status
+        const stripeStatus = data.paymentStatus;
+        let status: 'pending' | 'paid' | 'failed' = 'pending';
+        
+        if (stripeStatus === 'succeeded') {
+          status = 'paid';
+        } else if (stripeStatus === 'canceled' || stripeStatus === 'failed') {
+          status = 'failed';
+        } else {
+          status = 'pending';
+        }
+
+        setPaymentStatus(status);
         setOrderStatus(data.orderStatus);
         onStatusUpdate?.(data.orderStatus);
       } else {
@@ -59,7 +71,19 @@ const PaymentStatusTracker: React.FC<PaymentStatusTrackerProps> = ({
 
         if (error) throw error;
 
-        setPaymentStatus(order.payment_status || 'pending');
+        // Handle the payment status properly
+        const dbPaymentStatus = order.payment_status;
+        let status: 'pending' | 'paid' | 'failed' = 'pending';
+        
+        if (dbPaymentStatus === 'paid') {
+          status = 'paid';
+        } else if (dbPaymentStatus === 'failed') {
+          status = 'failed';
+        } else {
+          status = 'pending';
+        }
+
+        setPaymentStatus(status);
         setOrderStatus(order.status || 'pending');
         onStatusUpdate?.(order.status);
       }

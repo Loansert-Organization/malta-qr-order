@@ -13,10 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-const stripePromise = loadStripe(process.env.NODE_ENV === 'production' 
-  ? 'pk_live_...' // Replace with your live publishable key
-  : 'pk_test_51234567890abcdef' // Replace with your test publishable key
-);
+// Use a test publishable key - in production, replace with your live key
+const stripePromise = loadStripe('pk_test_51QZRj6GLdHQgMQ8Q2vKLSIRjSyMF6R8y9f9i8h7g6e5d4c3b2a1z0');
 
 interface StripePaymentFormProps {
   amount: number;
