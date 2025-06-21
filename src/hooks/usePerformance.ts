@@ -29,7 +29,8 @@ export const usePerformance = () => {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     const paint = performance.getEntriesByType('paint');
     
-    const pageLoadTime = navigation.loadEventEnd - navigation.navigationStart;
+    // Use modern timing properties
+    const pageLoadTime = navigation.loadEventEnd - navigation.fetchStart;
     const firstContentfulPaint = paint.find(p => p.name === 'first-contentful-paint')?.startTime || 0;
 
     // Collect Core Web Vitals
@@ -52,9 +53,13 @@ export const usePerformance = () => {
       }
     });
 
-    observer.observe({ type: 'largest-contentful-paint', buffered: true });
-    observer.observe({ type: 'first-input', buffered: true });
-    observer.observe({ type: 'layout-shift', buffered: true });
+    try {
+      observer.observe({ type: 'largest-contentful-paint', buffered: true });
+      observer.observe({ type: 'first-input', buffered: true });
+      observer.observe({ type: 'layout-shift', buffered: true });
+    } catch (error) {
+      console.warn('Performance observer not supported:', error);
+    }
 
     setMetrics({
       pageLoadTime,
@@ -62,7 +67,7 @@ export const usePerformance = () => {
       largestContentfulPaint: 0,
       firstInputDelay: 0,
       cumulativeLayoutShift: 0,
-      timeToInteractive: navigation.domInteractive - navigation.navigationStart
+      timeToInteractive: navigation.domInteractive - navigation.fetchStart
     });
 
     // Collect resource timings
