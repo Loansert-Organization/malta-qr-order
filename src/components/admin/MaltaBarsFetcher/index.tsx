@@ -18,6 +18,7 @@ const MaltaBarsFetcher = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastFetchResult, setLastFetchResult] = useState('');
   const [healthMetrics, setHealthMetrics] = useState<HealthMetrics | null>(null);
+  const [fetchLogs, setFetchLogs] = useState<FetchLog[]>([]);
   const { toast } = useToast();
 
   const fetchBars = async () => {
@@ -36,6 +37,25 @@ const MaltaBarsFetcher = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const fetchLogs = async () => {
+    // Mock fetch logs since we don't have the actual logs table yet
+    const mockLogs: FetchLog[] = [
+      {
+        id: '1',
+        operation_type: 'google_maps_fetch',
+        total_bars_processed: 50,
+        new_bars_added: 15,
+        bars_updated: 5,
+        errors_count: 2,
+        api_calls_made: 25,
+        operation_duration_ms: 45000,
+        status: 'completed',
+        created_at: new Date().toISOString()
+      }
+    ];
+    setFetchLogs(mockLogs);
   };
 
   const handleFetchBars = async (incremental = false) => {
@@ -65,6 +85,7 @@ const MaltaBarsFetcher = () => {
 
   const handleRefreshAll = async () => {
     await fetchBars();
+    await fetchLogs();
   };
 
   const handleHealthCheck = async () => {
@@ -96,6 +117,49 @@ const MaltaBarsFetcher = () => {
     }
   };
 
+  const handleExportData = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('export-bars-data');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Export Complete",
+        description: "Bars data exported successfully"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Export failed: ${error.message}`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCleanupDuplicates = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('cleanup-duplicate-bars');
+      
+      if (error) throw error;
+      
+      await fetchBars(); // Refresh after cleanup
+      
+      toast({
+        title: "Cleanup Complete",
+        description: `Removed ${data.duplicates_removed || 0} duplicate entries`
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Cleanup failed: ${error.message}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -117,11 +181,17 @@ const MaltaBarsFetcher = () => {
       case 'analytics':
         return <MenuAnalytics />;
       case 'logs':
-        return <OperationLogs />;
+        return <OperationLogs fetchLogs={fetchLogs} />;
       case 'health':
-        return <HealthMonitoring />;
+        return <HealthMonitoring healthMetrics={healthMetrics} />;
       case 'data':
-        return <DataManagement />;
+        return (
+          <DataManagement
+            isLoading={isLoading}
+            onExportData={handleExportData}
+            onCleanupDuplicates={handleCleanupDuplicates}
+          />
+        );
       default:
         return <BarsTable bars={bars} />;
     }
@@ -129,6 +199,7 @@ const MaltaBarsFetcher = () => {
 
   useEffect(() => {
     fetchBars();
+    fetchLogs();
   }, []);
 
   return (
