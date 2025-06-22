@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { ErrorMessage } from '@/components/ui/error-message';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
@@ -124,76 +125,73 @@ const AdminOverview = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Enhanced Header with better accessibility */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">ICUPA Admin Dashboard</h1>
-          <p className="text-gray-600">Real-time overview of your hospitality platform</p>
+          <p className="text-gray-600 mt-1">Real-time overview of your hospitality platform</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2" role="status">
           {getHealthIcon()}
           <span className="text-sm font-medium">System Health</span>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+      {/* Enhanced Stats Cards with better visual hierarchy */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-            <Store className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600">Total Vendors</CardTitle>
+            <Store className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalVendors}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.activeVendors} active, {stats.pendingVendors} pending
+            <div className="text-2xl font-bold text-gray-900">{stats.totalVendors}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              <span className="text-green-600 font-medium">{stats.activeVendors} active</span>
+              {stats.pendingVendors > 0 && (
+                <span className="text-orange-600 font-medium ml-2">{stats.pendingVendors} pending</span>
+              )}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600">Today's Orders</CardTitle>
+            <ShoppingCart className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all venues
-            </p>
+            <div className="text-2xl font-bold text-gray-900">{stats.totalOrders}</div>
+            <p className="text-xs text-gray-500 mt-1">Across all venues</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Revenue</CardTitle>
-            <Euro className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600">Today's Revenue</CardTitle>
+            <Euro className="h-5 w-5 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€{stats.todayRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              Platform revenue
-            </p>
+            <div className="text-2xl font-bold text-gray-900">€{stats.todayRevenue.toFixed(2)}</div>
+            <p className="text-xs text-gray-500 mt-1">Platform revenue</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Interactions</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-gray-600">AI Interactions</CardTitle>
+            <TrendingUp className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.aiInteractions}</div>
-            <p className="text-xs text-muted-foreground">
-              Kai conversations today
-            </p>
+            <div className="text-2xl font-bold text-gray-900">{stats.aiInteractions}</div>
+            <p className="text-xs text-gray-500 mt-1">Kai conversations today</p>
           </CardContent>
         </Card>
       </div>
@@ -235,15 +233,24 @@ const AdminOverview = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
-            <CardTitle>Vendor Management</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-5 w-5" />
+              <span>Vendor Management</span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full" variant="outline">
-              Review Pending Vendors ({stats.pendingVendors})
+            <Button 
+              className="w-full justify-start" 
+              variant="outline"
+              disabled={stats.pendingVendors === 0}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Review Pending ({stats.pendingVendors})
             </Button>
-            <Button className="w-full" variant="outline">
+            <Button className="w-full justify-start" variant="outline">
+              <CheckCircle className="h-4 w-4 mr-2" />
               Manage Active Vendors
             </Button>
           </CardContent>

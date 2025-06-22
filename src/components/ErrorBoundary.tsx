@@ -1,8 +1,8 @@
-
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Bug, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { aiAssistantService } from '@/services/aiAssistantService';
 
 interface Props {
@@ -123,45 +123,58 @@ class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-4xl">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-6 h-6 text-red-500" />
-                <CardTitle className="text-red-600">Autonomous AI Error Recovery</CardTitle>
+          <Card className="w-full max-w-4xl shadow-lg">
+            <CardHeader className="text-center">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <AlertCircle className="w-8 h-8 text-red-500" />
+                <CardTitle className="text-2xl text-red-600">System Error Detected</CardTitle>
               </div>
-              <CardDescription>
-                Triple-AI system (GPT-4o + Claude-4 + Gemini 2.5 Pro) analyzing error...
+              <CardDescription className="text-lg">
+                AI-powered error recovery system is analyzing the issue...
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Error Message */}
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="font-semibold text-red-800 mb-2">Error Details</h3>
-                <p className="text-red-700 text-sm font-mono">
-                  {this.state.error?.message || 'Unknown error'}
-                </p>
+            <CardContent className="space-y-6">
+              {/* Enhanced Error Message Display */}
+              <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                <h3 className="font-semibold text-red-800 mb-2 flex items-center">
+                  <Bug className="h-4 w-4 mr-2" />
+                  Error Details
+                </h3>
+                <code className="text-red-700 text-sm bg-red-100 p-2 rounded block">
+                  {this.state.error?.message || 'Unknown error occurred'}
+                </code>
               </div>
 
-              {/* AI Analysis Progress */}
+              {/* Enhanced AI Analysis Progress */}
               {this.state.isAnalyzing && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <Brain className="w-4 h-4 text-blue-600 animate-pulse" />
-                    <p className="text-blue-800 font-medium">
-                      Triple-AI Analysis in progress (GPT-4o + Claude-4 + Gemini 2.5 Pro)...
-                    </p>
+                  <div className="flex items-center space-x-3">
+                    <LoadingSpinner size="sm" className="text-blue-600" />
+                    <div>
+                      <p className="text-blue-800 font-medium">
+                        Triple-AI Analysis in Progress
+                      </p>
+                      <p className="text-blue-600 text-sm">
+                        GPT-4o + Claude-4 + Gemini 2.5 Pro analyzing error patterns...
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Build Confidence Check */}
+              {/* Enhanced Build Confidence Check */}
               {this.state.isCheckingConfidence && (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <Bug className="w-4 h-4 text-purple-600 animate-pulse" />
-                    <p className="text-purple-800 font-medium">
-                      Running Build Confidence Check (90% threshold)...
-                    </p>
+                  <div className="flex items-center space-x-3">
+                    <LoadingSpinner size="sm" className="text-purple-600" />
+                    <div>
+                      <p className="text-purple-800 font-medium">
+                        Build Confidence Assessment
+                      </p>
+                      <p className="text-purple-600 text-sm">
+                        Checking system stability (90% threshold required)...
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -250,29 +263,37 @@ class ErrorBoundary extends Component<Props, State> {
                 </div>
               )}
 
-              {/* Development Info */}
+              {/* Enhanced Action Buttons */}
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t">
+                <Button 
+                  onClick={this.handleReset} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+                <Button 
+                  onClick={this.handleReload} 
+                  className="flex-1"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reload Application
+                </Button>
+              </div>
+
+              {/* Enhanced Development Info */}
               {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-                <details className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <summary className="font-semibold text-gray-800 cursor-pointer">
-                    Development Details
+                <details className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                  <summary className="font-semibold text-gray-800 cursor-pointer hover:text-gray-600">
+                    Development Debug Information
                   </summary>
-                  <pre className="text-xs text-gray-600 mt-2 overflow-auto">
+                  <pre className="text-xs text-gray-600 mt-3 overflow-auto p-2 bg-gray-100 rounded">
                     {this.state.error?.stack}
                     {this.state.errorInfo.componentStack}
                   </pre>
                 </details>
               )}
-
-              {/* Action Buttons */}
-              <div className="flex space-x-3">
-                <Button onClick={this.handleReset} variant="outline">
-                  Try Again
-                </Button>
-                <Button onClick={this.handleReload} className="flex items-center space-x-2">
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Reload Page</span>
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </div>
