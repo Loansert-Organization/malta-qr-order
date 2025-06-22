@@ -1,114 +1,107 @@
 
-import React from 'react';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Header from "@/components/layout/Header";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import PWAOptimization from "@/components/PWAOptimization";
+import PerformanceMonitor from "@/components/PerformanceMonitor";
+import OfflineIndicator from "@/components/OfflineIndicator";
+
+// Pages
 import Index from "./pages/Index";
 import VendorDirectory from "./pages/VendorDirectory";
-import OrderDemo from "./pages/OrderDemo";
+import OrderPage from "./pages/OrderPage";
 import VendorDashboard from "./pages/VendorDashboard";
+import VendorRegistration from "./pages/VendorRegistration";
 import AdminPanel from "./pages/AdminPanel";
-import VendorRegistrationPage from "./pages/VendorRegistration";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
+import PWADashboard from "./pages/PWADashboard";
+import AISystemVerification from "./pages/AISystemVerification";
 import NotFound from "./pages/NotFound";
-import ErrorBoundary from "./components/ErrorBoundary";
 
-// Enhanced QueryClient with proper error handling
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
-      retry: (failureCount, error: any) => {
-        // Don't retry if offline or authentication error
-        if (!navigator.onLine || error?.status === 401) return false;
-        return failureCount < 3;
-      },
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-    },
-    mutations: {
-      retry: (failureCount, error: any) => {
-        // Don't retry mutations on auth errors
-        if (error?.status === 401 || error?.status === 403) return false;
-        return failureCount < 2;
-      },
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const App: React.FC = () => {
-  // Ensure React is available before rendering
-  if (!React || typeof React.useState !== 'function') {
-    return (
-      <div style={{ padding: '20px', color: 'red' }}>
-        React is not properly initialized. Please refresh the page.
-      </div>
-    );
-  }
-
+function App() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
         <AuthProvider>
-          <BrowserRouter>
-            <div className="min-h-screen bg-gray-50">
-              <Header />
-              <main className="relative">
-                <ErrorBoundary>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/restaurants" element={<VendorDirectory />} />
-                    <Route path="/order/:slug" element={<OrderDemo />} />
-                    <Route path="/register" element={<VendorRegistrationPage />} />
-                    <Route 
-                      path="/vendor" 
-                      element={
-                        <ProtectedRoute allowedRoles={['vendor', 'admin']} allowAnonymous={true}>
-                          <VendorDashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/admin" 
-                      element={
-                        <ProtectedRoute allowedRoles={['admin']}>
-                          <AdminPanel />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </ErrorBoundary>
-              </main>
-            </div>
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  style: {
-                    background: '#059669',
-                  },
-                },
-                error: {
-                  style: {
-                    background: '#dc2626',
-                  },
-                },
-              }}
-            />
-          </BrowserRouter>
+          <TooltipProvider>
+            <ErrorBoundary>
+              <div className="min-h-screen bg-background font-sans antialiased">
+                <PWAOptimization />
+                <PerformanceMonitor />
+                <OfflineIndicator />
+                
+                <Routes>
+                  {/* Public Routes - Anonymous Access */}
+                  <Route path="/" element={<Index />} />
+                  <Route path="/restaurants" element={<VendorDirectory />} />
+                  <Route 
+                    path="/order/:vendorSlug" 
+                    element={
+                      <ProtectedRoute allowAnonymous={true}>
+                        <OrderPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Vendor Routes - Anonymous/Authenticated */}
+                  <Route path="/vendor/register" element={<VendorRegistration />} />
+                  <Route 
+                    path="/vendor/dashboard" 
+                    element={
+                      <ProtectedRoute allowedRoles={['vendor']} allowAnonymous={true}>
+                        <VendorDashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* Admin Routes - Authentication Required */}
+                  <Route 
+                    path="/admin" 
+                    element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        <AdminPanel />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/analytics" 
+                    element={
+                      <ProtectedRoute allowedRoles={['admin']}>
+                        <AnalyticsDashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* System Routes */}
+                  <Route path="/pwa" element={<PWADashboard />} />
+                  <Route 
+                    path="/ai-verification" 
+                    element={
+                      <ProtectedRoute allowedRoles={['admin']} allowAnonymous={true}>
+                        <AISystemVerification />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  
+                  {/* 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+            </ErrorBoundary>
+            <Toaster />
+            <Sonner />
+          </TooltipProvider>
         </AuthProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
-};
+}
 
 export default App;

@@ -14,89 +14,87 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      amount, 
-      currency = 'eur',
-      orderId,
-      customerInfo,
-      items 
-    } = await req.json();
-
-    if (!amount || !orderId) {
-      throw new Error("Amount and order ID are required");
+    console.log('🔄 Processing Stripe payment request...');
+    
+    const { amount, currency = 'eur', order_id, customer_email } = await req.json();
+    
+    if (!amount || !order_id) {
+      throw new Error('Missing required fields: amount or order_id');
     }
 
     // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      throw new Error('Stripe secret key not configured');
+    }
+    
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2023-10-16",
     });
 
-    // Create Supabase client
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    console.log('💳 Creating Stripe checkout session...');
 
-    // Check if customer exists
-    let customerId;
-    if (customerInfo?.email) {
-      const customers = await stripe.customers.list({ 
-        email: customerInfo.email, 
-        limit: 1 
-      });
-      
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-      } else {
-        const customer = await stripe.customers.create({
-          email: customerInfo.email,
-          name: customerInfo.name,
-          phone: customerInfo.phone,
-        });
-        customerId = customer.id;
-      }
-    }
-
-    // Create payment intent for immediate payment
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: currency.toLowerCase(),
-      customer: customerId,
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: currency,
+            product_data: {
+              name: 'ICUPA Malta Order',
+              description: `Order #${order_id.substring(0, 8)}...`,
+            },
+            unit_amount: amount, // Amount should be in cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${req.headers.get("origin")}/order-success?session_id={CHECKOUT_SESSION_ID}&order_id=${order_id}`,
+      cancel_url: `${req.headers.get("origin")}/restaurants`,
+      customer_email: customer_email,
       metadata: {
-        orderId: orderId,
-        customerName: customerInfo?.name || 'Guest',
-        platform: 'ICUPA Malta'
-      },
-      automatic_payment_methods: {
-        enabled: true,
+        order_id: order_id,
       },
     });
 
-    // Update order with Stripe payment intent ID
+    console.log('✅ Stripe session created:', session.id);
+
+    // Update order with Stripe session ID
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     await supabase
       .from('orders')
       .update({ 
-        stripe_payment_intent_id: paymentIntent.id,
-        payment_method: 'stripe',
-        updated_at: new Date().toISOString()
+        payment_status: 'processing',
+        // Store stripe session ID in notes or create a new field
+        notes: `Stripe session: ${session.id}` 
       })
-      .eq('id', orderId);
+      .eq('id', order_id);
 
     return new Response(
-      JSON.stringify({
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id
+      JSON.stringify({ 
+        url: session.url,
+        session_id: session.id 
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
+    
   } catch (error) {
-    console.error('Stripe payment error:', error);
+    console.error('❌ Stripe payment error:', error);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'Payment processing failed',
+        details: 'Please try again or contact support'
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

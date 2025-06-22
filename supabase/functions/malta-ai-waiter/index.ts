@@ -17,6 +17,7 @@ const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Initialize clients
 const openaiClient = new OpenAIClient(openaiApiKey!);
 const dbOps = new DatabaseOperations(supabaseUrl, supabaseServiceKey);
 
@@ -26,6 +27,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🤖 Malta AI Waiter request received');
+    
     const { 
       message, 
       vendorSlug, 
@@ -34,15 +37,19 @@ serve(async (req) => {
       locationContext 
     }: MaltaAIWaiterRequest = await req.json();
     
+    console.log('Request details:', { vendorSlug, guestSessionId, language, message: message.substring(0, 50) + '...' });
+    
     // Get vendor and menu data
     const vendor = await dbOps.getVendorData(vendorSlug);
     if (!vendor) {
-      throw new Error('Vendor not found');
+      throw new Error(`Vendor not found: ${vendorSlug}`);
     }
 
+    console.log('✅ Vendor found:', vendor.name);
     const menuItems = vendor.menus[0]?.menu_items || [];
+    console.log('📋 Menu items loaded:', menuItems.length);
     
-    // Create system prompts
+    // Create Malta-specific system prompts
     const systemPrompts = createSystemPrompts(
       vendor.name,
       vendor.location || 'Malta',
@@ -50,27 +57,43 @@ serve(async (req) => {
       locationContext
     );
 
-    // Build contextual information
-    const contextualInfo = ContextProcessor.buildContextualInfo(message, locationContext);
+    // Build contextual information with Malta context
+    const contextualInfo = ContextProcessor.buildMaltaContextualInfo(
+      message, 
+      locationContext, 
+      vendor.location
+    );
     const timeContext = ContextProcessor.getTimeContext();
 
-    // Prepare GPT messages
+    console.log('🧠 Calling GPT-4o with Malta context...');
+    
+    // Prepare GPT messages with Malta-specific context
     const gptMessages = [
       {
         role: 'system',
         content: systemPrompts[language as keyof typeof systemPrompts] || systemPrompts.en
       },
-      { role: 'user', content: contextualInfo }
+      { 
+        role: 'user', 
+        content: contextualInfo 
+      }
     ];
 
-    // Get AI response
+    // Get AI response from GPT-4o
     const gptResponse = await openaiClient.callOpenAI(gptMessages, 'gpt-4o');
+    console.log('🎯 GPT-4o response received');
 
-    // Extract suggested items and generate layout
+    // Extract suggested items and generate Malta-themed layout
     const suggestedItems = ContextProcessor.extractSuggestedItems(gptResponse, menuItems);
-    const layoutSuggestions = ContextProcessor.generateLayoutSuggestions(locationContext);
+    const layoutSuggestions = ContextProcessor.generateMaltaLayoutSuggestions(
+      locationContext, 
+      timeContext,
+      vendor.location
+    );
 
-    // Log interactions
+    console.log('💡 Suggestions generated:', suggestedItems.length, 'items');
+
+    // Log interaction for analytics
     await dbOps.logInteraction(
       vendor.id,
       guestSessionId,
@@ -81,6 +104,8 @@ serve(async (req) => {
         language,
         location_context: locationContext,
         time_context: timeContext,
+        vendor_location: vendor.location,
+        malta_features: true,
         nearby_venues: locationContext?.nearbyBars?.length || 0
       }
     );
@@ -93,10 +118,13 @@ serve(async (req) => {
       'malta-enhanced-gpt4o',
       {
         language,
-        malta_features: layoutSuggestions
+        malta_features: layoutSuggestions,
+        suggestions_count: suggestedItems.length
       },
       suggestedItems
     );
+
+    console.log('📊 Interactions logged successfully');
 
     const response: AIWaiterResponse = {
       response: gptResponse,
@@ -108,21 +136,36 @@ serve(async (req) => {
       JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+    
   } catch (error) {
-    console.error('Error in malta-ai-waiter:', error);
+    console.error('❌ Error in malta-ai-waiter:', error);
     
     const fallbackMessages = getFallbackMessages();
-    const { language = 'en' } = await req.json().catch(() => ({}));
+    let language = 'en';
+    
+    try {
+      const requestData = await req.json();
+      language = requestData.language || 'en';
+    } catch (parseError) {
+      console.error('Could not parse request for fallback language');
+    }
     
     const errorResponse: AIWaiterResponse = {
       response: fallbackMessages[language as keyof typeof fallbackMessages] || fallbackMessages.en,
       suggestions: [],
-      layoutHints: {}
+      layoutHints: {
+        maltaTheme: true,
+        cardStyle: 'vertical',
+        highlight: 'popular'
+      }
     };
     
     return new Response(
       JSON.stringify(errorResponse),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      }
     );
   }
 });
