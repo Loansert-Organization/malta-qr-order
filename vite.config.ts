@@ -22,8 +22,7 @@ export default defineConfig(({ mode }) => ({
     dedupe: ['react', 'react-dom']
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-hot-toast'],
-    exclude: ['@radix-ui/react-tooltip']
+    include: ['react', 'react-dom', 'react-hot-toast']
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode),
