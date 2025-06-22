@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from './AuthProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AuthModalProps {
@@ -21,11 +21,12 @@ const AuthModal: React.FC<AuthModalProps> = ({
   onOpenChange, 
   defaultTab = 'signin' 
 }) => {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, loading } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(defaultTab);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const [signInForm, setSignInForm] = useState({
     email: '',
@@ -39,7 +40,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
     confirmPassword: '',
   });
 
-  const clearError = () => setAuthError(null);
+  const clearError = () => {
+    setAuthError(null);
+    setSignUpSuccess(false);
+  };
 
   const getErrorMessage = (error: any) => {
     if (!error) return null;
@@ -59,13 +63,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
     if (message.includes('Password should be at least')) {
       return 'Password must be at least 6 characters long.';
     }
+    if (message.includes('signup is disabled')) {
+      return 'Account creation is currently disabled. Please contact an administrator.';
+    }
     
     return message;
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (formLoading || loading) return;
+    
+    setFormLoading(true);
     setAuthError(null);
 
     try {
@@ -97,14 +106,17 @@ const AuthModal: React.FC<AuthModalProps> = ({
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (formLoading || loading) return;
+    
+    setFormLoading(true);
     setAuthError(null);
+    setSignUpSuccess(false);
 
     // Validate passwords match
     if (signUpForm.password !== signUpForm.confirmPassword) {
@@ -115,7 +127,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
         description: errorMessage,
         variant: "destructive",
       });
-      setLoading(false);
+      setFormLoading(false);
       return;
     }
 
@@ -128,7 +140,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
         description: errorMessage,
         variant: "destructive",
       });
-      setLoading(false);
+      setFormLoading(false);
       return;
     }
 
@@ -148,13 +160,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
           variant: "destructive",
         });
       } else {
+        setSignUpSuccess(true);
         toast({
           title: "Account Created!",
-          description: "Please check your email to verify your account before signing in.",
+          description: "Your account has been created successfully.",
         });
-        onOpenChange(false);
         // Reset form
         setSignUpForm({ email: '', password: '', fullName: '', confirmPassword: '' });
+        
+        // Switch to sign in tab after successful signup
+        setTimeout(() => {
+          setActiveTab('signin');
+        }, 2000);
       }
     } catch (error) {
       const errorMessage = "An unexpected error occurred. Please try again.";
@@ -165,26 +182,37 @@ const AuthModal: React.FC<AuthModalProps> = ({
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   const handleTabChange = (value: string) => {
     setActiveTab(value as 'signin' | 'signup');
-    setAuthError(null);
+    clearError();
   };
+
+  const isLoading = formLoading || loading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Welcome to ICUPA Malta</DialogTitle>
+          <DialogTitle>Admin Access - ICUPA Malta</DialogTitle>
         </DialogHeader>
 
         {authError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{authError}</AlertDescription>
+          </Alert>
+        )}
+
+        {signUpSuccess && (
+          <Alert>
+            <CheckCircle className="h-4 w-4" />
+            <AlertDescription>
+              Account created successfully! You can now sign in.
+            </AlertDescription>
           </Alert>
         )}
 
@@ -203,7 +231,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                   <Input
                     id="signin-email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="Enter your admin email"
                     value={signInForm.email}
                     onChange={(e) => {
                       setSignInForm({...signInForm, email: e.target.value});
@@ -211,7 +239,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="pl-10"
                     required
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -231,13 +260,14 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="pl-10"
                     required
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="current-password"
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing In...
@@ -265,7 +295,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
                       clearError();
                     }}
                     className="pl-10"
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="name"
                   />
                 </div>
               </div>
@@ -285,7 +316,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="pl-10"
                     required
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -305,7 +337,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="pl-10"
                     required
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="new-password"
                   />
                 </div>
               </div>
@@ -325,19 +358,20 @@ const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="pl-10"
                     required
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="new-password"
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating Account...
                   </>
                 ) : (
-                  'Create Account'
+                  'Create Admin Account'
                 )}
               </Button>
             </form>

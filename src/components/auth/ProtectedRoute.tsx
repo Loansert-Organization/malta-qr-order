@@ -31,12 +31,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <>{children}</>;
   }
 
-  // Require authentication for admin routes
+  // For admin routes, require authentication
   if (allowedRoles.includes('admin') && !user) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  // For vendor routes, allow anonymous access (they can authenticate later if needed)
+  // For vendor routes, allow anonymous access unless admin is also required
   if (allowedRoles.includes('vendor') && !allowedRoles.includes('admin')) {
     return <>{children}</>;
   }
@@ -44,6 +44,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Check role-based access for authenticated users
   if (user && profile && !allowedRoles.includes(profile.role)) {
     return <Navigate to={redirectTo} replace />;
+  }
+
+  // If user is authenticated but no profile exists, allow access (profile will be created)
+  if (user && !profile) {
+    return <>{children}</>;
   }
 
   return <>{children}</>;
