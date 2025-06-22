@@ -79,17 +79,18 @@ SOURCE: ${body.source || 'Unknown'}
     const suggestion = data.choices[0].message.content;
 
     // Log the fix attempt
-    await supabase.from('system_logs').insert({
-      log_type: 'ai_error_fix',
-      component: body.source || 'unknown',
-      message: `AI error fix generated for: ${body.message || body.task}`,
-      metadata: {
+    await supabase.from('ai_waiter_logs').insert({
+      content: `AI error fix generated for: ${body.message || body.task}`,
+      message_type: 'ai_error_fix',
+      guest_session_id: 'system',
+      vendor_id: '00000000-0000-0000-0000-000000000000',
+      processing_metadata: {
         original_error: body.message,
         task: body.task,
         fix_suggestion: suggestion,
         timestamp: new Date().toISOString()
       },
-      severity: 'info'
+      ai_model_used: 'gpt-4o'
     });
 
     return new Response(JSON.stringify({ 

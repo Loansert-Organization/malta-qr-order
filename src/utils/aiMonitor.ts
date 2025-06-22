@@ -53,18 +53,18 @@ export async function aiMonitor(
 
 async function logAIEvent(eventType: string, endpoint: string, result: any, payload: any) {
   try {
-    await supabase.from('system_logs').insert({
-      log_type: 'ai_monitor',
-      component: endpoint,
-      message: `AI function ${endpoint} triggered for ${eventType}`,
-      metadata: {
-        event_type: eventType,
+    await supabase.from('ai_waiter_logs').insert({
+      content: `AI function ${endpoint} triggered for ${eventType}`,
+      message_type: eventType,
+      guest_session_id: 'system',
+      vendor_id: '00000000-0000-0000-0000-000000000000',
+      processing_metadata: {
         endpoint,
         payload,
         result,
         timestamp: new Date().toISOString()
       },
-      severity: 'info'
+      ai_model_used: 'system_monitor'
     });
   } catch (error) {
     console.error('Failed to log AI event:', error);

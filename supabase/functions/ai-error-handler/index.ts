@@ -32,19 +32,21 @@ serve(async (req) => {
       timestamp: new Date().toISOString()
     };
 
-    // Insert into system_logs table
-    const { error: logError } = await supabase.from('system_logs').insert({
-      log_type: 'error_handler',
-      component: log.component,
-      message: log.message,
-      metadata: {
+    // Insert into ai_waiter_logs table
+    const { error: logError } = await supabase.from('ai_waiter_logs').insert({
+      content: log.message,
+      message_type: 'error_handler',
+      guest_session_id: 'system',
+      vendor_id: '00000000-0000-0000-0000-000000000000',
+      processing_metadata: {
         stack: log.stack,
         source: log.source,
         context: log.context,
         event_type: log.event_type,
+        component: log.component,
         timestamp: log.timestamp
       },
-      severity: determineSeverity(log.message)
+      ai_model_used: 'error_handler'
     });
 
     if (logError) {
@@ -78,18 +80,6 @@ serve(async (req) => {
     });
   }
 });
-
-function determineSeverity(message: string): 'info' | 'warning' | 'error' {
-  const lowerMessage = message.toLowerCase();
-  
-  if (lowerMessage.includes('critical') || lowerMessage.includes('fatal') || lowerMessage.includes('crash')) {
-    return 'error';
-  } else if (lowerMessage.includes('warning') || lowerMessage.includes('deprecated')) {
-    return 'warning';
-  }
-  
-  return 'info';
-}
 
 function checkIfCritical(message: string, stack: string): boolean {
   const criticalKeywords = ['cannot read properties', 'undefined', 'null', 'crash', 'fatal', 'failed to fetch'];
