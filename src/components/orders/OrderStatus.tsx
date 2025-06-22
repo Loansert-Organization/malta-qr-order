@@ -6,12 +6,18 @@ import { Progress } from '@/components/ui/progress';
 import { Clock, CheckCircle, ChefHat, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 interface Order {
   id: string;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
   total_amount: number;
   estimated_time?: number;
-  items: any[];
+  items: OrderItem[];
   created_at: string;
 }
 
@@ -39,7 +45,12 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
           filter: `id=eq.${orderId}`
         },
         (payload) => {
-          setOrder(payload.new as Order);
+          // Transform the payload to match our Order interface
+          const updatedOrder: Order = {
+            ...payload.new as any,
+            items: payload.new.items || [] // Provide default empty array
+          };
+          setOrder(updatedOrder);
         }
       )
       .subscribe();
@@ -51,15 +62,34 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
 
   const fetchOrder = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch order with items
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          order_items (
+            quantity,
+            unit_price,
+            menu_items (name)
+          )
+        `)
         .eq('id', orderId)
         .eq('guest_session_id', guestSessionId)
         .single();
 
-      if (error) throw error;
-      setOrder(data);
+      if (orderError) throw orderError;
+
+      // Transform the data to match our Order interface
+      const transformedOrder: Order = {
+        ...orderData,
+        items: orderData.order_items?.map((item: any) => ({
+          name: item.menu_items?.name || 'Unknown Item',
+          quantity: item.quantity,
+          price: item.unit_price
+        })) || []
+      };
+
+      setOrder(transformedOrder);
     } catch (error) {
       console.error('Error fetching order:', error);
     } finally {
@@ -171,7 +201,7 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
           <div className="border-t pt-4">
             <h4 className="font-medium mb-2">Order Details</h4>
             <div className="space-y-2">
-              {order.items?.map((item: any, index: number) => (
+              {order.items?.map((item: OrderItem, index: number) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span>{item.quantity}x {item.name}</span>
                   <span>€{(item.price * item.quantity).toFixed(2)}</span>
