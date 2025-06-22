@@ -9,6 +9,11 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 
+// Ensure React is properly imported to prevent useState null errors
+if (!React || typeof React.useState !== 'function') {
+  console.error('React is not properly initialized');
+}
+
 // Global toast state to avoid React hook issues
 let globalToasts: Array<{
   id: string
@@ -30,12 +35,24 @@ export function addToast(toast: {
   globalToasts = [newToast, ...globalToasts.slice(0, 4)]
   
   // Update all registered components
-  updateFunctions.forEach(update => update([...globalToasts]))
+  updateFunctions.forEach(update => {
+    try {
+      update([...globalToasts])
+    } catch (error) {
+      console.error('Error updating toast:', error)
+    }
+  })
   
   // Auto remove after 5 seconds
   setTimeout(() => {
     globalToasts = globalToasts.filter(t => t.id !== id)
-    updateFunctions.forEach(update => update([...globalToasts]))
+    updateFunctions.forEach(update => {
+      try {
+        update([...globalToasts])
+      } catch (error) {
+        console.error('Error removing toast:', error)
+      }
+    })
   }, 5000)
 }
 

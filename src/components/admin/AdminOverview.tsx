@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -133,18 +132,19 @@ const AdminOverview = () => {
 
       setRealtimeOrders(recentOrders || []);
 
-      // Log successful data load
-      await supabase.from('system_logs').insert({
-        log_type: 'admin_dashboard_load',
-        component: 'AdminOverview',
-        message: 'Dashboard data loaded successfully',
-        metadata: {
+      // Log successful data load using ai_waiter_logs table
+      await supabase.from('ai_waiter_logs').insert({
+        content: 'Dashboard data loaded successfully',
+        message_type: 'admin_dashboard_load',
+        guest_session_id: 'admin_system',
+        vendor_id: '00000000-0000-0000-0000-000000000000',
+        processing_metadata: {
           vendors_count: totalVendors,
           orders_count: orders?.length || 0,
           bars_count: bars?.length || 0,
           timestamp: new Date().toISOString()
         },
-        severity: 'info'
+        ai_model_used: 'admin_dashboard'
       });
 
       // AI task review

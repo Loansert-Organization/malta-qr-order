@@ -50,12 +50,13 @@ class ErrorBoundary extends Component<Props, State> {
     try {
       console.log('🤖 Starting Autonomous AI QA Protocol...');
       
-      // Log to system_logs
-      await supabase.from('system_logs').insert({
-        log_type: 'error_boundary_triggered',
-        component: 'ErrorBoundary',
-        message: `Error caught: ${error.message}`,
-        metadata: {
+      // Log to ai_waiter_logs table (using existing table)
+      await supabase.from('ai_waiter_logs').insert({
+        content: `Error caught: ${error.message}`,
+        message_type: 'error_boundary_triggered',
+        guest_session_id: 'system',
+        vendor_id: '00000000-0000-0000-0000-000000000000', // system vendor ID
+        processing_metadata: {
           error_message: error.message,
           error_stack: error.stack,
           component_stack: errorInfo.componentStack,
@@ -63,7 +64,7 @@ class ErrorBoundary extends Component<Props, State> {
           user_agent: navigator.userAgent,
           url: window.location.href
         },
-        severity: 'error'
+        ai_model_used: 'error_boundary_system'
       });
 
       // Trigger AI error analysis
@@ -92,17 +93,13 @@ class ErrorBoundary extends Component<Props, State> {
       
       // Call multiple AI services for comprehensive analysis
       const qaPromises = [
-        supabase.functions.invoke('ai-code-evaluator', {
+        supabase.functions.invoke('ai-task-review', {
           body: {
-            task: 'Error recovery and system stability check',
-            files_modified: 2,
-            error_context: error.message
-          }
-        }),
-        supabase.functions.invoke('ai-error-handler', {
-          body: {
-            error: error.message,
-            context: errorInfo.componentStack
+            task_name: 'Error recovery and system stability check',
+            component_code: error.stack,
+            functionality_description: 'Error boundary triggered',
+            current_state: 'completed',
+            context: { error_context: error.message }
           }
         }),
         supabase.functions.invoke('ai-ux-recommendation', {
@@ -117,17 +114,15 @@ class ErrorBoundary extends Component<Props, State> {
       const qaResults = await Promise.allSettled(qaPromises);
       
       // Process results
-      const codeQuality = qaResults[0].status === 'fulfilled' ? qaResults[0].value?.data?.overall_score || 80 : 80;
-      const errorFree = qaResults[1].status === 'fulfilled' ? 100 : 100; // Error handled
-      const uxQuality = qaResults[2].status === 'fulfilled' ? qaResults[2].value?.data?.ai_consensus?.overall_ux_score || 82 : 82;
+      const taskReview = qaResults[0].status === 'fulfilled' ? qaResults[0].value?.data : null;
+      const uxReview = qaResults[1].status === 'fulfilled' ? qaResults[1].value?.data : null;
       
-      const overallConfidence = Math.round((codeQuality + errorFree + uxQuality) / 3);
+      const overallConfidence = taskReview?.overall_confidence || 80;
       
       console.log('🏆 Build Confidence Check completed:', {
         overall_confidence: overallConfidence,
-        code_quality_score: codeQuality,
-        error_free_score: errorFree,
-        ux_quality_score: uxQuality,
+        task_review_status: taskReview?.approval_status || 'pending',
+        ux_recommendations: uxReview?.recommendations?.length || 0,
         meets_90_percent_threshold: overallConfidence >= 90,
         recommendations: overallConfidence < 90 ? ['🚨 Build confidence below 90% threshold - improvements required'] : ['✅ Build confidence meets threshold'],
         timestamp: new Date().toISOString()
