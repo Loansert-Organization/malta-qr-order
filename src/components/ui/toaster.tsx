@@ -9,68 +9,66 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 
-// Simple toast state management without hooks to avoid the React null issue
-let toastState: Array<{
+// Global toast state to avoid React hook issues
+let globalToasts: Array<{
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   variant?: "default" | "destructive"
 }> = []
 
-let toastListeners: Array<(toasts: typeof toastState) => void> = []
+let updateFunctions: Array<React.Dispatch<React.SetStateAction<any[]>>> = []
 
-function addToast(toast: { title?: string; description?: string; variant?: "default" | "destructive" }) {
-  const id = Date.now().toString()
+export function addToast(toast: { 
+  title?: string; 
+  description?: string; 
+  variant?: "default" | "destructive" 
+}) {
+  const id = Math.random().toString(36).substr(2, 9)
   const newToast = { ...toast, id }
-  toastState = [newToast, ...toastState.slice(0, 4)] // Keep max 5 toasts
   
-  toastListeners.forEach(listener => listener(toastState))
+  globalToasts = [newToast, ...globalToasts.slice(0, 4)]
+  
+  // Update all registered components
+  updateFunctions.forEach(update => update([...globalToasts]))
   
   // Auto remove after 5 seconds
   setTimeout(() => {
-    toastState = toastState.filter(t => t.id !== id)
-    toastListeners.forEach(listener => listener(toastState))
+    globalToasts = globalToasts.filter(t => t.id !== id)
+    updateFunctions.forEach(update => update([...globalToasts]))
   }, 5000)
 }
 
-function useSimpleToast() {
-  const [toasts, setToasts] = React.useState(toastState)
-  
+export function Toaster() {
+  const [toasts, setToasts] = React.useState(globalToasts)
+
   React.useEffect(() => {
-    toastListeners.push(setToasts)
+    updateFunctions.push(setToasts)
     return () => {
-      const index = toastListeners.indexOf(setToasts)
+      const index = updateFunctions.indexOf(setToasts)
       if (index > -1) {
-        toastListeners.splice(index, 1)
+        updateFunctions.splice(index, 1)
       }
     }
   }, [])
-  
-  return { toasts, toast: addToast }
-}
-
-export function Toaster() {
-  const { toasts } = useSimpleToast()
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            <ToastClose />
-          </Toast>
-        )
-      })}
+      {toasts.map((toast) => (
+        <Toast key={toast.id} variant={toast.variant}>
+          <div className="grid gap-1">
+            {toast.title && <ToastTitle>{toast.title}</ToastTitle>}
+            {toast.description && (
+              <ToastDescription>{toast.description}</ToastDescription>
+            )}
+          </div>
+          <ToastClose />
+        </Toast>
+      ))}
       <ToastViewport />
     </ToastProvider>
   )
 }
 
-// Export the simple toast function for use in other components
+// Export for backward compatibility
 export { addToast as toast }
