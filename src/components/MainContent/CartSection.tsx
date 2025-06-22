@@ -14,10 +14,10 @@ interface CartSectionProps {
   vendor: any;
   guestSessionId: string;
   removeFromCart: (itemId: string) => void;
-  updateQuantity: (itemId: string, quantity: number) => void;
-  clearCart: () => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
+  updateQuantity?: (itemId: string, quantity: number) => void;
+  clearCart?: () => void;
 }
 
 const CartSection: React.FC<CartSectionProps> = ({
@@ -25,10 +25,10 @@ const CartSection: React.FC<CartSectionProps> = ({
   vendor,
   guestSessionId,
   removeFromCart,
-  updateQuantity,
-  clearCart,
   getTotalPrice,
-  getTotalItems
+  getTotalItems,
+  updateQuantity,
+  clearCart
 }) => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
@@ -36,7 +36,33 @@ const CartSection: React.FC<CartSectionProps> = ({
   const handleOrderComplete = (orderId: string) => {
     setCurrentOrderId(orderId);
     setShowCheckout(false);
-    clearCart();
+    if (clearCart) {
+      clearCart();
+    }
+  };
+
+  const handleUpdateQuantity = (itemId: string, quantity: number) => {
+    if (updateQuantity) {
+      updateQuantity(itemId, quantity);
+    } else {
+      // Fallback: remove/add items manually
+      if (quantity <= 0) {
+        removeFromCart(itemId);
+      }
+    }
+  };
+
+  const handleClearCart = () => {
+    if (clearCart) {
+      clearCart();
+    } else {
+      // Fallback: remove all items individually
+      cart.forEach(item => {
+        for (let i = 0; i < item.quantity; i++) {
+          removeFromCart(item.id);
+        }
+      });
+    }
   };
 
   const totalItems = getTotalItems();
@@ -80,7 +106,7 @@ const CartSection: React.FC<CartSectionProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                            onClick={() => handleUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
                             className="h-6 w-6 p-0"
                           >
                             <Minus className="h-3 w-3" />
@@ -91,7 +117,7 @@ const CartSection: React.FC<CartSectionProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                             className="h-6 w-6 p-0"
                           >
                             <Plus className="h-3 w-3" />
@@ -147,7 +173,7 @@ const CartSection: React.FC<CartSectionProps> = ({
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={clearCart}
+                    onClick={handleClearCart}
                     className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
                     size="sm"
                   >

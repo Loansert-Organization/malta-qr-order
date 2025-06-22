@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,50 +9,10 @@ const corsHeaders = {
 };
 
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-const claudeApiKey = Deno.env.get('CLAUDE_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-interface CodeEvaluationRequest {
-  task_description: string;
-  files_modified: string[];
-  code_changes: {
-    file_path: string;
-    changes: string;
-    change_type: 'created' | 'modified' | 'deleted';
-  }[];
-  user_requirements: string;
-  completion_summary: string;
-}
-
-interface CodeEvaluationResponse {
-  overall_score: number; // 0-100
-  task_completion: {
-    score: number;
-    feedback: string;
-    missing_requirements: string[];
-  };
-  code_quality: {
-    score: number;
-    strengths: string[];
-    improvements: string[];
-    maintainability: number;
-    readability: number;
-    performance: number;
-  };
-  best_practices: {
-    score: number;
-    followed: string[];
-    violated: string[];
-    suggestions: string[];
-  };
-  security_assessment: {
-    score: number;
-    vulnerabilities: string[];
-    recommendations: string[];
-  };
-  future_recommendations: string[];
-  ai_model_used: string;
-  evaluation_timestamp: string;
-}
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -59,231 +20,146 @@ serve(async (req) => {
   }
 
   try {
-    const evaluationRequest: CodeEvaluationRequest = await req.json();
-    console.log('AI Code Evaluator processing task:', evaluationRequest.task_description);
+    const body = await req.json();
+    console.log('🧪 AI Code Evaluator Starting...');
 
-    // Choose AI model for evaluation
-    let evaluationResult: CodeEvaluationResponse;
-    
-    if (openaiApiKey) {
-      evaluationResult = await evaluateWithGPT4o(evaluationRequest);
-    } else if (claudeApiKey) {
-      evaluationResult = await evaluateWithClaude(evaluationRequest);
-    } else {
-      throw new Error('No AI API keys available for code evaluation');
+    const code = body.code || body.implementation;
+    const context = body.context || body.task || "";
+
+    if (!code) {
+      return new Response(JSON.stringify({ 
+        error: "Missing code or implementation to evaluate" 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
-    // Log the evaluation for learning purposes
-    await logCodeEvaluation(evaluationRequest, evaluationResult);
+    const completion = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a senior code reviewer specializing in React, TypeScript, and modern web development.
+            
+            Evaluate the provided code and give scores (0-100) for:
+            1. Code Quality - clean, readable, maintainable
+            2. Performance - efficient, optimized
+            3. Security - safe practices, no vulnerabilities  
+            4. Best Practices - follows modern standards
+            5. Type Safety - proper TypeScript usage
+            
+            Provide an overall score and specific recommendations. Be constructive and actionable.`
+          },
+          {
+            role: 'user',
+            content: `CODE TO EVALUATE:\n${code}\n\nCONTEXT:\n${context}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1200
+      }),
+    });
 
-    return new Response(JSON.stringify(evaluationResult), {
+    if (!completion.ok) {
+      throw new Error(`OpenAI API error: ${completion.status}`);
+    }
+
+    const data = await completion.json();
+    const evaluation = data.choices[0].message.content;
+
+    // Extract scores using simple regex (fallback to default if not found)
+    const overallScore = extractScore(evaluation, 'overall') || 75;
+    const qualityScore = extractScore(evaluation, 'quality') || 75;
+    const performanceScore = extractScore(evaluation, 'performance') || 75;
+    const securityScore = extractScore(evaluation, 'security') || 80;
+
+    const result = {
+      evaluation,
+      scores: {
+        overall: overallScore,
+        code_quality: qualityScore,
+        performance: performanceScore,
+        security: securityScore,
+        type_safety: extractScore(evaluation, 'type') || 70,
+        best_practices: extractScore(evaluation, 'practices') || 70
+      },
+      recommendations: extractRecommendations(evaluation),
+      timestamp: new Date().toISOString()
+    };
+
+    // Log the evaluation
+    await supabase.from('system_logs').insert({
+      log_type: 'ai_code_evaluation',
+      component: 'code_evaluator',
+      message: `Code evaluation completed with overall score: ${overallScore}`,
+      metadata: {
+        scores: result.scores,
+        code_length: code.length,
+        context,
+        timestamp: result.timestamp
+      },
+      severity: overallScore >= 80 ? 'info' : overallScore >= 60 ? 'warning' : 'error'
+    });
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in AI Code Evaluator:', error);
+    console.error('❌ Code Evaluation Failed:', error);
     
-    // Fallback evaluation
-    const fallbackResponse: CodeEvaluationResponse = {
-      overall_score: 70,
-      task_completion: {
-        score: 70,
-        feedback: 'Unable to evaluate with AI models',
-        missing_requirements: []
-      },
-      code_quality: {
-        score: 70,
-        strengths: ['Task attempted'],
-        improvements: ['Add AI-powered evaluation'],
-        maintainability: 70,
-        readability: 70,
-        performance: 70
-      },
-      best_practices: {
-        score: 70,
-        followed: [],
-        violated: [],
-        suggestions: ['Implement proper AI evaluation system']
-      },
-      security_assessment: {
-        score: 70,
-        vulnerabilities: [],
-        recommendations: ['Review code manually']
-      },
-      future_recommendations: ['Set up AI evaluation system'],
-      ai_model_used: 'fallback',
-      evaluation_timestamp: new Date().toISOString()
-    };
-
-    return new Response(JSON.stringify(fallbackResponse), {
+    return new Response(JSON.stringify({
+      error: "Code evaluation failed",
+      details: error.message,
+      fallback_score: 50
+    }), {
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
 
-async function evaluateWithGPT4o(request: CodeEvaluationRequest): Promise<CodeEvaluationResponse> {
-  const systemPrompt = `You are an expert code reviewer and software architect specializing in React/TypeScript applications. 
-
-Your role is to evaluate completed coding tasks for ICUPA Malta - a hospitality platform built with React, TypeScript, Supabase, Tailwind CSS, and Shadcn UI.
-
-Evaluate the code changes based on:
-1. Task completion (Did it meet the requirements?)
-2. Code quality (Clean, maintainable, readable)
-3. Best practices (React patterns, TypeScript usage, performance)
-4. Security considerations
-5. Future maintainability
-
-Provide specific, actionable feedback with scores out of 100.`;
-
-  const userPrompt = `Code Evaluation Request:
-
-Task Description: ${request.task_description}
-User Requirements: ${request.user_requirements}
-Completion Summary: ${request.completion_summary}
-
-Files Modified: ${request.files_modified.join(', ')}
-
-Code Changes:
-${request.code_changes.map(change => 
-  `File: ${change.file_path} (${change.change_type})
-Changes: ${change.changes.substring(0, 500)}...`
-).join('\n\n')}
-
-Please provide a comprehensive evaluation with specific scores and actionable feedback.`;
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.2,
-      max_tokens: 2000,
-    }),
-  });
-
-  const data = await response.json();
-  const evaluation = data.choices[0].message.content;
-
-  // Parse AI response into structured format
-  return parseCodeEvaluation(evaluation, 'gpt-4o');
-}
-
-async function evaluateWithClaude(request: CodeEvaluationRequest): Promise<CodeEvaluationResponse> {
-  // Implementation for Claude API would go here
-  // For now, return a placeholder
-  return {
-    overall_score: 85,
-    task_completion: {
-      score: 85,
-      feedback: 'Claude evaluation not yet implemented',
-      missing_requirements: []
-    },
-    code_quality: {
-      score: 80,
-      strengths: [],
-      improvements: [],
-      maintainability: 80,
-      readability: 80,
-      performance: 80
-    },
-    best_practices: {
-      score: 80,
-      followed: [],
-      violated: [],
-      suggestions: []
-    },
-    security_assessment: {
-      score: 90,
-      vulnerabilities: [],
-      recommendations: []
-    },
-    future_recommendations: [],
-    ai_model_used: 'claude-4',
-    evaluation_timestamp: new Date().toISOString()
-  };
-}
-
-function parseCodeEvaluation(evaluationText: string, model: string): CodeEvaluationResponse {
-  // Parse the AI response into structured format
-  // This is a simplified parser - in production, you'd want more robust parsing
-  
-  const overallScore = extractScore(evaluationText, 'overall') || 80;
-  
-  return {
-    overall_score: overallScore,
-    task_completion: {
-      score: extractScore(evaluationText, 'task completion') || overallScore,
-      feedback: extractFeedback(evaluationText, 'task completion'),
-      missing_requirements: extractList(evaluationText, 'missing requirements')
-    },
-    code_quality: {
-      score: extractScore(evaluationText, 'code quality') || overallScore,
-      strengths: extractList(evaluationText, 'strengths'),
-      improvements: extractList(evaluationText, 'improvements'),
-      maintainability: extractScore(evaluationText, 'maintainability') || overallScore,
-      readability: extractScore(evaluationText, 'readability') || overallScore,
-      performance: extractScore(evaluationText, 'performance') || overallScore
-    },
-    best_practices: {
-      score: extractScore(evaluationText, 'best practices') || overallScore,
-      followed: extractList(evaluationText, 'followed'),
-      violated: extractList(evaluationText, 'violated'),
-      suggestions: extractList(evaluationText, 'suggestions')
-    },
-    security_assessment: {
-      score: extractScore(evaluationText, 'security') || overallScore,
-      vulnerabilities: extractList(evaluationText, 'vulnerabilities'),
-      recommendations: extractList(evaluationText, 'security recommendations')
-    },
-    future_recommendations: extractList(evaluationText, 'future recommendations'),
-    ai_model_used: model,
-    evaluation_timestamp: new Date().toISOString()
-  };
-}
-
 function extractScore(text: string, category: string): number | null {
-  const scoreRegex = new RegExp(`${category}:?\\s*(\\d+)`, 'i');
-  const match = text.match(scoreRegex);
-  return match ? parseInt(match[1]) : null;
-}
-
-function extractFeedback(text: string, category: string): string {
-  const feedbackRegex = new RegExp(`${category}:?\\s*(.+?)(?:\\n|$)`, 'i');
-  const match = text.match(feedbackRegex);
-  return match ? match[1].trim() : `${category} feedback not available`;
-}
-
-function extractList(text: string, category: string): string[] {
-  const listRegex = new RegExp(`${category}:?\\s*([\\s\\S]*?)(?:\\n\\n|$)`, 'i');
-  const match = text.match(listRegex);
+  const patterns = [
+    new RegExp(`${category}[:\\s]*([0-9]{1,3})`, 'i'),
+    new RegExp(`([0-9]{1,3})[\\s]*[/\\-\\s]*100[\\s]*${category}`, 'i'),
+    new RegExp(`${category}[^0-9]*([0-9]{1,3})`, 'i')
+  ];
   
-  if (match) {
-    return match[1]
-      .split('\n')
-      .map(item => item.replace(/^[-*•]\s*/, '').trim())
-      .filter(item => item.length > 0);
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const score = parseInt(match[1]);
+      if (score >= 0 && score <= 100) {
+        return score;
+      }
+    }
   }
   
-  return [];
+  return null;
 }
 
-async function logCodeEvaluation(request: CodeEvaluationRequest, evaluation: CodeEvaluationResponse) {
-  try {
-    console.log('Code Evaluation Logged:', {
-      timestamp: new Date().toISOString(),
-      task: request.task_description,
-      overall_score: evaluation.overall_score,
-      model_used: evaluation.ai_model_used,
-      files_modified: request.files_modified.length
-    });
-  } catch (error) {
-    console.error('Failed to log code evaluation:', error);
+function extractRecommendations(evaluation: string): string[] {
+  const recommendations = [];
+  const lines = evaluation.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.match(/^[-•*]\s/) || trimmed.toLowerCase().includes('recommend') || trimmed.toLowerCase().includes('suggest')) {
+      recommendations.push(trimmed.replace(/^[-•*]\s*/, ''));
+    }
   }
+  
+  return recommendations.length > 0 ? recommendations : [
+    'Continue following current coding practices',
+    'Consider adding more comprehensive error handling',
+    'Review code for potential performance optimizations'
+  ];
 }
