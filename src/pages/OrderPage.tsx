@@ -17,7 +17,6 @@ const OrderPage = () => {
     menuItems,
     cart,
     loading: orderLoading,
-    error,
     searchQuery,
     layout,
     weatherData,
@@ -25,14 +24,13 @@ const OrderPage = () => {
     handleSearch,
     addToCart,
     removeFromCart,
-    updateQuantity,
-    clearCart,
     getTotalPrice,
     getTotalItems
   } = useOrderDemo(vendorSlug || '');
 
   const [showAIWaiter, setShowAIWaiter] = useState(false);
   const [showAIVerification, setShowAIVerification] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Generate guest session ID for anonymous users
   const [guestSessionId] = useState(() => {
@@ -105,8 +103,6 @@ const OrderPage = () => {
             vendor={vendor}
             guestSessionId={guestSessionId}
             removeFromCart={removeFromCart}
-            updateQuantity={updateQuantity}
-            clearCart={clearCart}
             getTotalPrice={getTotalPrice}
             getTotalItems={getTotalItems}
           />
@@ -115,7 +111,8 @@ const OrderPage = () => {
 
       {/* AI Modals */}
       <AIModals
-        vendor={vendor}
+        vendorId={vendor.id}
+        vendorName={vendor.name}
         guestSessionId={guestSessionId}
         showAIWaiter={showAIWaiter}
         showAIVerification={showAIVerification}

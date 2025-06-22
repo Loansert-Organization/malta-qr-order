@@ -25,13 +25,20 @@ const OrderDemo = () => {
     loading,
     
     // Actions
-    handleHeroCtaClick,
-    handleSearch,
     addToCart,
     removeFromCart,
+    handleSearch,
     getTotalPrice,
     getTotalItems
-  } = useOrderDemo();
+  } = useOrderDemo(slug || '');
+
+  const handleHeroCtaClick = () => {
+    // Scroll to menu section
+    const menuElement = document.getElementById('menu-section');
+    if (menuElement) {
+      menuElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   if (loading) {
     return <LoadingState />;

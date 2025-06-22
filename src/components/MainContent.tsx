@@ -16,7 +16,7 @@ interface MainContentProps {
   contextData: any;
   handleHeroCtaClick: () => void;
   handleSearch: (query: string) => void;
-  addToCart: (item: any) => void;
+  addToCart: (item: any) => Promise<void>;
   removeFromCart: (itemId: string) => void;
   getTotalPrice: () => number;
   getTotalItems: () => number;
@@ -47,6 +47,11 @@ const MainContent = ({
     // Additional order completion logic can be added here
   };
 
+  // Wrapper to handle sync addToCart calls
+  const handleAddToCart = async (item: any) => {
+    await addToCart(item);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -69,17 +74,18 @@ const MainContent = ({
             menuItems={menuItems}
             handleHeroCtaClick={handleHeroCtaClick}
             handleSearch={handleSearch}
-            addToCart={addToCart}
+            addToCart={handleAddToCart}
           />
 
           {/* Right Column - Cart */}
           <CartSection
             cart={cart}
-            onAddToCart={addToCart}
+            onAddToCart={(item) => addToCart(item)}
             onRemoveFromCart={removeFromCart}
             getTotalPrice={getTotalPrice}
             getTotalItems={getTotalItems}
             vendorId={vendor.id}
+            vendorName={vendor.name}
             guestSessionId={guestSessionId}
             onOrderComplete={handleOrderComplete}
           />
@@ -92,8 +98,9 @@ const MainContent = ({
         showAIVerification={showAIVerification}
         onCloseAIWaiter={() => setShowAIWaiter(false)}
         onCloseAIVerification={() => setShowAIVerification(false)}
-        onAddToCart={addToCart}
-        vendorSlug={vendor.slug}
+        onAddToCart={handleAddToCart}
+        vendorId={vendor.id}
+        vendorName={vendor.name}
         guestSessionId={guestSessionId}
       />
 

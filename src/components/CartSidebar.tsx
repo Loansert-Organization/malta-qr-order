@@ -29,6 +29,7 @@ interface CartSidebarProps {
   getTotalPrice: () => number;
   getTotalItems: () => number;
   vendorId: string;
+  vendorName?: string;
   guestSessionId: string;
   onOrderComplete?: (orderId: string) => void;
 }
@@ -40,6 +41,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
   getTotalPrice,
   getTotalItems,
   vendorId,
+  vendorName = 'Restaurant',
   guestSessionId,
   onOrderComplete
 }) => {
@@ -173,6 +175,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
         isOpen={showOrderStatus}
         onClose={() => setShowOrderStatus(false)}
         orderId={currentOrderId}
+        vendorName={vendorName}
       />
     </>
   );
