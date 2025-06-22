@@ -12,9 +12,11 @@ interface OrderItem {
   price: number;
 }
 
+type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
+
 interface Order {
   id: string;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
+  status: OrderStatus;
   total_amount: number;
   estimated_time?: number;
   items: OrderItem[];
@@ -26,7 +28,7 @@ interface OrderStatusProps {
   guestSessionId: string;
 }
 
-const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) => {
+const OrderStatusComponent: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +50,8 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
           // Transform the payload to match our Order interface
           const updatedOrder: Order = {
             ...payload.new as any,
-            items: payload.new.items || [] // Provide default empty array
+            status: (payload.new.status as OrderStatus) || 'pending',
+            items: payload.new.items || []
           };
           setOrder(updatedOrder);
         }
@@ -82,6 +85,7 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
       // Transform the data to match our Order interface
       const transformedOrder: Order = {
         ...orderData,
+        status: (orderData.status as OrderStatus) || 'pending',
         items: orderData.order_items?.map((item: any) => ({
           name: item.menu_items?.name || 'Unknown Item',
           quantity: item.quantity,
@@ -97,7 +101,7 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
     }
   };
 
-  const getStatusInfo = (status: Order['status']) => {
+  const getStatusInfo = (status: OrderStatus) => {
     switch (status) {
       case 'pending':
         return { 
@@ -223,4 +227,4 @@ const OrderStatus: React.FC<OrderStatusProps> = ({ orderId, guestSessionId }) =>
   );
 };
 
-export default OrderStatus;
+export default OrderStatusComponent;
