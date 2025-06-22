@@ -4,12 +4,31 @@ import { cn } from "@/lib/utils"
 
 interface TooltipProps {
   children: React.ReactNode
-  content: string
+  content?: string
   side?: 'top' | 'bottom' | 'left' | 'right'
   className?: string
 }
 
-const TooltipProvider = ({ children }: { children: React.ReactNode }) => {
+interface TooltipProviderProps {
+  children: React.ReactNode
+  delayDuration?: number
+}
+
+interface TooltipTriggerProps {
+  children: React.ReactNode
+  asChild?: boolean
+}
+
+interface TooltipContentProps {
+  children?: React.ReactNode
+  className?: string
+  sideOffset?: number
+  side?: string
+  align?: string
+  hidden?: boolean
+}
+
+const TooltipProvider = ({ children, delayDuration }: TooltipProviderProps) => {
   return <>{children}</>;
 };
 
@@ -33,7 +52,7 @@ const Tooltip = ({ children, content, side = 'top', className }: TooltipProps) =
       >
         {children}
       </div>
-      {isVisible && (
+      {isVisible && content && (
         <div
           className={cn(
             "absolute z-50 px-3 py-1.5 text-sm text-white bg-gray-900 rounded-md shadow-lg whitespace-nowrap",
@@ -58,15 +77,12 @@ const Tooltip = ({ children, content, side = 'top', className }: TooltipProps) =
 };
 
 // For backward compatibility with existing code
-const TooltipTrigger = ({ children }: { children: React.ReactNode }) => {
+const TooltipTrigger = ({ children, asChild }: TooltipTriggerProps) => {
   return <>{children}</>;
 };
 
-const TooltipContent = ({ children, className, ...props }: { 
-  children: React.ReactNode; 
-  className?: string;
-  sideOffset?: number;
-}) => {
+const TooltipContent = ({ children, className, side, align, hidden, sideOffset, ...props }: TooltipContentProps) => {
+  if (hidden) return null;
   return <span className={className} {...props}>{children}</span>;
 };
 
