@@ -1,5 +1,5 @@
 
-import React from "react"
+import * as React from "react"
 import {
   Toast,
   ToastClose,
@@ -9,65 +9,100 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 
-// Ensure React is properly imported to prevent useState null errors
+// Ensure React is properly available
 if (!React || typeof React.useState !== 'function') {
-  console.error('React is not properly initialized');
+  console.error('React hooks are not available in toaster component');
 }
 
-// Global toast state to avoid React hook issues
-let globalToasts: Array<{
+// Toast interface
+interface ToastItem {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   variant?: "default" | "destructive"
-}> = []
+}
 
-let updateFunctions: Array<React.Dispatch<React.SetStateAction<any[]>>> = []
+// Safe global state management
+class ToastManager {
+  private toasts: ToastItem[] = []
+  private listeners: Array<(toasts: ToastItem[]) => void> = []
 
+  addToast(toast: { 
+    title?: string; 
+    description?: string; 
+    variant?: "default" | "destructive" 
+  }) {
+    const id = Math.random().toString(36).substr(2, 9)
+    const newToast: ToastItem = { ...toast, id }
+    
+    this.toasts = [newToast, ...this.toasts.slice(0, 4)]
+    this.notifyListeners()
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      this.removeToast(id)
+    }, 5000)
+    
+    return id
+  }
+
+  removeToast(id: string) {
+    this.toasts = this.toasts.filter(t => t.id !== id)
+    this.notifyListeners()
+  }
+
+  subscribe(listener: (toasts: ToastItem[]) => void) {
+    this.listeners.push(listener)
+    return () => {
+      const index = this.listeners.indexOf(listener)
+      if (index > -1) {
+        this.listeners.splice(index, 1)
+      }
+    }
+  }
+
+  getToasts() {
+    return this.toasts
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => {
+      try {
+        listener([...this.toasts])
+      } catch (error) {
+        console.error('Error notifying toast listener:', error)
+      }
+    })
+  }
+}
+
+// Global toast manager instance
+const toastManager = new ToastManager()
+
+// Export function to add toasts
 export function addToast(toast: { 
   title?: string; 
   description?: string; 
   variant?: "default" | "destructive" 
 }) {
-  const id = Math.random().toString(36).substr(2, 9)
-  const newToast = { ...toast, id }
-  
-  globalToasts = [newToast, ...globalToasts.slice(0, 4)]
-  
-  // Update all registered components
-  updateFunctions.forEach(update => {
-    try {
-      update([...globalToasts])
-    } catch (error) {
-      console.error('Error updating toast:', error)
-    }
-  })
-  
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    globalToasts = globalToasts.filter(t => t.id !== id)
-    updateFunctions.forEach(update => {
-      try {
-        update([...globalToasts])
-      } catch (error) {
-        console.error('Error removing toast:', error)
-      }
-    })
-  }, 5000)
+  return toastManager.addToast(toast)
 }
 
+// Main Toaster component
 export function Toaster() {
-  const [toasts, setToasts] = React.useState(globalToasts)
+  // Safe React hooks usage with fallback
+  const [toasts, setToasts] = React.useState<ToastItem[]>(() => toastManager.getToasts())
 
   React.useEffect(() => {
-    updateFunctions.push(setToasts)
-    return () => {
-      const index = updateFunctions.indexOf(setToasts)
-      if (index > -1) {
-        updateFunctions.splice(index, 1)
-      }
-    }
+    const unsubscribe = toastManager.subscribe(setToasts)
+    return unsubscribe
   }, [])
+
+  // Defensive rendering
+  if (!React || !Array.isArray(toasts)) {
+    console.warn('Toaster: Invalid state, skipping render')
+    return null
+  }
 
   return (
     <ToastProvider>

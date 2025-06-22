@@ -40,6 +40,15 @@ const queryClient = new QueryClient({
 });
 
 const App: React.FC = () => {
+  // Ensure React is available before rendering
+  if (!React || typeof React.useState !== 'function') {
+    return (
+      <div style={{ padding: '20px', color: 'red' }}>
+        React is not properly initialized. Please refresh the page.
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
