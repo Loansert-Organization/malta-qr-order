@@ -1,16 +1,22 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CreditCard, Smartphone } from 'lucide-react';
 
 interface PaymentMethodSelectorProps {
   paymentMethod: 'stripe' | 'revolut';
   setPaymentMethod: (method: 'stripe' | 'revolut') => void;
+  vendorPaymentLinks: {
+    revolut_link?: string;
+    stripe_link?: string;
+  };
 }
 
 const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   paymentMethod,
-  setPaymentMethod
+  setPaymentMethod,
+  vendorPaymentLinks
 }) => {
   return (
     <div className="space-y-4">
@@ -19,18 +25,28 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         <Button
           variant={paymentMethod === 'stripe' ? 'default' : 'outline'}
           onClick={() => setPaymentMethod('stripe')}
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-2 h-auto p-4"
         >
-          <CreditCard className="h-4 w-4" />
-          <span>Card</span>
+          <div className="flex flex-col items-center space-y-2">
+            <CreditCard className="h-5 w-5" />
+            <span className="text-sm">Credit Card</span>
+            <Badge variant="secondary" className="text-xs">Secure</Badge>
+          </div>
         </Button>
+        
         <Button
           variant={paymentMethod === 'revolut' ? 'default' : 'outline'}
           onClick={() => setPaymentMethod('revolut')}
-          className="flex items-center space-x-2"
+          disabled={!vendorPaymentLinks.revolut_link}
+          className="flex items-center space-x-2 h-auto p-4"
         >
-          <Smartphone className="h-4 w-4" />
-          <span>Revolut</span>
+          <div className="flex flex-col items-center space-y-2">
+            <Smartphone className="h-5 w-5" />
+            <span className="text-sm">Revolut</span>
+            <Badge variant="secondary" className="text-xs">
+              {vendorPaymentLinks.revolut_link ? 'Fast' : 'N/A'}
+            </Badge>
+          </div>
         </Button>
       </div>
     </div>

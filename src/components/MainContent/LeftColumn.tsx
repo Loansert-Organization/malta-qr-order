@@ -1,9 +1,8 @@
 
 import React from 'react';
-import HeroSection from '../HeroSection';
-import SearchSection from '../SearchSection';
-import AIInsightsPanel from '../AIInsightsPanel';
-import SmartMenu from '../SmartMenu';
+import HeroSection from './HeroSection';
+import MenuSection from './MenuSection';
+import SearchBar from './SearchBar';
 
 interface LeftColumnProps {
   layout: any;
@@ -14,7 +13,7 @@ interface LeftColumnProps {
   menuItems: any[];
   handleHeroCtaClick: () => void;
   handleSearch: (query: string) => void;
-  addToCart: (item: any) => void;
+  addToCart: (item: any) => Promise<void>;
 }
 
 const LeftColumn: React.FC<LeftColumnProps> = ({
@@ -39,29 +38,17 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
         onCtaClick={handleHeroCtaClick}
       />
 
-      {/* Search and Filters */}
-      <SearchSection
+      {/* Search Bar */}
+      <SearchBar
         searchQuery={searchQuery}
         onSearch={handleSearch}
-        contextData={contextData}
       />
 
-      {/* AI Insights Panel */}
-      <AIInsightsPanel
-        vendorId={vendor.id}
-        contextData={contextData}
-        onInsightClick={(insight) => {
-          console.log('AI Insight clicked:', insight);
-        }}
-      />
-
-      {/* Menu Items */}
-      <SmartMenu
+      {/* Menu Section */}
+      <MenuSection
         menuItems={menuItems}
-        onAddToCart={addToCart}
-        aiInsights={contextData?.ai_insights}
-        weatherData={weatherData}
         searchQuery={searchQuery}
+        onAddToCart={addToCart}
       />
     </div>
   );
