@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import {
   Star,
   Clock,
   MapPin,
-  WifiOff,
   Check
 } from 'lucide-react';
 
@@ -277,7 +277,7 @@ const MobileOrderingInterface = () => {
       </div>
 
       {/* Enhanced Floating Cart with better UX */}
-      {getTotalItems() > 0 and (
+      {getTotalItems() > 0 && (
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md z-50">
           <Card className="bg-blue-600 text-white shadow-xl border-0">
             <CardContent className="p-4">
