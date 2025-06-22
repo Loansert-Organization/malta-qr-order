@@ -2,6 +2,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Header from "@/components/layout/Header";
@@ -13,7 +14,6 @@ import AdminPanel from "./pages/AdminPanel";
 import VendorRegistrationPage from "./pages/VendorRegistration";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { Toaster } from "@/components/ui/toaster";
 
 // Enhanced QueryClient with proper error handling
 const queryClient = new QueryClient({
@@ -84,7 +84,26 @@ const App: React.FC = () => {
                 </ErrorBoundary>
               </main>
             </div>
-            <Toaster />
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: {
+                  style: {
+                    background: '#059669',
+                  },
+                },
+                error: {
+                  style: {
+                    background: '#dc2626',
+                  },
+                },
+              }}
+            />
           </BrowserRouter>
         </AuthProvider>
       </QueryClientProvider>
