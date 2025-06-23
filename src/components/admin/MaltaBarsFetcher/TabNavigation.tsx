@@ -16,17 +16,17 @@ interface TabNavigationProps {
   onTabChange: (tab: string) => void;
 }
 
-const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
-  const tabs = [
-    { id: 'overview', label: 'Bars Overview', icon: Database },
-    { id: 'control', label: 'Control Panel', icon: Settings },
-    { id: 'automation', label: 'AI Automation', icon: Bot },
-    { id: 'analytics', label: 'Menu Analytics', icon: BarChart3 },
-    { id: 'logs', label: 'Operation Logs', icon: FileText },
-    { id: 'health', label: 'Health Monitor', icon: Activity },
-    { id: 'data', label: 'Data Management', icon: HardDrive },
-  ];
+const tabs = [
+  { id: 'overview', label: 'Bars Overview', icon: Database },
+  { id: 'control', label: 'Control Panel', icon: Settings },
+  { id: 'automation', label: 'AI Automation', icon: Bot },
+  { id: 'analytics', label: 'Menu Analytics', icon: BarChart3 },
+  { id: 'logs', label: 'Operation Logs', icon: FileText },
+  { id: 'health', label: 'Health Monitor', icon: Activity },
+  { id: 'data', label: 'Data Management', icon: HardDrive },
+];
 
+export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
   return (
     <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-lg">
       {tabs.map((tab) => {
@@ -46,6 +46,4 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
       })}
     </div>
   );
-};
-
-export default TabNavigation;
+}
