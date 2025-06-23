@@ -1,49 +1,73 @@
 
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Star, TrendingUp, Thermometer } from 'lucide-react';
-import { MenuItem, AIInsights, WeatherData, BadgeInfo } from './types';
+import { Utensils, Coffee, Leaf, AlertTriangle } from 'lucide-react';
+import { MenuItem } from '@/hooks/useOrderDemo/types';
 
 interface SmartMenuBadgesProps {
-  item: MenuItem;
-  aiInsights?: AIInsights;
-  weatherData?: WeatherData;
+  menuItems: MenuItem[];
+  totalItems: number;
+  activeFilters: string[];
 }
 
-export const SmartMenuBadges = ({ item, aiInsights, weatherData }: SmartMenuBadgesProps) => {
-  const getBadges = (): BadgeInfo[] => {
-    const badges: BadgeInfo[] = [];
-
-    if (item.popular) {
-      badges.push({ text: 'Popular', variant: 'default', icon: Star });
-    }
-
-    if (aiInsights?.trending_items.includes(item.name)) {
-      badges.push({ text: 'Trending', variant: 'secondary', icon: TrendingUp });
-    }
-
-    if (weatherData?.recommendations.some(rec => 
-      item.category.toLowerCase().includes(rec) || 
-      item.name.toLowerCase().includes(rec)
-    )) {
-      badges.push({ text: 'Perfect Weather', variant: 'outline', icon: Thermometer });
-    }
-
-    return badges;
+const SmartMenuBadges: React.FC<SmartMenuBadgesProps> = ({ 
+  menuItems, 
+  totalItems, 
+  activeFilters 
+}) => {
+  const stats = {
+    food: menuItems.filter(item => item.category === 'Food').length,
+    drinks: menuItems.filter(item => item.category === 'Drink').length,
+    vegetarian: menuItems.filter(item => item.is_vegetarian).length,
+    withAllergens: menuItems.filter(item => item.allergens && item.allergens.length > 0).length,
+    popular: menuItems.filter(item => item.popular).length,
+    available: menuItems.filter(item => item.available !== false).length
   };
 
-  const badges = getBadges();
+  const isFiltered = activeFilters.length > 0;
 
   return (
-    <div className="flex space-x-1">
-      {badges.map((badge, idx) => {
-        const IconComponent = badge.icon;
-        return (
-          <Badge key={idx} variant={badge.variant} className="text-xs flex items-center space-x-1">
-            <IconComponent className="h-3 w-3" />
-            <span>{badge.text}</span>
+    <div className="flex flex-wrap gap-2 p-4 bg-white rounded-lg border">
+      <div className="flex items-center gap-2 mb-2 w-full">
+        <h3 className="font-semibold text-gray-900">Menu Overview</h3>
+        {isFiltered && (
+          <Badge variant="outline" className="text-xs">
+            Showing {menuItems.length} of {totalItems} items
           </Badge>
-        );
-      })}
+        )}
+      </div>
+      
+      <Badge variant="outline" className="flex items-center gap-1">
+        <Utensils className="h-3 w-3" />
+        {stats.food} Food Items
+      </Badge>
+      
+      <Badge variant="outline" className="flex items-center gap-1">
+        <Coffee className="h-3 w-3" />
+        {stats.drinks} Drinks
+      </Badge>
+      
+      <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600">
+        <Leaf className="h-3 w-3" />
+        {stats.vegetarian} Vegetarian
+      </Badge>
+      
+      <Badge variant="outline" className="flex items-center gap-1 text-yellow-600 border-yellow-600">
+        <AlertTriangle className="h-3 w-3" />
+        {stats.withAllergens} With Allergens
+      </Badge>
+      
+      {stats.popular > 0 && (
+        <Badge variant="secondary" className="flex items-center gap-1">
+          ⭐ {stats.popular} Popular
+        </Badge>
+      )}
+      
+      <Badge variant="outline" className="text-green-700 border-green-700">
+        {stats.available} Available Now
+      </Badge>
     </div>
   );
 };
+
+export default SmartMenuBadges;

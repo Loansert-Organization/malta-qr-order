@@ -2,13 +2,16 @@
 export interface MenuItem {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
   image_url?: string;
-  category: string;
-  popular: boolean;
+  category?: string;
+  subcategory?: string;
+  popular?: boolean;
   prep_time?: string;
-  available: boolean;
+  available?: boolean;
+  is_vegetarian?: boolean;
+  allergens?: string[];
 }
 
 export interface CartItem extends MenuItem {
@@ -19,6 +22,8 @@ export interface Vendor {
   id: string;
   name: string;
   slug: string;
-  location: string;
-  description: string;
+  description?: string;
+  location?: string;
+  logo_url?: string;
+  active: boolean;
 }

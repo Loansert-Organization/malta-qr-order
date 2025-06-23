@@ -302,6 +302,7 @@ export type Database = {
       }
       menu_items: {
         Row: {
+          allergens: Json | null
           available: boolean | null
           bar_id: string | null
           category: string | null
@@ -309,15 +310,18 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_vegetarian: boolean | null
           menu_id: string
           name: string
           popular: boolean | null
           prep_time: string | null
           price: number
           source_url: string | null
+          subcategory: string | null
           updated_at: string
         }
         Insert: {
+          allergens?: Json | null
           available?: boolean | null
           bar_id?: string | null
           category?: string | null
@@ -325,15 +329,18 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_vegetarian?: boolean | null
           menu_id: string
           name: string
           popular?: boolean | null
           prep_time?: string | null
           price: number
           source_url?: string | null
+          subcategory?: string | null
           updated_at?: string
         }
         Update: {
+          allergens?: Json | null
           available?: boolean | null
           bar_id?: string | null
           category?: string | null
@@ -341,12 +348,14 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_vegetarian?: boolean | null
           menu_id?: string
           name?: string
           popular?: boolean | null
           prep_time?: string | null
           price?: number
           source_url?: string | null
+          subcategory?: string | null
           updated_at?: string
         }
         Relationships: [
