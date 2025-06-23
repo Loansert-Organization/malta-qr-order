@@ -2,6 +2,40 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vendor, MenuItem, CartItem } from './useOrderDemo/types';
+import { Json } from '@/integrations/supabase/types';
+
+// Transform function to convert database JSON to proper types
+const transformMenuItem = (dbItem: any): MenuItem => {
+  let allergens: string[] = [];
+  
+  if (Array.isArray(dbItem.allergens)) {
+    allergens = dbItem.allergens as string[];
+  } else if (typeof dbItem.allergens === 'string') {
+    try {
+      const parsed = JSON.parse(dbItem.allergens);
+      allergens = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      allergens = [];
+    }
+  } else if (dbItem.allergens === null || dbItem.allergens === undefined) {
+    allergens = [];
+  }
+
+  return {
+    id: dbItem.id,
+    name: dbItem.name,
+    description: dbItem.description,
+    price: dbItem.price,
+    image_url: dbItem.image_url,
+    category: dbItem.category,
+    subcategory: dbItem.subcategory,
+    popular: dbItem.popular,
+    prep_time: dbItem.prep_time,
+    available: dbItem.available,
+    is_vegetarian: dbItem.is_vegetarian,
+    allergens
+  };
+};
 
 export const useOrderDemo = (vendorSlug: string) => {
   const [vendor, setVendor] = useState<Vendor | null>(null);
@@ -70,8 +104,10 @@ export const useOrderDemo = (vendorSlug: string) => {
 
       if (vendorData) {
         setVendor(vendorData);
-        const items = vendorData.menus?.[0]?.menu_items || [];
-        setMenuItems(items);
+        const rawItems = vendorData.menus?.[0]?.menu_items || [];
+        // Transform the data to handle JSON types properly
+        const transformedItems = rawItems.map(transformMenuItem);
+        setMenuItems(transformedItems);
         
         // Update layout with actual data
         setLayout(prev => ({

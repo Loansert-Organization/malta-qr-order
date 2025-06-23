@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import SmartMenuItems from './SmartMenu/SmartMenuItems';
 import SmartMenuFilters from './SmartMenu/SmartMenuFilters';
 import SmartMenuBadges from './SmartMenu/SmartMenuBadges';
-import SmartMenuWeatherContext from './SmartMenu/SmartMenuWeatherContext';
+import { SmartMenuWeatherContext } from './SmartMenu/SmartMenuWeatherContext';
 import { MenuItem } from '@/hooks/useOrderDemo/types';
 
 interface SmartMenuProps {

@@ -1,12 +1,20 @@
 
 import { Card, CardContent } from '@/components/ui/card';
-import { WeatherData } from './types';
+
+export interface WeatherData {
+  temperature: number;
+  condition?: string;
+  humidity?: number;
+  windSpeed?: number;
+}
 
 interface SmartMenuWeatherContextProps {
   weatherData: WeatherData;
+  contextData?: any;
+  menuItems?: any[];
 }
 
-export const SmartMenuWeatherContext = ({ weatherData }: SmartMenuWeatherContextProps) => {
+export const SmartMenuWeatherContext = ({ weatherData, contextData, menuItems }: SmartMenuWeatherContextProps) => {
   const getWeatherContext = () => {
     const temp = weatherData.temperature;
     
