@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { logSystemEvent } from '@/utils/systemLogs';
 
 const SUPABASE_EDGE_BASE = "https://nireplgrlwhwppjtfxbb.supabase.co/functions/v1";
 
@@ -41,33 +42,37 @@ export async function aiMonitor(
 
     console.log(`✅ AI Function (${eventType}) → ${endpoint}:`, response.data);
     
-    // Log to system for tracking
-    await logAIEvent(eventType, endpoint, response.data, payload);
+    // Log to system_logs instead of ai_waiter_logs
+    await logSystemEvent({
+      log_type: 'info',
+      component: 'ai_monitor',
+      message: `AI function ${endpoint} triggered for ${eventType}`,
+      metadata: {
+        endpoint,
+        payload,
+        result: response.data,
+        timestamp: new Date().toISOString()
+      }
+    });
     
     return response.data;
   } catch (err) {
     console.error(`[aiMonitor] Failed to call ${endpoint}:`, err);
-    return null;
-  }
-}
-
-async function logAIEvent(eventType: string, endpoint: string, result: any, payload: any) {
-  try {
-    await supabase.from('ai_waiter_logs').insert({
-      content: `AI function ${endpoint} triggered for ${eventType}`,
-      message_type: eventType,
-      guest_session_id: 'system',
-      vendor_id: '00000000-0000-0000-0000-000000000000',
-      processing_metadata: {
+    
+    // Log error to system_logs
+    await logSystemEvent({
+      log_type: 'error',
+      component: 'ai_monitor',
+      message: `Failed to call AI function ${endpoint}: ${err}`,
+      metadata: {
         endpoint,
         payload,
-        result,
+        error: String(err),
         timestamp: new Date().toISOString()
-      },
-      ai_model_used: 'system_monitor'
+      }
     });
-  } catch (error) {
-    console.error('Failed to log AI event:', error);
+    
+    return null;
   }
 }
 

@@ -1,6 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { aiMonitor } from '@/utils/aiMonitor';
+import { logSystemEvent } from '@/utils/systemLogs';
+import { securityAuditService, SecurityAuditIssue } from './securityAuditService';
+import { performanceAuditService, PerformanceAuditIssue } from './performanceAuditService';
+import { accessibilityAuditService, AccessibilityAuditIssue } from './accessibilityAuditService';
 
 export interface AuditIssue {
   id: string;
@@ -47,11 +50,27 @@ export class ModularAuditService {
     this.auditId = `audit_${Date.now()}`;
   }
 
+  private convertToAuditIssue(issue: SecurityAuditIssue | PerformanceAuditIssue | any): AuditIssue {
+    return {
+      id: issue.id,
+      location: issue.endpoint || issue.table || issue.element || 'System',
+      description: issue.description,
+      severity: issue.severity,
+      category: issue.category,
+      recommendation: issue.recommendation,
+      status: issue.status,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
   async runFrontendAudit(): Promise<AuditModule> {
     const startTime = Date.now();
     const issues: AuditIssue[] = [];
 
     try {
+      console.log('🖥️ Running Frontend Audit...');
+
       // Check for TypeScript compilation issues
       const tsIssues = await this.checkTypeScriptHealth();
       issues.push(...tsIssues);
@@ -60,9 +79,9 @@ export class ModularAuditService {
       const boundaryIssues = await this.checkErrorBoundaries();
       issues.push(...boundaryIssues);
 
-      // Check for accessibility issues
-      const a11yIssues = await this.checkAccessibility();
-      issues.push(...a11yIssues);
+      // Run accessibility audit
+      const accessibilityIssues = await accessibilityAuditService.runComprehensiveAccessibilityAudit();
+      issues.push(...accessibilityIssues.map(this.convertToAuditIssue));
 
       const score = this.calculateModuleScore(issues);
       const duration = Date.now() - startTime;
@@ -76,7 +95,7 @@ export class ModularAuditService {
 
       return {
         name: 'Frontend Audit',
-        description: 'TypeScript, React, and UI component health check',
+        description: 'TypeScript, React, accessibility, and UI component health check',
         status: 'completed',
         issues,
         score,
@@ -92,7 +111,7 @@ export class ModularAuditService {
 
       return {
         name: 'Frontend Audit',
-        description: 'TypeScript, React, and UI component health check',
+        description: 'TypeScript, React, accessibility, and UI component health check',
         status: 'failed',
         issues: [{
           id: 'frontend-audit-error',
@@ -117,6 +136,8 @@ export class ModularAuditService {
     const issues: AuditIssue[] = [];
 
     try {
+      console.log('🔧 Running Backend Audit...');
+
       // Check database connectivity
       const dbIssues = await this.checkDatabaseHealth();
       issues.push(...dbIssues);
@@ -129,12 +150,16 @@ export class ModularAuditService {
       const apiIssues = await this.checkAPIHealth();
       issues.push(...apiIssues);
 
+      // Run performance audit
+      const performanceIssues = await performanceAuditService.runComprehensivePerformanceAudit();
+      issues.push(...performanceIssues.map(this.convertToAuditIssue));
+
       const score = this.calculateModuleScore(issues);
       const duration = Date.now() - startTime;
 
       return {
         name: 'Backend Audit',
-        description: 'Database, API, and edge function health check',
+        description: 'Database, API, performance, and edge function health check',
         status: 'completed',
         issues,
         score,
@@ -150,7 +175,7 @@ export class ModularAuditService {
 
       return {
         name: 'Backend Audit',
-        description: 'Database, API, and edge function health check',
+        description: 'Database, API, performance, and edge function health check',
         status: 'failed',
         issues: [],
         score: 0,
@@ -165,24 +190,18 @@ export class ModularAuditService {
     const issues: AuditIssue[] = [];
 
     try {
-      // Check RLS policies
-      const rlsIssues = await this.checkRLSPolicies();
-      issues.push(...rlsIssues);
+      console.log('🔒 Running Security Audit...');
 
-      // Check authentication flows
-      const authIssues = await this.checkAuthenticationFlows();
-      issues.push(...authIssues);
-
-      // Check for exposed endpoints
-      const exposureIssues = await this.checkEndpointExposure();
-      issues.push(...exposureIssues);
+      // Run comprehensive security audit
+      const securityIssues = await securityAuditService.runComprehensiveSecurityAudit();
+      issues.push(...securityIssues.map(this.convertToAuditIssue));
 
       const score = this.calculateModuleScore(issues);
       const duration = Date.now() - startTime;
 
       return {
         name: 'Security Audit',
-        description: 'Authentication, authorization, and security policy check',
+        description: 'Authentication, authorization, RLS policies, and endpoint security check',
         status: 'completed',
         issues,
         score,
@@ -192,7 +211,7 @@ export class ModularAuditService {
     } catch (error) {
       return {
         name: 'Security Audit',
-        description: 'Authentication, authorization, and security policy check',
+        description: 'Authentication, authorization, RLS policies, and endpoint security check',
         status: 'failed',
         issues: [],
         score: 0,
@@ -207,24 +226,18 @@ export class ModularAuditService {
     const issues: AuditIssue[] = [];
 
     try {
-      // Check response times
-      const responseIssues = await this.checkResponseTimes();
-      issues.push(...responseIssues);
+      console.log('⚡ Running Performance Audit...');
 
-      // Check bundle sizes
-      const bundleIssues = await this.checkBundleSizes();
-      issues.push(...bundleIssues);
-
-      // Check slow queries
-      const queryIssues = await this.checkSlowQueries();
-      issues.push(...queryIssues);
+      // This is now handled in backend audit but we keep it separate for organization
+      const performanceIssues = await performanceAuditService.runComprehensivePerformanceAudit();
+      issues.push(...performanceIssues.map(this.convertToAuditIssue));
 
       const score = this.calculateModuleScore(issues);
       const duration = Date.now() - startTime;
 
       return {
         name: 'Performance Audit',
-        description: 'Response times, bundle sizes, and query performance check',
+        description: 'Database queries, bundle size, memory usage, and Core Web Vitals check',
         status: 'completed',
         issues,
         score,
@@ -234,7 +247,7 @@ export class ModularAuditService {
     } catch (error) {
       return {
         name: 'Performance Audit',
-        description: 'Response times, bundle sizes, and query performance check',
+        description: 'Database queries, bundle size, memory usage, and Core Web Vitals check',
         status: 'failed',
         issues: [],
         score: 0,
@@ -248,6 +261,8 @@ export class ModularAuditService {
     const startTime = Date.now();
 
     try {
+      console.log('🔍 Starting comprehensive fullstack audit...');
+
       // Run all audit modules
       const [frontendModule, backendModule, securityModule, performanceModule] = await Promise.all([
         this.runFrontendAudit(),
@@ -280,16 +295,16 @@ export class ModularAuditService {
       };
 
       // Log to system_logs
-      await supabase.from('system_logs').insert({
-        log_type: 'audit_completed',
-        component: 'modular_audit_service',
+      await logSystemEvent({
+        log_type: 'info',
+        component: 'comprehensive_audit',
         message: `Comprehensive audit completed with score: ${overallScore.toFixed(1)}%`,
         metadata: {
           audit_id: this.auditId,
           summary,
-          duration: Date.now() - startTime
-        },
-        severity: overallScore > 80 ? 'info' : overallScore > 60 ? 'warning' : 'error'
+          duration: Date.now() - startTime,
+          modules: modules.map(m => ({ name: m.name, score: m.score, issues: m.issues.length }))
+        }
       });
 
       // Trigger AI review for critical issues
@@ -329,23 +344,19 @@ export class ModularAuditService {
     }
   }
 
-  // Real audit implementation methods
+  // Keep existing implementation methods but with real checks now
   private async checkTypeScriptHealth(): Promise<AuditIssue[]> {
     const issues: AuditIssue[] = [];
     
     try {
-      // Check for common TypeScript issues
-      const { data: errorLogs } = await supabase
-        .from('error_logs')
-        .select('*')
-        .eq('error_type', 'typescript_error')
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-      if (errorLogs && errorLogs.length > 0) {
+      // Check for common TypeScript issues in console
+      const errors = (window as any).__typescript_errors || [];
+      
+      if (errors.length > 0) {
         issues.push({
           id: 'ts-compilation-errors',
           location: 'TypeScript Compiler',
-          description: `${errorLogs.length} TypeScript compilation errors in last 24h`,
+          description: `${errors.length} TypeScript compilation errors detected`,
           severity: 'high',
           category: 'code-quality',
           recommendation: 'Fix TypeScript compilation errors',
@@ -362,29 +373,36 @@ export class ModularAuditService {
   }
 
   private async checkErrorBoundaries(): Promise<AuditIssue[]> {
-    return [{
-      id: 'missing-error-boundary',
-      location: 'App Component',
-      description: 'Missing error boundary for main application',
-      severity: 'medium',
-      category: 'reliability',
-      recommendation: 'Add React error boundary to catch and handle component errors',
-      status: 'open',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }];
-  }
+    const issues: AuditIssue[] = [];
+    
+    // Check if React error boundaries are implemented
+    const hasErrorBoundary = document.querySelector('[data-error-boundary]');
+    
+    if (!hasErrorBoundary) {
+      issues.push({
+        id: 'missing-error-boundary',
+        location: 'App Component',
+        description: 'Missing React error boundary for main application',
+        severity: 'medium',
+        category: 'reliability',
+        recommendation: 'Add React error boundary to catch and handle component errors',
+        status: 'open',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
 
-  private async checkAccessibility(): Promise<AuditIssue[]> {
-    // Placeholder for accessibility checks
-    return [];
+    return issues;
   }
 
   private async checkDatabaseHealth(): Promise<AuditIssue[]> {
     const issues: AuditIssue[] = [];
     
     try {
+      const startTime = performance.now();
       const { error } = await supabase.from('vendors').select('count').limit(1);
+      const responseTime = performance.now() - startTime;
+      
       if (error) {
         issues.push({
           id: 'db-connectivity-issue',
@@ -393,6 +411,20 @@ export class ModularAuditService {
           severity: 'critical',
           category: 'infrastructure',
           recommendation: 'Check database connection and network connectivity',
+          status: 'open',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      if (responseTime > 300) {
+        issues.push({
+          id: 'db-slow-response',
+          location: 'Database',
+          description: `Slow database response time: ${Math.round(responseTime)}ms`,
+          severity: 'medium',
+          category: 'performance',
+          recommendation: 'Optimize database queries and check network latency',
           status: 'open',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -417,95 +449,105 @@ export class ModularAuditService {
 
   private async checkEdgeFunctionHealth(): Promise<AuditIssue[]> {
     const issues: AuditIssue[] = [];
+    const edgeFunctions = ['ai-system-health', 'ai-error-fix', 'ai-code-evaluator'];
     
-    try {
-      const { error } = await supabase.functions.invoke('ai-system-health', {
-        body: { check: 'health' }
-      });
-      
-      if (error) {
-        issues.push({
-          id: 'edge-function-error',
-          location: 'Edge Functions',
-          description: `Edge function health check failed: ${error.message}`,
-          severity: 'high',
-          category: 'infrastructure',
-          recommendation: 'Check edge function deployment and configuration',
-          status: 'open',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+    for (const functionName of edgeFunctions) {
+      try {
+        const startTime = performance.now();
+        const { error } = await supabase.functions.invoke(functionName, {
+          body: { test: true }
         });
+        const responseTime = performance.now() - startTime;
+        
+        if (error) {
+          issues.push({
+            id: `edge-function-error-${functionName}`,
+            location: `Edge Function: ${functionName}`,
+            description: `Edge function health check failed: ${error.message}`,
+            severity: 'high',
+            category: 'infrastructure',
+            recommendation: 'Check edge function deployment and configuration',
+            status: 'open',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+
+        if (responseTime > 5000) {
+          issues.push({
+            id: `edge-function-slow-${functionName}`,
+            location: `Edge Function: ${functionName}`,
+            description: `Slow edge function response: ${Math.round(responseTime)}ms`,
+            severity: 'medium',
+            category: 'performance',
+            recommendation: 'Optimize edge function performance',
+            status: 'open',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (error) {
+        // Edge functions may not be deployed in development - this is expected
+        console.log(`Edge function ${functionName} test completed:`, error);
       }
-    } catch (error) {
-      // Edge functions may not be deployed in development
     }
 
     return issues;
   }
 
   private async checkAPIHealth(): Promise<AuditIssue[]> {
-    // Placeholder for API health checks
-    return [];
-  }
-
-  private async checkRLSPolicies(): Promise<AuditIssue[]> {
-    // Placeholder for RLS policy checks
-    return [];
-  }
-
-  private async checkAuthenticationFlows(): Promise<AuditIssue[]> {
-    // Placeholder for authentication flow checks
-    return [];
-  }
-
-  private async checkEndpointExposure(): Promise<AuditIssue[]> {
-    // Placeholder for endpoint exposure checks
-    return [];
-  }
-
-  private async checkResponseTimes(): Promise<AuditIssue[]> {
     const issues: AuditIssue[] = [];
     
     try {
-      const { data: perfLogs } = await supabase
-        .from('performance_logs')
-        .select('response_time, endpoint')
-        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-        .order('response_time', { ascending: false })
-        .limit(100);
+      // Test basic API connectivity
+      const startTime = performance.now();
+      const response = await fetch(`${window.location.origin}/`, {
+        method: 'HEAD'
+      });
+      const responseTime = performance.now() - startTime;
 
-      if (perfLogs && perfLogs.length > 0) {
-        const slowQueries = perfLogs.filter(log => log.response_time > 2000);
-        
-        if (slowQueries.length > 5) {
-          issues.push({
-            id: 'slow-response-times',
-            location: 'API Endpoints',
-            description: `${slowQueries.length} slow API responses (>2s) detected`,
-            severity: 'medium',
-            category: 'performance',
-            recommendation: 'Optimize slow API endpoints and database queries',
-            status: 'open',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        }
+      if (!response.ok) {
+        issues.push({
+          id: 'api-connectivity',
+          location: 'API Health',
+          description: `API health check failed with status: ${response.status}`,
+          severity: 'high',
+          category: 'api',
+          recommendation: 'Check API server status and configuration',
+          status: 'open',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      if (responseTime > 2000) {
+        issues.push({
+          id: 'api-slow-response',
+          location: 'API Health',
+          description: `Slow API response time: ${Math.round(responseTime)}ms`,
+          severity: 'medium',
+          category: 'performance',
+          recommendation: 'Optimize API response time and check server resources',
+          status: 'open',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
       }
     } catch (error) {
-      console.error('Response time check failed:', error);
+      issues.push({
+        id: 'api-error',
+        location: 'API Health',
+        description: `API health check failed: ${error}`,
+        severity: 'critical',
+        category: 'api',
+        recommendation: 'Investigate API connectivity and server status',
+        status: 'open',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
     }
 
     return issues;
-  }
-
-  private async checkBundleSizes(): Promise<AuditIssue[]> {
-    // Placeholder for bundle size checks
-    return [];
-  }
-
-  private async checkSlowQueries(): Promise<AuditIssue[]> {
-    // Placeholder for slow query checks
-    return [];
   }
 
   private calculateModuleScore(issues: AuditIssue[]): number {

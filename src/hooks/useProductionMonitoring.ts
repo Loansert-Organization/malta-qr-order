@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { aiMonitor } from '@/utils/aiMonitor';
+import { logSystemEvent } from '@/utils/systemLogs';
 
 interface ProductionMetrics {
   systemHealth: number;
@@ -24,6 +25,17 @@ interface ServiceHealth {
   auth: boolean;
   lastError?: string;
   responseTimes: { [key: string]: number };
+  failureCount: number;
+  circuitBreakerOpen: boolean;
+  lastRecoveryAttempt?: string;
+}
+
+interface CircuitBreakerState {
+  isOpen: boolean;
+  failureCount: number;
+  lastFailureTime: number;
+  nextRetryTime: number;
+  state: 'closed' | 'open' | 'half-open';
 }
 
 export const useProductionMonitoring = () => {
@@ -34,16 +46,86 @@ export const useProductionMonitoring = () => {
     edge: false,
     auth: false,
     responseTimes: {},
+    failureCount: 0,
+    circuitBreakerOpen: false,
   });
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [circuitBreaker, setCircuitBreaker] = useState<CircuitBreakerState>({
+    isOpen: false,
+    failureCount: 0,
+    lastFailureTime: 0,
+    nextRetryTime: 0,
+    state: 'closed'
+  });
+
+  const FAILURE_THRESHOLD = 3;
+  const CIRCUIT_BREAKER_TIMEOUT = 60000; // 1 minute
+  const MAX_BACKOFF_TIME = 300000; // 5 minutes
+
+  const calculateBackoffTime = (failureCount: number): number => {
+    return Math.min(1000 * Math.pow(2, failureCount), MAX_BACKOFF_TIME);
+  };
+
+  const shouldAttemptRequest = (): boolean => {
+    if (circuitBreaker.state === 'closed') return true;
+    if (circuitBreaker.state === 'open' && Date.now() > circuitBreaker.nextRetryTime) {
+      setCircuitBreaker(prev => ({ ...prev, state: 'half-open' }));
+      return true;
+    }
+    return false;
+  };
+
+  const recordSuccess = () => {
+    setCircuitBreaker({
+      isOpen: false,
+      failureCount: 0,
+      lastFailureTime: 0,
+      nextRetryTime: 0,
+      state: 'closed'
+    });
+  };
+
+  const recordFailure = () => {
+    const newFailureCount = circuitBreaker.failureCount + 1;
+    const now = Date.now();
+    
+    if (newFailureCount >= FAILURE_THRESHOLD) {
+      const backoffTime = calculateBackoffTime(newFailureCount);
+      setCircuitBreaker({
+        isOpen: true,
+        failureCount: newFailureCount,
+        lastFailureTime: now,
+        nextRetryTime: now + backoffTime,
+        state: 'open'
+      });
+
+      logSystemEvent({
+        log_type: 'error',
+        component: 'circuit_breaker',
+        message: `Circuit breaker opened after ${newFailureCount} failures. Next retry in ${backoffTime}ms`,
+        metadata: { failureCount: newFailureCount, backoffTime, nextRetryTime: now + backoffTime }
+      });
+    } else {
+      setCircuitBreaker(prev => ({
+        ...prev,
+        failureCount: newFailureCount,
+        lastFailureTime: now
+      }));
+    }
+  };
 
   const checkDatabaseHealth = async (): Promise<{ ok: boolean; time: number }> => {
+    if (!shouldAttemptRequest()) {
+      return { ok: false, time: 0 };
+    }
+
     const startTime = Date.now();
     try {
       const { data, error } = await supabase.from('vendors').select('count').limit(1);
       const responseTime = Date.now() - startTime;
       
       if (error) {
+        recordFailure();
         await aiMonitor("error", {
           message: `Database health check failed: ${error.message}`,
           context: "db-health-check",
@@ -52,9 +134,11 @@ export const useProductionMonitoring = () => {
         return { ok: false, time: responseTime };
       }
       
+      recordSuccess();
       return { ok: true, time: responseTime };
     } catch (error) {
       const responseTime = Date.now() - startTime;
+      recordFailure();
       await aiMonitor("error", {
         message: `Database connectivity error: ${error}`,
         context: "db-connectivity",
@@ -65,6 +149,10 @@ export const useProductionMonitoring = () => {
   };
 
   const checkEdgeFunctionHealth = async (): Promise<{ ok: boolean; time: number }> => {
+    if (!shouldAttemptRequest()) {
+      return { ok: false, time: 0 };
+    }
+
     const startTime = Date.now();
     try {
       const { data, error } = await supabase.functions.invoke('ai-system-health', {
@@ -110,6 +198,53 @@ export const useProductionMonitoring = () => {
     }
   };
 
+  const attemptServiceRecovery = async () => {
+    console.log('🔄 Attempting service recovery...');
+    
+    // Log recovery attempt
+    await logSystemEvent({
+      log_type: 'info',
+      component: 'service_recovery',
+      message: 'Attempting automatic service recovery',
+      metadata: { 
+        circuitBreakerState: circuitBreaker,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // Try to recover services
+    const recoveryResults = await Promise.allSettled([
+      checkDatabaseHealth(),
+      checkEdgeFunctionHealth(),
+      checkAuthHealth()
+    ]);
+
+    const successfulRecoveries = recoveryResults.filter(result => 
+      result.status === 'fulfilled' && result.value.ok
+    ).length;
+
+    if (successfulRecoveries > 0) {
+      console.log(`✅ Successfully recovered ${successfulRecoveries} services`);
+      
+      await logSystemEvent({
+        log_type: 'info',
+        component: 'service_recovery',
+        message: `Service recovery successful: ${successfulRecoveries} services restored`,
+        metadata: { 
+          recoveredServices: successfulRecoveries,
+          totalServices: recoveryResults.length
+        }
+      });
+
+      // Reset circuit breaker if enough services are recovered
+      if (successfulRecoveries >= 2) {
+        recordSuccess();
+      }
+    }
+
+    return successfulRecoveries;
+  };
+
   const collectMetrics = async () => {
     const startTime = Date.now();
 
@@ -133,12 +268,10 @@ export const useProductionMonitoring = () => {
 
       const errorRate = errorCount || 0;
 
-      // Mock additional metrics (in production, these would come from actual monitoring)
-      const mockMetrics = {
-        uptime: 99.9,
-        memoryUsage: 45 + Math.random() * 20,
-        cpuUsage: 30 + Math.random() * 15,
-      };
+      // Enhanced metrics calculation
+      const cpuUsage = 30 + Math.random() * 15; // Mock CPU usage
+      const memoryUsage = 45 + Math.random() * 20; // Mock memory usage
+      const uptime = 99.9; // Mock uptime
 
       const newMetrics: ProductionMetrics = {
         systemHealth,
@@ -149,7 +282,9 @@ export const useProductionMonitoring = () => {
         timestamp: new Date().toISOString(),
         dbConnectivity: dbHealth.ok,
         edgeFunctionHealth: edgeHealth.ok,
-        ...mockMetrics
+        uptime,
+        memoryUsage,
+        cpuUsage
       };
 
       const newServiceHealth: ServiceHealth = {
@@ -162,19 +297,25 @@ export const useProductionMonitoring = () => {
           edge: edgeHealth.time,
           auth: authHealth.time,
         },
-        lastError: !dbHealth.ok ? 'Database' : !edgeHealth.ok ? 'Edge Functions' : !authHealth.ok ? 'Authentication' : undefined
+        lastError: !dbHealth.ok ? 'Database' : !edgeHealth.ok ? 'Edge Functions' : !authHealth.ok ? 'Authentication' : undefined,
+        failureCount: circuitBreaker.failureCount,
+        circuitBreakerOpen: circuitBreaker.isOpen,
+        lastRecoveryAttempt: circuitBreaker.state === 'half-open' ? new Date().toISOString() : undefined
       };
 
       setMetrics(newMetrics);
       setServiceHealth(newServiceHealth);
 
-      // Log metrics to system_logs with correct field name and JSON-safe metadata
-      await supabase.from('system_logs').insert({
-        log_type: 'monitoring_metrics',
+      // Log metrics to system_logs
+      await logSystemEvent({
+        log_type: systemHealth > 80 ? 'info' : systemHealth > 60 ? 'warning' : 'error',
         component: 'production_monitoring',
         message: `System health: ${systemHealth.toFixed(1)}%, Error rate: ${errorRate}`,
-        metadata: JSON.parse(JSON.stringify(newMetrics)),
-        severity: systemHealth > 80 ? 'info' : systemHealth > 60 ? 'warning' : 'error'
+        metadata: {
+          ...newMetrics,
+          circuitBreakerState: circuitBreaker.state,
+          servicesHealthy: healthyServices
+        }
       });
 
       // Trigger AI monitoring if health is poor
@@ -185,6 +326,11 @@ export const useProductionMonitoring = () => {
           metrics: newMetrics,
           severity: systemHealth < 50 ? "critical" : "high"
         });
+      }
+
+      // Attempt recovery if circuit breaker is open and it's time to retry
+      if (circuitBreaker.isOpen && Date.now() > circuitBreaker.nextRetryTime) {
+        await attemptServiceRecovery();
       }
 
     } catch (error) {
@@ -220,10 +366,10 @@ export const useProductionMonitoring = () => {
     // Initial metrics collection
     collectMetrics();
 
-    // Monitor system health every 10 minutes (optimized for production)
+    // Monitor system health every 5 minutes (production optimized)
     const monitoringInterval = setInterval(() => {
       collectMetrics();
-    }, 600000); // 10 minutes
+    }, 300000); // 5 minutes
 
     return () => {
       clearInterval(monitoringInterval);
@@ -236,6 +382,10 @@ export const useProductionMonitoring = () => {
     return { metrics, serviceHealth };
   };
 
+  const forceServiceRecovery = async () => {
+    return await attemptServiceRecovery();
+  };
+
   useEffect(() => {
     const cleanup = startMonitoring();
     return cleanup;
@@ -245,7 +395,9 @@ export const useProductionMonitoring = () => {
     metrics,
     serviceHealth,
     isMonitoring,
+    circuitBreaker,
     collectMetrics,
-    runQuickHealthCheck
+    runQuickHealthCheck,
+    forceServiceRecovery
   };
 };
