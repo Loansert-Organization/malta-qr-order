@@ -1,9 +1,9 @@
 
 import React from 'react';
-import FullstackAuditReport from '@/components/admin/FullstackAuditReport';
+import FullstackAuditDashboard from '@/components/admin/FullstackAuditDashboard';
 
 const FullstackAudit = () => {
-  return <FullstackAuditReport />;
+  return <FullstackAuditDashboard />;
 };
 
 export default FullstackAudit;
