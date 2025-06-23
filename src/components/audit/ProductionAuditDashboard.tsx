@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -166,27 +165,105 @@ const ProductionAuditDashboard = () => {
 
   const auditDatabaseSchema = async () => {
     try {
-      // Check required tables
-      const requiredTables = [
-        'vendors', 'menus', 'menu_items', 'orders', 'order_items',
-        'payments', 'ai_waiter_logs', 'guest_sessions', 'profiles'
-      ];
-
-      for (const table of requiredTables) {
-        const { data, error } = await supabase.from(table).select('*').limit(1);
-        if (error) {
-          addAuditResult('Database', 'fail', `Table ${table} not accessible`, error.message);
+      // Check specific required tables with proper typing
+      try {
+        const { data: vendorsData, error: vendorsError } = await supabase.from('vendors').select('*').limit(1);
+        if (vendorsError) {
+          addAuditResult('Database', 'fail', `Vendors table not accessible`, vendorsError.message);
         } else {
-          addAuditResult('Database', 'pass', `Table ${table} accessible`);
+          addAuditResult('Database', 'pass', `Vendors table accessible`);
         }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Vendors table error`, error.message);
+      }
+
+      try {
+        const { data: menusData, error: menusError } = await supabase.from('menus').select('*').limit(1);
+        if (menusError) {
+          addAuditResult('Database', 'fail', `Menus table not accessible`, menusError.message);
+        } else {
+          addAuditResult('Database', 'pass', `Menus table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Menus table error`, error.message);
+      }
+
+      try {
+        const { data: menuItemsData, error: menuItemsError } = await supabase.from('menu_items').select('*').limit(1);
+        if (menuItemsError) {
+          addAuditResult('Database', 'fail', `Menu items table not accessible`, menuItemsError.message);
+        } else {
+          addAuditResult('Database', 'pass', `Menu items table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Menu items table error`, error.message);
+      }
+
+      try {
+        const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*').limit(1);
+        if (ordersError) {
+          addAuditResult('Database', 'fail', `Orders table not accessible`, ordersError.message);
+        } else {
+          addAuditResult('Database', 'pass', `Orders table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Orders table error`, error.message);
+      }
+
+      try {
+        const { data: paymentsData, error: paymentsError } = await supabase.from('payments').select('*').limit(1);
+        if (paymentsError) {
+          addAuditResult('Database', 'fail', `Payments table not accessible`, paymentsError.message);
+        } else {
+          addAuditResult('Database', 'pass', `Payments table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Payments table error`, error.message);
+      }
+
+      try {
+        const { data: aiLogsData, error: aiLogsError } = await supabase.from('ai_waiter_logs').select('*').limit(1);
+        if (aiLogsError) {
+          addAuditResult('Database', 'fail', `AI waiter logs table not accessible`, aiLogsError.message);
+        } else {
+          addAuditResult('Database', 'pass', `AI waiter logs table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `AI waiter logs table error`, error.message);
+      }
+
+      try {
+        const { data: guestSessionsData, error: guestSessionsError } = await supabase.from('guest_sessions').select('*').limit(1);
+        if (guestSessionsError) {
+          addAuditResult('Database', 'fail', `Guest sessions table not accessible`, guestSessionsError.message);
+        } else {
+          addAuditResult('Database', 'pass', `Guest sessions table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Guest sessions table error`, error.message);
+      }
+
+      try {
+        const { data: profilesData, error: profilesError } = await supabase.from('profiles').select('*').limit(1);
+        if (profilesError) {
+          addAuditResult('Database', 'fail', `Profiles table not accessible`, profilesError.message);
+        } else {
+          addAuditResult('Database', 'pass', `Profiles table accessible`);
+        }
+      } catch (error) {
+        addAuditResult('Database', 'fail', `Profiles table error`, error.message);
       }
 
       // Check RLS policies
-      const { data: policies, error: policyError } = await supabase.rpc('get_system_uuid');
-      if (!policyError) {
-        addAuditResult('Database', 'pass', 'RLS policies configured');
-      } else {
-        addAuditResult('Database', 'warning', 'RLS policy check incomplete');
+      try {
+        const { data: policies, error: policyError } = await supabase.rpc('get_system_uuid');
+        if (!policyError) {
+          addAuditResult('Database', 'pass', 'RLS policies configured');
+        } else {
+          addAuditResult('Database', 'warning', 'RLS policy check incomplete');
+        }
+      } catch (error) {
+        addAuditResult('Database', 'warning', 'Could not verify RLS policies', error.message);
       }
 
     } catch (error) {
