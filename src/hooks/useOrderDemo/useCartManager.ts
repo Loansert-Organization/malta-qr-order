@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { MenuItem, CartItem } from './types';
 
-export const useCartManager = (trackInteraction: (action: string, metadata?: any) => Promise<void>) => {
+export const useCartManager = (vendorId: string) => {
   const { toast } = useToast();
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -21,12 +21,18 @@ export const useCartManager = (trackInteraction: (action: string, metadata?: any
     });
 
     // Track interaction for AI insights
-    await trackInteraction('add_to_cart', {
-      item_id: item.id,
-      item_name: item.name,
-      category: item.category,
-      price: item.price
-    });
+    try {
+      const { contextService } = await import('@/services/contextService');
+      await contextService.trackInteraction('add_to_cart', {
+        item_id: item.id,
+        item_name: item.name,
+        category: item.category,
+        price: item.price,
+        vendor_id: vendorId
+      });
+    } catch (error) {
+      console.error('Failed to track add to cart interaction:', error);
+    }
 
     toast({
       title: "Added to cart",
