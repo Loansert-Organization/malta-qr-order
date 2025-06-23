@@ -9,6 +9,7 @@ import AIMonitoring from './AIMonitoring';
 import FinancialOverview from './FinancialOverview';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
 import MaltaBarsFetcher from './MaltaBarsFetcher';
+import ProductionAuditDashboard from '@/components/audit/ProductionAuditDashboard';
 import { 
   LayoutDashboard, 
   Store, 
@@ -17,7 +18,8 @@ import {
   Bot, 
   DollarSign, 
   MapPin,
-  BarChart3
+  BarChart3,
+  Shield
 } from 'lucide-react';
 
 interface AdminTabsProps {
@@ -49,7 +51,7 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-8 mb-8">
+        <TabsList className="grid w-full grid-cols-9 mb-8">
           <TabsTrigger value="overview" className="flex items-center space-x-2">
             <LayoutDashboard className="h-4 w-4" />
             <span>Overview</span>
@@ -81,6 +83,10 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
           <TabsTrigger value="malta-data" className="flex items-center space-x-2">
             <MapPin className="h-4 w-4" />
             <span>Malta Data</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="flex items-center space-x-2">
+            <Shield className="h-4 w-4" />
+            <span>Production Audit</span>
           </TabsTrigger>
         </TabsList>
 
@@ -118,6 +124,10 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
 
         <TabsContent value="malta-data">
           <MaltaBarsFetcher />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <ProductionAuditDashboard />
         </TabsContent>
       </Tabs>
     </div>
