@@ -39,7 +39,6 @@ export const useAutomationEngine = () => {
       
       console.log('✅ Fetched jobs:', data);
       
-      // Type-safe mapping to ensure status matches our interface
       const typedJobs: AutomationJob[] = (data || []).map(job => ({
         ...job,
         status: job.status as 'pending' | 'running' | 'completed' | 'failed'
@@ -89,7 +88,8 @@ export const useAutomationEngine = () => {
 
       toast({
         title: "Automation Complete",
-        description: `${jobType.replace('_', ' ')} completed successfully!`
+        description: `${jobType.replace('_', ' ')} completed successfully!`,
+        duration: 5000
       });
 
     } catch (error: any) {
@@ -97,9 +97,8 @@ export const useAutomationEngine = () => {
       
       let errorMessage = error.message || 'Unknown error occurred';
       
-      // Provide specific guidance for common errors
       if (errorMessage.includes('REQUEST_DENIED') || errorMessage.includes('API key')) {
-        errorMessage = 'Google Maps API key is missing or invalid. Please check your Supabase secrets.';
+        errorMessage = 'Google Maps API key is missing or invalid. Please check your API key configuration.';
       } else if (errorMessage.includes('PERMISSION_DENIED')) {
         errorMessage = 'Authentication failed. Please check your admin permissions.';
       } else if (errorMessage.includes('Edge function failed')) {
@@ -109,12 +108,13 @@ export const useAutomationEngine = () => {
       toast({
         title: "Automation Failed",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
+        duration: 8000
       });
     } finally {
       setIsRunning(false);
       setProgress(0);
-      await fetchJobs(); // Refresh job list
+      await fetchJobs();
     }
   };
 
