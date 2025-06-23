@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,7 +79,18 @@ const ClientOrder = () => {
         .single();
 
       if (error) throw error;
-      setOrder(data);
+      
+      // Transform the data to match our Order interface
+      const transformedOrder: Order = {
+        ...data,
+        vendor: {
+          business_name: data.vendors.business_name,
+          location: data.vendors.location,
+          phone_number: data.vendors.phone_number
+        }
+      };
+      
+      setOrder(transformedOrder);
     } catch (error) {
       console.error('Error fetching order:', error);
       toast.error('Failed to load order details');
@@ -162,7 +172,6 @@ const ClientOrder = () => {
   };
 
   const handleRateOrder = () => {
-    // Navigate to rating page or open modal
     toast.success('Rating feature coming soon!');
   };
 
