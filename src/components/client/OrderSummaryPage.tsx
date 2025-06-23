@@ -180,7 +180,7 @@ const OrderSummaryPage: React.FC<OrderSummaryPageProps> = ({
               <Checkbox
                 id="whatsapp"
                 checked={whatsappConsent}
-                onCheckedChange={setWhatsappConsent}
+                onCheckedChange={(checked) => setWhatsappConsent(checked === true)}
               />
               <Label htmlFor="whatsapp" className="text-sm text-gray-300">
                 I consent to receive order updates via WhatsApp (optional)
@@ -190,7 +190,7 @@ const OrderSummaryPage: React.FC<OrderSummaryPageProps> = ({
               <Checkbox
                 id="terms"
                 checked={agreedToTerms}
-                onCheckedChange={setAgreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
                 required
               />
               <Label htmlFor="terms" className="text-sm text-gray-300">
