@@ -88,8 +88,7 @@ export const useAutomationEngine = () => {
 
       toast({
         title: "Automation Complete",
-        description: `${jobType.replace('_', ' ')} completed successfully!`,
-        duration: 5000
+        description: `${jobType.replace('_', ' ')} completed successfully!`
       });
 
     } catch (error: any) {
@@ -103,13 +102,14 @@ export const useAutomationEngine = () => {
         errorMessage = 'Authentication failed. Please check your admin permissions.';
       } else if (errorMessage.includes('Edge function failed')) {
         errorMessage = 'Backend service error. Please check the edge function logs.';
+      } else if (errorMessage.includes('row-level security policy')) {
+        errorMessage = 'Database permission error. Running automation without job tracking.';
       }
       
       toast({
         title: "Automation Failed",
         description: errorMessage,
-        variant: "destructive",
-        duration: 8000
+        variant: "destructive"
       });
     } finally {
       setIsRunning(false);

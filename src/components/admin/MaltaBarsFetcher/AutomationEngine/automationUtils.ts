@@ -13,31 +13,10 @@ interface AutomationJob {
 export const runGoogleMapsFetch = async (setProgress: (progress: number) => void) => {
   console.log('🚀 Starting Google Maps fetch automation...');
   
-  let jobId: string | null = null;
-  
   try {
-    // Create automation job record
-    const { data: jobData, error: jobError } = await supabase
-      .from('automation_jobs')
-      .insert({
-        job_type: 'google_maps_fetch',
-        status: 'running',
-        started_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (jobError) {
-      console.error('❌ Failed to create automation job:', jobError);
-      throw new Error(`Failed to create job record: ${jobError.message}`);
-    }
-
-    jobId = jobData.id;
-    console.log('✅ Created automation job:', jobId);
-
     setProgress(10);
 
-    // Call the fetch-malta-bars function
+    // Call the fetch-malta-bars function directly without job creation
     console.log('📡 Invoking fetch-malta-bars edge function...');
     const { data, error } = await supabase.functions.invoke('fetch-malta-bars', {
       headers: {
@@ -53,23 +32,25 @@ export const runGoogleMapsFetch = async (setProgress: (progress: number) => void
     console.log('✅ Edge function response:', data);
     setProgress(90);
 
-    // Update job as completed
-    const { error: updateError } = await supabase
-      .from('automation_jobs')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        progress_data: {
-          response: data,
-          total_processed: data?.summary?.total_processed || 0,
-          new_bars_added: data?.summary?.new_bars_added || 0,
-          bars_updated: data?.summary?.bars_updated || 0
-        }
-      })
-      .eq('id', jobId);
-
-    if (updateError) {
-      console.error('❌ Failed to update job status:', updateError);
+    // Try to create job record, but don't fail if RLS blocks it
+    try {
+      await supabase
+        .from('automation_jobs')
+        .insert({
+          job_type: 'google_maps_fetch',
+          status: 'completed',
+          started_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+          progress_data: {
+            response: data,
+            total_processed: data?.summary?.total_processed || 0,
+            new_bars_added: data?.summary?.new_bars_added || 0,
+            bars_updated: data?.summary?.bars_updated || 0
+          }
+        });
+    } catch (jobError) {
+      console.warn('⚠️ Could not create job record:', jobError);
+      // Continue execution even if job logging fails
     }
 
     setProgress(100);
@@ -78,24 +59,23 @@ export const runGoogleMapsFetch = async (setProgress: (progress: number) => void
   } catch (error: any) {
     console.error('💥 Google Maps fetch failed:', error);
     
-    // Update job as failed if we have a jobId
-    if (jobId) {
-      const { error: updateError } = await supabase
+    // Try to log the error, but don't fail if RLS blocks it
+    try {
+      await supabase
         .from('automation_jobs')
-        .update({
+        .insert({
+          job_type: 'google_maps_fetch',
           status: 'failed',
+          started_at: new Date().toISOString(),
           completed_at: new Date().toISOString(),
           error_message: error.message,
           progress_data: {
             error_type: error.name || 'UnknownError',
             error_details: error.message
           }
-        })
-        .eq('id', jobId);
-
-      if (updateError) {
-        console.error('❌ Failed to update job error status:', updateError);
-      }
+        });
+    } catch (jobError) {
+      console.warn('⚠️ Could not log error to job record:', jobError);
     }
     
     throw error;
