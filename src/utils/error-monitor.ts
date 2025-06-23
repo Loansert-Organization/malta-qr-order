@@ -235,7 +235,7 @@ export function withPerformanceMonitoring<T extends object>(
   componentName: string
 ) {
   return function PerformanceMonitoredComponent(props: T) {
-    const { logPerformance, logError } = useErrorMonitor();
+    const { logPerformance } = useErrorMonitor();
     
     React.useEffect(() => {
       const startTime = performance.now();
@@ -249,9 +249,9 @@ export function withPerformanceMonitoring<T extends object>(
           metadata: { componentName }
         });
       };
-    }, []);
+    }, [logPerformance, componentName]);
 
-    return <Component {...props} />;
+    return React.createElement(Component, props);
   };
 }
 
