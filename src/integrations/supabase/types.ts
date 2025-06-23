@@ -183,6 +183,41 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_activity: string | null
+          metadata: Json | null
+          session_token: string
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_activity?: string | null
+          metadata?: Json | null
+          session_token: string
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_activity?: string | null
+          metadata?: Json | null
+          session_token?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_sessions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_ui_sessions: {
         Row: {
           created_at: string
@@ -703,6 +738,36 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          component: string
+          created_at: string | null
+          id: string
+          log_type: string
+          message: string
+          metadata: Json | null
+          severity: string | null
+        }
+        Insert: {
+          component: string
+          created_at?: string | null
+          id?: string
+          log_type: string
+          message: string
+          metadata?: Json | null
+          severity?: string | null
+        }
+        Update: {
+          component?: string
+          created_at?: string | null
+          id?: string
+          log_type?: string
+          message?: string
+          metadata?: Json | null
+          severity?: string | null
+        }
+        Relationships: []
+      }
       terms_and_conditions: {
         Row: {
           active: boolean | null
@@ -830,10 +895,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_anonymous_uuid: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_system_uuid: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      order_status_enum:
+        | "pending"
+        | "confirmed"
+        | "preparing"
+        | "ready"
+        | "completed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -948,6 +1026,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      order_status_enum: [
+        "pending",
+        "confirmed",
+        "preparing",
+        "ready",
+        "completed",
+        "cancelled",
+      ],
+    },
   },
 } as const

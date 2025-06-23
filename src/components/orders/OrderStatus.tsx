@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Clock, CheckCircle, ChefHat, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { OrderStatus as OrderStatusType } from '@/lib/constants';
+import { withErrorBoundary } from '@/components/ErrorBoundary';
 
 interface OrderItem {
   name: string;
@@ -12,11 +14,9 @@ interface OrderItem {
   price: number;
 }
 
-type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed';
-
 interface Order {
   id: string;
-  status: OrderStatus;
+  status: OrderStatusType;
   total_amount: number;
   estimated_time?: number;
   items: OrderItem[];
@@ -50,7 +50,7 @@ const OrderStatusComponent: React.FC<OrderStatusProps> = ({ orderId, guestSessio
           // Transform the payload to match our Order interface
           const updatedOrder: Order = {
             ...payload.new as any,
-            status: (payload.new.status as OrderStatus) || 'pending',
+            status: (payload.new.status as OrderStatusType) || 'pending',
             items: payload.new.items || []
           };
           setOrder(updatedOrder);
@@ -85,7 +85,7 @@ const OrderStatusComponent: React.FC<OrderStatusProps> = ({ orderId, guestSessio
       // Transform the data to match our Order interface
       const transformedOrder: Order = {
         ...orderData,
-        status: (orderData.status as OrderStatus) || 'pending',
+        status: (orderData.status as OrderStatusType) || 'pending',
         items: orderData.order_items?.map((item: any) => ({
           name: item.menu_items?.name || 'Unknown Item',
           quantity: item.quantity,
@@ -101,7 +101,7 @@ const OrderStatusComponent: React.FC<OrderStatusProps> = ({ orderId, guestSessio
     }
   };
 
-  const getStatusInfo = (status: OrderStatus) => {
+  const getStatusInfo = (status: OrderStatusType) => {
     switch (status) {
       case 'pending':
         return { 
@@ -137,6 +137,13 @@ const OrderStatusComponent: React.FC<OrderStatusProps> = ({ orderId, guestSessio
           color: 'bg-green-100 text-green-800',
           icon: CheckCircle,
           progress: 100
+        };
+      case 'cancelled':
+        return { 
+          label: 'Cancelled', 
+          color: 'bg-red-100 text-red-800',
+          icon: CheckCircle,
+          progress: 0
         };
       default:
         return { 
@@ -227,4 +234,4 @@ const OrderStatusComponent: React.FC<OrderStatusProps> = ({ orderId, guestSessio
   );
 };
 
-export default OrderStatusComponent;
+export default withErrorBoundary(OrderStatusComponent, 'OrderStatus');

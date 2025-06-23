@@ -1,64 +1,109 @@
 
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useDynamicLayout } from '@/hooks/useDynamicLayout';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useVendorData } from './useVendorData';
 import { useCartManager } from './useCartManager';
 import { useSearchManager } from './useSearchManager';
+import { useDynamicLayout } from '../useDynamicLayout';
+import { useGuestSession } from '../useGuestSession';
+import { AIGuard } from '@/lib/ai-guards';
 
-export const useOrderDemo = () => {
-  const { slug } = useParams();
-  const [guestSessionId] = useState(() => `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+export const useOrderDemo = (slug: string | undefined) => {
+  const [contextData, setContextData] = useState({
+    timeOfDay: 'evening',
+    location: 'Malta',
+    weather: null as any
+  });
 
-  // Fetch vendor and menu data
+  // Initialize guest session first
+  const { guestSession, sessionId } = useGuestSession();
+
+  // Initialize vendor data with dependency array
   const { vendor, menuItems, loading, weatherData } = useVendorData(slug);
 
-  // Dynamic layout integration
-  const { 
-    layout, 
-    loading: layoutLoading, 
-    trackInteraction,
-    contextData
-  } = useDynamicLayout(vendor?.id || '');
+  // Initialize cart manager with stable vendor ID
+  const vendorId = useMemo(() => vendor?.id || '', [vendor?.id]);
+  const {
+    cart,
+    addToCart: rawAddToCart,
+    removeFromCart: rawRemoveFromCart,
+    getTotalPrice,
+    getTotalItems
+  } = useCartManager(vendorId);
 
-  // Cart management
-  const { cart, addToCart, removeFromCart, getTotalPrice, getTotalItems } = useCartManager(trackInteraction);
+  // Initialize search with stable menu items
+  const stableMenuItems = useMemo(() => menuItems, [menuItems]);
+  const { searchQuery, handleSearch } = useSearchManager(stableMenuItems);
 
-  // Search management
-  const { searchQuery, handleSearch } = useSearchManager(menuItems, trackInteraction);
+  // Initialize dynamic layout with stable vendor ID
+  const { layout } = useDynamicLayout({
+    vendorId,
+    contextData,
+    guestSessionId: sessionId
+  });
 
-  const handleHeroCtaClick = async () => {
-    await trackInteraction('hero_cta_click', {
-      cta_text: layout?.hero_section?.cta_text,
-      section: 'hero'
-    });
-
-    // Scroll to menu
-    const menuElement = document.getElementById('menu-section');
-    if (menuElement) {
-      menuElement.scrollIntoView({ behavior: 'smooth' });
+  // Stable cart functions to prevent infinite loops
+  const addToCart = useCallback((item: any) => {
+    try {
+      rawAddToCart(item);
+    } catch (error) {
+      AIGuard.handleComponentError(error as Error, 'useOrderDemo.addToCart');
     }
-  };
+  }, [rawAddToCart]);
+
+  const removeFromCart = useCallback((itemId: string) => {
+    try {
+      rawRemoveFromCart(itemId);
+    } catch (error) {
+      AIGuard.handleComponentError(error as Error, 'useOrderDemo.removeFromCart');
+    }
+  }, [rawRemoveFromCart]);
+
+  // Update context data when weather changes
+  useEffect(() => {
+    if (weatherData) {
+      setContextData(prev => ({
+        ...prev,
+        weather: weatherData
+      }));
+    }
+  }, [weatherData]);
+
+  // Update time of day context
+  useEffect(() => {
+    const updateTimeContext = () => {
+      const hour = new Date().getHours();
+      const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+      setContextData(prev => ({
+        ...prev,
+        timeOfDay
+      }));
+    };
+
+    updateTimeContext();
+    const interval = setInterval(updateTimeContext, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   return {
+    // Data
     vendor,
-    menuItems,
-    cart,
-    loading,
-    layoutLoading,
-    searchQuery,
-    weatherData,
-    guestSessionId,
     layout,
+    weatherData,
+    menuItems: stableMenuItems,
+    cart,
+    searchQuery,
     contextData,
-    trackInteraction,
+    guestSessionId: sessionId,
+    
+    // State
+    loading,
+    
+    // Actions
     addToCart,
     removeFromCart,
     handleSearch,
-    handleHeroCtaClick,
     getTotalPrice,
     getTotalItems
   };
 };
-
-export * from './types';
