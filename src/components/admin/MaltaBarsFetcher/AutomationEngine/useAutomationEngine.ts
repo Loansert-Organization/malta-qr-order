@@ -25,7 +25,7 @@ export const useAutomationEngine = () => {
 
   const fetchJobs = async () => {
     try {
-      console.log('Fetching automation jobs...');
+      console.log('📋 Fetching automation jobs...');
       const { data, error } = await supabase
         .from('automation_jobs')
         .select('*')
@@ -33,11 +33,11 @@ export const useAutomationEngine = () => {
         .limit(20);
 
       if (error) {
-        console.error('Error fetching jobs:', error);
+        console.error('❌ Error fetching jobs:', error);
         throw error;
       }
       
-      console.log('Fetched jobs:', data);
+      console.log('✅ Fetched jobs:', data);
       
       // Type-safe mapping to ensure status matches our interface
       const typedJobs: AutomationJob[] = (data || []).map(job => ({
@@ -47,24 +47,34 @@ export const useAutomationEngine = () => {
       
       setJobs(typedJobs);
     } catch (error: any) {
-      console.error('Failed to fetch automation jobs:', error);
+      console.error('💥 Failed to fetch automation jobs:', error);
       toast({
-        title: "Error",
-        description: `Failed to fetch jobs: ${error.message}`,
+        title: "Error Fetching Jobs",
+        description: `Failed to load job history: ${error.message}`,
         variant: "destructive"
       });
     }
   };
 
   const startAutomation = async (jobType: string) => {
-    console.log('Starting automation:', jobType);
+    console.log('🚀 Starting automation:', jobType);
+    
+    if (isRunning) {
+      toast({
+        title: "Automation Already Running",
+        description: "Please wait for the current automation to complete.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsRunning(true);
     setProgress(0);
     
     try {
       toast({
         title: "Starting Automation",
-        description: `Launching ${jobType} automation pipeline...`
+        description: `Launching ${jobType.replace('_', ' ')} automation pipeline...`
       });
 
       if (jobType === 'google_maps_fetch') {
@@ -73,28 +83,43 @@ export const useAutomationEngine = () => {
         await runWebsiteDiscovery(setProgress);
       } else if (jobType === 'menu_extraction') {
         await runMenuExtraction(setProgress);
+      } else {
+        throw new Error(`Unknown job type: ${jobType}`);
       }
 
       toast({
         title: "Automation Complete",
-        description: `${jobType} completed successfully!`
+        description: `${jobType.replace('_', ' ')} completed successfully!`
       });
+
     } catch (error: any) {
-      console.error('Automation failed:', error);
+      console.error('💥 Automation failed:', error);
+      
+      let errorMessage = error.message || 'Unknown error occurred';
+      
+      // Provide specific guidance for common errors
+      if (errorMessage.includes('REQUEST_DENIED') || errorMessage.includes('API key')) {
+        errorMessage = 'Google Maps API key is missing or invalid. Please check your Supabase secrets.';
+      } else if (errorMessage.includes('PERMISSION_DENIED')) {
+        errorMessage = 'Authentication failed. Please check your admin permissions.';
+      } else if (errorMessage.includes('Edge function failed')) {
+        errorMessage = 'Backend service error. Please check the edge function logs.';
+      }
+      
       toast({
         title: "Automation Failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setIsRunning(false);
       setProgress(0);
-      await fetchJobs();
+      await fetchJobs(); // Refresh job list
     }
   };
 
   useEffect(() => {
-    console.log('AutomationEngine mounted, fetching jobs...');
+    console.log('🔄 AutomationEngine mounted, fetching jobs...');
     fetchJobs();
   }, []);
 

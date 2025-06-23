@@ -1,29 +1,109 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+interface AutomationJob {
+  id: string;
+  job_type: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  error_message?: string;
+  progress_data?: any;
+  created_at: string;
+}
+
 export const runGoogleMapsFetch = async (setProgress: (progress: number) => void) => {
-  console.log('Running Google Maps fetch...');
-  setProgress(25);
+  console.log('🚀 Starting Google Maps fetch automation...');
+  
+  let jobId: string | null = null;
   
   try {
-    // Call the existing fetch-malta-bars function
-    const { data, error } = await supabase.functions.invoke('fetch-malta-bars');
-    
+    // Create automation job record
+    const { data: jobData, error: jobError } = await supabase
+      .from('automation_jobs')
+      .insert({
+        job_type: 'google_maps_fetch',
+        status: 'running',
+        started_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (jobError) {
+      console.error('❌ Failed to create automation job:', jobError);
+      throw new Error(`Failed to create job record: ${jobError.message}`);
+    }
+
+    jobId = jobData.id;
+    console.log('✅ Created automation job:', jobId);
+
+    setProgress(10);
+
+    // Call the fetch-malta-bars function
+    console.log('📡 Invoking fetch-malta-bars edge function...');
+    const { data, error } = await supabase.functions.invoke('fetch-malta-bars', {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
     if (error) {
-      console.error('Google Maps fetch error:', error);
-      throw new Error(`Google Maps fetch failed: ${error.message}`);
+      console.error('❌ Edge function error:', error);
+      throw new Error(`Edge function failed: ${error.message}`);
+    }
+
+    console.log('✅ Edge function response:', data);
+    setProgress(90);
+
+    // Update job as completed
+    const { error: updateError } = await supabase
+      .from('automation_jobs')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        progress_data: {
+          response: data,
+          total_processed: data?.summary?.total_processed || 0,
+          new_bars_added: data?.summary?.new_bars_added || 0,
+          bars_updated: data?.summary?.bars_updated || 0
+        }
+      })
+      .eq('id', jobId);
+
+    if (updateError) {
+      console.error('❌ Failed to update job status:', updateError);
+    }
+
+    setProgress(100);
+    console.log('🎉 Google Maps fetch completed successfully!');
+
+  } catch (error: any) {
+    console.error('💥 Google Maps fetch failed:', error);
+    
+    // Update job as failed if we have a jobId
+    if (jobId) {
+      const { error: updateError } = await supabase
+        .from('automation_jobs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_message: error.message,
+          progress_data: {
+            error_type: error.name || 'UnknownError',
+            error_details: error.message
+          }
+        })
+        .eq('id', jobId);
+
+      if (updateError) {
+        console.error('❌ Failed to update job error status:', updateError);
+      }
     }
     
-    console.log('Google Maps fetch result:', data);
-    setProgress(100);
-  } catch (error) {
-    console.error('Error in runGoogleMapsFetch:', error);
     throw error;
   }
 };
 
 export const runWebsiteDiscovery = async (setProgress: (progress: number) => void) => {
-  console.log('Running website discovery...');
+  console.log('🔍 Running website discovery...');
   
   try {
     // Get bars without website URLs
@@ -74,7 +154,7 @@ export const runWebsiteDiscovery = async (setProgress: (progress: number) => voi
 };
 
 export const runMenuExtraction = async (setProgress: (progress: number) => void) => {
-  console.log('Running menu extraction...');
+  console.log('📋 Running menu extraction...');
   
   try {
     // Get bars with website URLs
