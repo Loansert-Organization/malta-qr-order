@@ -28,21 +28,23 @@ class ErrorTrackingService {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
+      const contextData = context ? {
+        ...context,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString()
+      } : {
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString()
+      };
+
       await supabase.from('error_logs').insert({
         error_type: errorType,
         error_message: errorMessage,
         stack_trace: stackTrace,
         user_id: user?.id || null,
-        context: context ? {
-          ...context,
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString()
-        } : {
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString()
-        },
+        context: contextData,
         severity
       });
 
@@ -60,16 +62,18 @@ class ErrorTrackingService {
   }
 
   async logJavaScriptError(error: Error, context?: ErrorContext): Promise<void> {
+    const contextData = context ? {
+      ...context,
+      component: context.component || 'unknown'
+    } : {
+      component: 'unknown'
+    };
+
     await this.logError(
       'javascript_error',
       error.message,
       'high',
-      context ? {
-        ...context,
-        component: context.component || 'unknown'
-      } : {
-        component: 'unknown'
-      },
+      contextData,
       error.stack
     );
   }
@@ -83,20 +87,22 @@ class ErrorTrackingService {
   ): Promise<void> {
     const severity: ErrorSeverity = status >= 500 ? 'critical' : status >= 400 ? 'high' : 'medium';
     
+    const contextData = context ? {
+      ...context,
+      endpoint,
+      method,
+      statusCode: status
+    } : {
+      endpoint,
+      method,
+      statusCode: status
+    };
+
     await this.logError(
       'api_error',
       `${method} ${endpoint}: ${message}`,
       severity,
-      context ? {
-        ...context,
-        endpoint,
-        method,
-        statusCode: status
-      } : {
-        endpoint,
-        method,
-        statusCode: status
-      }
+      contextData
     );
   }
 
@@ -106,18 +112,20 @@ class ErrorTrackingService {
     context?: ErrorContext
   ): Promise<void> {
     if (!success) {
+      const contextData = context ? {
+        ...context,
+        action,
+        success
+      } : {
+        action,
+        success
+      };
+
       await this.logError(
         'user_action_failed',
         `User action failed: ${action}`,
         'medium',
-        context ? {
-          ...context,
-          action,
-          success
-        } : {
-          action,
-          success
-        }
+        contextData
       );
     }
   }

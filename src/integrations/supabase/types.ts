@@ -1089,6 +1089,86 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audits: {
+        Row: {
+          audit_score: number
+          audit_type: string
+          created_at: string
+          id: string
+          issues_found: Json | null
+          performed_at: string
+          recommendations: Json | null
+        }
+        Insert: {
+          audit_score?: number
+          audit_type?: string
+          created_at?: string
+          id?: string
+          issues_found?: Json | null
+          performed_at?: string
+          recommendations?: Json | null
+        }
+        Update: {
+          audit_score?: number
+          audit_type?: string
+          created_at?: string
+          id?: string
+          issues_found?: Json | null
+          performed_at?: string
+          recommendations?: Json | null
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string
+          customer_id: string
+          description: string
+          id: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          customer_id: string
+          description: string
+          id?: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          customer_id?: string
+          description?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_logs: {
         Row: {
           component: string
@@ -1116,6 +1196,33 @@ export type Database = {
           message?: string
           metadata?: Json | null
           severity?: string | null
+        }
+        Relationships: []
+      }
+      system_metrics: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          tags: Json | null
+          timestamp: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          tags?: Json | null
+          timestamp?: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          tags?: Json | null
+          timestamp?: string
+          value?: number
         }
         Relationships: []
       }
