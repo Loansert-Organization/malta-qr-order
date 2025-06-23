@@ -660,8 +660,8 @@ class ComprehensiveAuditService {
     try {
       await supabase.from('security_audits').insert({
         audit_score: report.overallScore,
-        issues_found: Object.values(report.categories).flatMap(cat => cat.issues),
-        recommendations: Object.values(report.categories).flatMap(cat => cat.recommendations),
+        issues_found: JSON.stringify(Object.values(report.categories).flatMap(cat => cat.issues)),
+        recommendations: JSON.stringify(Object.values(report.categories).flatMap(cat => cat.recommendations)),
         audit_type: 'fullstack_comprehensive'
       });
     } catch (error) {

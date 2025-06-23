@@ -16,7 +16,7 @@ import {
   Zap,
   Brain
 } from 'lucide-react';
-import { productionAuditService, AuditReport, AuditIssue } from '@/services/productionAudit';
+import { productionAuditService, type AuditReport, type AuditIssue } from '@/services/productionAudit';
 import { useAISupervision } from '@/hooks/useAISupervision';
 
 const ProductionAuditDashboard: React.FC = () => {
@@ -219,51 +219,56 @@ const ProductionAuditDashboard: React.FC = () => {
 
           {/* Audit Categories */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {Object.entries(auditReport.categories).map(([category, issues]) => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    {getCategoryIcon(category)}
-                    <span className="capitalize">
-                      {category.replace(/([A-Z])/g, ' $1').trim()}
-                    </span>
-                    <Badge variant="outline">{issues.length}</Badge>
-                  </CardTitle>
-                  <CardDescription>
-                    {issues.filter(i => i.status === 'ready').length} ready, {' '}
-                    {issues.filter(i => i.status === 'broken').length} broken
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {issues.slice(0, 10).map((issue) => (
-                      <div key={issue.id} className="flex items-start space-x-3 p-3 border rounded">
-                        {getStatusIcon(issue.status)}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium truncate">
-                              {issue.location}
+            {Object.entries(auditReport.categories).map(([category, issues]) => {
+              // Type guard to ensure issues is an array
+              const issueArray = Array.isArray(issues) ? issues : [];
+              
+              return (
+                <Card key={category}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      {getCategoryIcon(category)}
+                      <span className="capitalize">
+                        {category.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                      <Badge variant="outline">{issueArray.length}</Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      {issueArray.filter(i => i.status === 'ready').length} ready, {' '}
+                      {issueArray.filter(i => i.status === 'broken').length} broken
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {issueArray.slice(0, 10).map((issue) => (
+                        <div key={issue.id} className="flex items-start space-x-3 p-3 border rounded">
+                          {getStatusIcon(issue.status)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium truncate">
+                                {issue.location}
+                              </p>
+                              {getSeverityBadge(issue.severity)}
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">
+                              {issue.description}
                             </p>
-                            {getSeverityBadge(issue.severity)}
+                            <p className="text-xs text-blue-600 mt-1">
+                              Fix: {issue.proposedFix}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-600 mt-1">
-                            {issue.description}
-                          </p>
-                          <p className="text-xs text-blue-600 mt-1">
-                            Fix: {issue.proposedFix}
-                          </p>
                         </div>
-                      </div>
-                    ))}
-                    {issues.length > 10 && (
-                      <div className="text-center text-sm text-gray-500">
-                        +{issues.length - 10} more items...
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      ))}
+                      {issueArray.length > 10 && (
+                        <div className="text-center text-sm text-gray-500">
+                          +{issueArray.length - 10} more items...
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* Final Report */}

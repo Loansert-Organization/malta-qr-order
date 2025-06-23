@@ -21,7 +21,7 @@ const SupportDashboard: React.FC = () => {
   useEffect(() => {
     const loadTickets = async () => {
       try {
-        // In a real implementation, this would load all tickets for admin view
+        // Mock data for now - in a real implementation, this would load all tickets for admin view
         setTickets([
           {
             id: '1',
@@ -62,7 +62,7 @@ const SupportDashboard: React.FC = () => {
       const ticketId = await icupaProductionSystem.getSupport().createTicket(ticketData);
       console.log('Ticket created:', ticketId);
       setNewTicketOpen(false);
-      // Reload tickets
+      // Reload tickets in a real implementation
     } catch (error) {
       console.error('Failed to create ticket:', error);
     }
