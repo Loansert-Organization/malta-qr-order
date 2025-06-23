@@ -26,4 +26,37 @@ const TooltipContent = React.forwardRef<
 ))
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+// Enhanced Tooltip component that supports both content prop and children
+interface TooltipProps {
+  children: React.ReactNode
+  content?: string
+  side?: "top" | "bottom" | "left" | "right"
+}
+
+const EnhancedTooltip: React.FC<TooltipProps> = ({ children, content, side }) => {
+  if (!content) {
+    return <>{children}</>
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {children}
+        </TooltipTrigger>
+        <TooltipContent side={side}>
+          {content}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
+// Export both the primitive components and the enhanced one
+export { 
+  Tooltip, 
+  TooltipTrigger, 
+  TooltipContent, 
+  TooltipProvider,
+  EnhancedTooltip as Tooltip as any // For backward compatibility
+}
