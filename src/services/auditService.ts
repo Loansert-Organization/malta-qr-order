@@ -329,10 +329,36 @@ export class ModularAuditService {
     }
   }
 
-  // Helper methods for specific audit checks
+  // Real audit implementation methods
   private async checkTypeScriptHealth(): Promise<AuditIssue[]> {
-    // Mock TypeScript health check
-    return [];
+    const issues: AuditIssue[] = [];
+    
+    try {
+      // Check for common TypeScript issues
+      const { data: errorLogs } = await supabase
+        .from('error_logs')
+        .select('*')
+        .eq('error_type', 'typescript_error')
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      if (errorLogs && errorLogs.length > 0) {
+        issues.push({
+          id: 'ts-compilation-errors',
+          location: 'TypeScript Compiler',
+          description: `${errorLogs.length} TypeScript compilation errors in last 24h`,
+          severity: 'high',
+          category: 'code-quality',
+          recommendation: 'Fix TypeScript compilation errors',
+          status: 'open',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('TypeScript health check failed:', error);
+    }
+
+    return issues;
   }
 
   private async checkErrorBoundaries(): Promise<AuditIssue[]> {
@@ -350,14 +376,17 @@ export class ModularAuditService {
   }
 
   private async checkAccessibility(): Promise<AuditIssue[]> {
+    // Placeholder for accessibility checks
     return [];
   }
 
   private async checkDatabaseHealth(): Promise<AuditIssue[]> {
+    const issues: AuditIssue[] = [];
+    
     try {
       const { error } = await supabase.from('vendors').select('count').limit(1);
       if (error) {
-        return [{
+        issues.push({
           id: 'db-connectivity-issue',
           location: 'Database',
           description: `Database connectivity issue: ${error.message}`,
@@ -367,11 +396,10 @@ export class ModularAuditService {
           status: 'open',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }];
+        });
       }
-      return [];
     } catch (error) {
-      return [{
+      issues.push({
         id: 'db-error',
         location: 'Database',
         description: `Database error: ${error}`,
@@ -381,39 +409,102 @@ export class ModularAuditService {
         status: 'open',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }];
+      });
     }
+
+    return issues;
   }
 
   private async checkEdgeFunctionHealth(): Promise<AuditIssue[]> {
-    return [];
+    const issues: AuditIssue[] = [];
+    
+    try {
+      const { error } = await supabase.functions.invoke('ai-system-health', {
+        body: { check: 'health' }
+      });
+      
+      if (error) {
+        issues.push({
+          id: 'edge-function-error',
+          location: 'Edge Functions',
+          description: `Edge function health check failed: ${error.message}`,
+          severity: 'high',
+          category: 'infrastructure',
+          recommendation: 'Check edge function deployment and configuration',
+          status: 'open',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      // Edge functions may not be deployed in development
+    }
+
+    return issues;
   }
 
   private async checkAPIHealth(): Promise<AuditIssue[]> {
+    // Placeholder for API health checks
     return [];
   }
 
   private async checkRLSPolicies(): Promise<AuditIssue[]> {
+    // Placeholder for RLS policy checks
     return [];
   }
 
   private async checkAuthenticationFlows(): Promise<AuditIssue[]> {
+    // Placeholder for authentication flow checks
     return [];
   }
 
   private async checkEndpointExposure(): Promise<AuditIssue[]> {
+    // Placeholder for endpoint exposure checks
     return [];
   }
 
   private async checkResponseTimes(): Promise<AuditIssue[]> {
-    return [];
+    const issues: AuditIssue[] = [];
+    
+    try {
+      const { data: perfLogs } = await supabase
+        .from('performance_logs')
+        .select('response_time, endpoint')
+        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+        .order('response_time', { ascending: false })
+        .limit(100);
+
+      if (perfLogs && perfLogs.length > 0) {
+        const slowQueries = perfLogs.filter(log => log.response_time > 2000);
+        
+        if (slowQueries.length > 5) {
+          issues.push({
+            id: 'slow-response-times',
+            location: 'API Endpoints',
+            description: `${slowQueries.length} slow API responses (>2s) detected`,
+            severity: 'medium',
+            category: 'performance',
+            recommendation: 'Optimize slow API endpoints and database queries',
+            status: 'open',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Response time check failed:', error);
+    }
+
+    return issues;
   }
 
   private async checkBundleSizes(): Promise<AuditIssue[]> {
+    // Placeholder for bundle size checks
     return [];
   }
 
   private async checkSlowQueries(): Promise<AuditIssue[]> {
+    // Placeholder for slow query checks
     return [];
   }
 

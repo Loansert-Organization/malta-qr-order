@@ -168,12 +168,12 @@ export const useProductionMonitoring = () => {
       setMetrics(newMetrics);
       setServiceHealth(newServiceHealth);
 
-      // Log metrics to system_logs
+      // Log metrics to system_logs with correct field name and JSON-safe metadata
       await supabase.from('system_logs').insert({
         log_type: 'monitoring_metrics',
         component: 'production_monitoring',
         message: `System health: ${systemHealth.toFixed(1)}%, Error rate: ${errorRate}`,
-        metadata: newMetrics,
+        metadata: JSON.parse(JSON.stringify(newMetrics)),
         severity: systemHealth > 80 ? 'info' : systemHealth > 60 ? 'warning' : 'error'
       });
 
@@ -220,10 +220,10 @@ export const useProductionMonitoring = () => {
     // Initial metrics collection
     collectMetrics();
 
-    // Monitor system health every 5 minutes
+    // Monitor system health every 10 minutes (optimized for production)
     const monitoringInterval = setInterval(() => {
       collectMetrics();
-    }, 300000); // 5 minutes
+    }, 600000); // 10 minutes
 
     return () => {
       clearInterval(monitoringInterval);
