@@ -9,18 +9,19 @@ interface AIWaiterChatProps {
 }
 
 const AIWaiterChat = ({ onClose, onAddToCart, vendorSlug, guestSessionId }: AIWaiterChatProps) => {
-  // Get vendor data for location context
+  // Create vendor object to match MaltaAIWaiterChat interface
   const vendor = {
-    location: 'St. Julian\'s' // This would come from actual vendor data
+    id: vendorSlug,
+    name: vendorSlug,
+    location: 'Malta'
   };
 
   return (
     <MaltaAIWaiterChat
+      vendor={vendor}
       onClose={onClose}
       onAddToCart={onAddToCart}
-      vendorSlug={vendorSlug}
       guestSessionId={guestSessionId}
-      vendorLocation={vendor.location}
     />
   );
 };

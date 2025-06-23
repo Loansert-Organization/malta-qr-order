@@ -25,6 +25,13 @@ const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({
     fallbackMessage: "I apologize, but I'm experiencing technical difficulties. You can still browse the menu manually or try asking me again in a moment."
   });
 
+  // Create vendor object to match MaltaAIWaiterChat interface
+  const vendor = {
+    id: vendorSlug,
+    name: vendorSlug,
+    location: 'Malta'
+  };
+
   return (
     <AIErrorBoundary
       onError={(error, errorInfo) => {
@@ -48,11 +55,10 @@ const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({
       }
     >
       <MaltaAIWaiterChat
+        vendor={vendor}
         onClose={onClose || (() => {})}
         onAddToCart={onAddToCart}
-        vendorSlug={vendorSlug}
         guestSessionId={session?.sessionToken || ''}
-        vendorLocation="Malta"
       />
     </AIErrorBoundary>
   );

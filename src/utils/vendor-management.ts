@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { Json } from '@/integrations/supabase/types';
@@ -187,21 +188,24 @@ class VendorManagementService {
 
   async bulkUpdateVendors(vendorIds: string[], updates: Partial<Vendor>): Promise<void> {
     try {
+      // Remove problematic fields before update
+      const { location_geo, ...safeUpdates } = updates;
+      
       const { error } = await supabase
         .from('vendors')
-        .update(updates)
+        .update(safeUpdates)
         .in('id', vendorIds);
 
       if (error) throw error;
 
-      // Log bulk operation
+      // Log bulk operation with safe parameters
       await supabase
         .from('vendor_bulk_operations')
         .insert({
           operation_type: 'bulk_update',
           vendor_ids: vendorIds,
-          parameters: updates,
-          performed_by: 'system', // This should be the current user ID
+          parameters: sanitizeForJson(safeUpdates) as Json,
+          performed_by: 'system',
           status: 'completed',
           completed_at: new Date().toISOString()
         });
@@ -252,7 +256,6 @@ export const logVendorOperation = async (
   results: Record<string, any> = {}
 ) => {
   try {
-    // Convert the parameters and results to valid JSON, excluding problematic fields
     const sanitizedParameters = sanitizeForJson(parameters);
     const sanitizedResults = sanitizeForJson(results);
 
@@ -303,7 +306,9 @@ export const createBulkVendorUpdate = async (
   performedBy: string
 ) => {
   try {
-    const sanitizedUpdates = sanitizeForJson(updates);
+    // Remove problematic fields
+    const { location_geo, ...safeUpdates } = updates;
+    const sanitizedUpdates = sanitizeForJson(safeUpdates);
     
     const { error } = await supabase
       .from('vendors')
