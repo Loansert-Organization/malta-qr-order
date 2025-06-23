@@ -4,7 +4,7 @@ import TabNavigation from './TabNavigation';
 import { TabContentRenderer } from './TabContentRenderer';
 import { useMaltaBarsFetcher } from './hooks/useMaltaBarsFetcher';
 
-const MaltaBarsFetcher = () => {
+const MaltaBarsFetcher: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const {
     bars,

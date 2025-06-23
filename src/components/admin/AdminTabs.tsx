@@ -8,7 +8,7 @@ import SystemHealth from './SystemHealth';
 import AIMonitoring from './AIMonitoring';
 import FinancialOverview from './FinancialOverview';
 import AnalyticsLayout from '@/components/analytics/AnalyticsLayout';
-import MaltaBarsFetcher from './MaltaBarsFetcher/index';
+import MaltaBarsFetcher from './MaltaBarsFetcher';
 import { 
   LayoutDashboard, 
   Store, 
