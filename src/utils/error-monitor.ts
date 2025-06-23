@@ -1,336 +1,249 @@
 
-import { createClient } from '@supabase/supabase-js';
-import React from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
-
-export interface ErrorContext {
-  userId?: string;
-  userAgent?: string;
-  url?: string;
+interface ErrorContext {
   component?: string;
   action?: string;
+  userId?: string;
+  url?: string;
+  userAgent?: string;
+  timestamp?: string;
+  endpoint?: string;
+  method?: string;
+  statusCode?: number;
+  success?: boolean;
   additionalData?: Record<string, any>;
 }
 
-export interface PerformanceMetric {
-  endpoint: string;
-  method: string;
-  responseTime: number;
-  statusCode?: number;
-  userId?: string;
-  metadata?: Record<string, any>;
-}
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
-export class ErrorMonitor {
-  private supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+class ErrorMonitorService {
+  private static instance: ErrorMonitorService;
+  private isInitialized = false;
 
-  async logError(
-    error: Error | string,
-    severity: ErrorSeverity = 'medium',
-    context: ErrorContext = {}
-  ): Promise<void> {
-    try {
-      const errorMessage = typeof error === 'string' ? error : error.message;
-      const stackTrace = typeof error === 'string' ? undefined : error.stack;
-
-      await this.supabase
-        .from('error_logs')
-        .insert({
-          error_type: this.getErrorType(error),
-          error_message: errorMessage,
-          stack_trace: stackTrace,
-          user_id: context.userId,
-          context: context,
-          severity: severity
-        });
-
-      if (severity === 'critical') {
-        await this.sendCriticalAlert(errorMessage, context);
-      }
-
-      console.error(`[${severity.toUpperCase()}] ${errorMessage}`, {
-        context,
-        stack: stackTrace
-      });
-    } catch (logError) {
-      console.error('Failed to log error:', logError);
+  static getInstance(): ErrorMonitorService {
+    if (!ErrorMonitorService.instance) {
+      ErrorMonitorService.instance = new ErrorMonitorService();
     }
+    return ErrorMonitorService.instance;
   }
 
-  async logPerformance(metric: PerformanceMetric): Promise<void> {
-    try {
-      await this.supabase
-        .from('performance_logs')
-        .insert({
-          endpoint: metric.endpoint,
-          method: metric.method,
-          response_time: metric.responseTime,
-          status_code: metric.statusCode,
-          user_id: metric.userId,
-          metadata: metric.metadata
-        });
-
-      if (metric.responseTime > 5000) {
-        await this.logError(
-          `Slow response detected: ${metric.endpoint} took ${metric.responseTime}ms`,
-          'high',
-          { endpoint: metric.endpoint, responseTime: metric.responseTime }
-        );
-      }
-    } catch (error) {
-      console.error('Failed to log performance metric:', error);
-    }
-  }
-
-  async trackEvent(
-    eventName: string,
-    properties: Record<string, any> = {},
-    userId?: string
-  ): Promise<void> {
-    try {
-      await this.supabase
-        .from('analytics_events')
-        .insert({
-          event_name: eventName,
-          user_id: userId,
-          session_id: this.getSessionId(),
-          properties: properties
-        });
-    } catch (error) {
-      console.error('Failed to track event:', error);
-    }
-  }
-
-  async storeMetric(
-    metricName: string,
-    value: number,
-    dimensions: Record<string, any> = {}
-  ): Promise<void> {
-    try {
-      await this.supabase
-        .from('analytics_metrics')
-        .insert({
-          metric_name: metricName,
-          metric_value: value,
-          dimensions: dimensions
-        });
-    } catch (error) {
-      console.error('Failed to store metric:', error);
-    }
-  }
-
-  async getErrorSummary(days: number = 7): Promise<any> {
-    try {
-      const { data } = await this.supabase
-        .from('error_logs')
-        .select('severity, error_type, count(*)')
-        .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
-        .order('count', { ascending: false });
-
-      return data;
-    } catch (error) {
-      console.error('Failed to get error summary:', error);
-      return [];
-    }
-  }
-
-  async getPerformanceMetrics(endpoint?: string, days: number = 7): Promise<any> {
-    try {
-      let query = this.supabase
-        .from('performance_logs')
-        .select('*')
-        .gte('created_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString());
-
-      if (endpoint) {
-        query = query.eq('endpoint', endpoint);
-      }
-
-      const { data } = await query.order('created_at', { ascending: false });
-      return data;
-    } catch (error) {
-      console.error('Failed to get performance metrics:', error);
-      return [];
-    }
-  }
-
-  private getErrorType(error: Error | string): string {
-    if (typeof error === 'string') return 'custom_error';
-    return error.constructor.name || 'unknown_error';
-  }
-
-  private getSessionId(): string {
-    if (typeof window !== 'undefined') {
-      let sessionId = sessionStorage.getItem('session_id');
-      if (!sessionId) {
-        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        sessionStorage.setItem('session_id', sessionId);
-      }
-      return sessionId;
-    }
-    return `server_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  private async sendCriticalAlert(message: string, context: ErrorContext): Promise<void> {
-    try {
-      if (process.env.SLACK_WEBHOOK_URL) {
-        await fetch(process.env.SLACK_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: `🚨 Critical Error in ICUPA Malta`,
-            attachments: [{
-              color: 'danger',
-              fields: [
-                { title: 'Error', value: message, short: false },
-                { title: 'Context', value: JSON.stringify(context, null, 2), short: false },
-                { title: 'Time', value: new Date().toISOString(), short: true }
-              ]
-            }]
-          })
-        });
-      }
-    } catch (error) {
-      console.error('Failed to send critical alert:', error);
-    }
-  }
-}
-
-export function useErrorMonitor() {
-  const monitor = new ErrorMonitor();
-
-  const logError = (error: Error | string, severity: ErrorSeverity = 'medium', context: ErrorContext = {}) => {
-    monitor.logError(error, severity, context);
-  };
-
-  const trackEvent = (eventName: string, properties: Record<string, any> = {}) => {
-    monitor.trackEvent(eventName, properties);
-  };
-
-  const logPerformance = (metric: PerformanceMetric) => {
-    monitor.logPerformance(metric);
-  };
-
-  return { logError, trackEvent, logPerformance };
-}
-
-export function withPerformanceMonitoring<T extends object>(
-  Component: React.ComponentType<T>,
-  componentName: string
-) {
-  return function PerformanceMonitoredComponent(props: T) {
-    const { logPerformance } = useErrorMonitor();
+  initialize() {
+    if (this.isInitialized) return;
     
-    React.useEffect(() => {
-      const startTime = performance.now();
-      
-      return () => {
-        const endTime = performance.now();
-        logPerformance({
-          endpoint: `component_${componentName}`,
-          method: 'render',
-          responseTime: endTime - startTime,
-          metadata: { componentName }
-        });
-      };
-    }, [logPerformance]);
+    this.setupGlobalErrorHandlers();
+    this.setupPerformanceMonitoring();
+    this.isInitialized = true;
+    
+    console.log('🤖 AI Error Monitor: Initialized with global handlers');
+  }
 
-    return React.createElement(Component, props);
-  };
-}
-
-export function setupGlobalErrorHandling() {
-  const monitor = new ErrorMonitor();
-
-  if (typeof window !== 'undefined') {
-    window.addEventListener('unhandledrejection', (event) => {
-      monitor.logError(
-        event.reason,
-        'high',
-        {
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          component: 'unhandled_promise_rejection'
-        }
-      );
-    });
-
+  private setupGlobalErrorHandlers() {
+    // Global JavaScript error handler
     window.addEventListener('error', (event) => {
-      monitor.logError(
-        event.error || event.message,
-        'high',
-        {
-          url: window.location.href,
-          userAgent: navigator.userAgent,
-          component: 'javascript_error',
-          additionalData: {
-            filename: event.filename,
-            lineno: event.lineno,
-            colno: event.colno
-          }
-        }
-      );
-    });
-  }
-
-  if (typeof process !== 'undefined') {
-    process.on('unhandledRejection', (reason, promise) => {
-      monitor.logError(
-        reason as Error,
-        'critical',
-        { component: 'server_unhandled_rejection' }
-      );
+      this.handleError({
+        type: 'javascript_error',
+        message: event.error?.message || event.message || 'Unknown JavaScript error',
+        stack: event.error?.stack,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno
+      });
     });
 
-    process.on('uncaughtException', (error) => {
-      monitor.logError(
-        error,
-        'critical',
-        { component: 'server_uncaught_exception' }
-      );
+    // Unhandled promise rejection handler
+    window.addEventListener('unhandledrejection', (event) => {
+      this.handleError({
+        type: 'unhandled_promise_rejection',
+        message: event.reason?.message || String(event.reason) || 'Unhandled promise rejection',
+        stack: event.reason?.stack
+      });
     });
-  }
-}
 
-export class ErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback?: React.ReactNode },
-  { hasError: boolean }
-> {
-  private monitor = new ErrorMonitor();
-
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    this.monitor.logError(
-      error,
-      'high',
-      {
-        component: 'react_error_boundary',
-        additionalData: errorInfo
+    // React error boundary fallback
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('React') || message.includes('component')) {
+        this.handleError({
+          type: 'react_error',
+          message: message,
+          context: { args }
+        });
       }
-    );
+      originalConsoleError.apply(console, args);
+    };
   }
 
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="error-boundary">
-          <h2>Something went wrong.</h2>
-          <p>We've been notified of this error and are working to fix it.</p>
-        </div>
-      );
-    }
+  private setupPerformanceMonitoring() {
+    // Monitor page load performance
+    window.addEventListener('load', () => {
+      const perfData = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const loadTime = perfData.loadEventEnd - perfData.loadEventStart;
+      
+      if (loadTime > 3000) { // Slow load threshold
+        this.handleError({
+          type: 'performance_issue',
+          message: `Slow page load detected: ${loadTime}ms`,
+          context: { loadTime, perfData }
+        });
+      }
+    });
+  }
 
-    return this.props.children;
+  async handleError(errorData: {
+    type: string;
+    message: string;
+    stack?: string;
+    context?: any;
+    filename?: string;
+    lineno?: number;
+    colno?: number;
+  }) {
+    try {
+      console.error('🤖 AI Monitor: Capturing error →', errorData.type, errorData.message);
+
+      // Log to AI error handler edge function
+      const { data, error } = await supabase.functions.invoke('ai-error-handler', {
+        body: {
+          message: errorData.message,
+          stack: errorData.stack,
+          source: errorData.filename || 'unknown',
+          context: {
+            type: errorData.type,
+            lineno: errorData.lineno,
+            colno: errorData.colno,
+            ...errorData.context,
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent
+          },
+          eventType: errorData.type,
+          component: this.extractComponentFromStack(errorData.stack)
+        }
+      });
+
+      if (error) {
+        console.error('Failed to log error to AI handler:', error);
+        return;
+      }
+
+      console.log('✅ AI Error logged successfully:', data);
+
+      // If critical error, attempt auto-fix
+      if (this.isCriticalError(errorData.message)) {
+        console.log('🤖 AI Monitor: Triggering error → ai-error-fix');
+        await this.triggerAutoFix(errorData);
+      }
+
+    } catch (err) {
+      console.error('Error monitor failed:', err);
+    }
+  }
+
+  private isCriticalError(message: string): boolean {
+    const criticalKeywords = [
+      'cannot read properties',
+      'undefined',
+      'null',
+      'crash',
+      'fatal',
+      'failed to fetch',
+      'network error',
+      'authentication failed'
+    ];
+    
+    const lowerMessage = message.toLowerCase();
+    return criticalKeywords.some(keyword => lowerMessage.includes(keyword));
+  }
+
+  private async triggerAutoFix(errorData: any) {
+    try {
+      const { data: fixData, error: fixError } = await supabase.functions.invoke('ai-error-fix', {
+        body: {
+          message: errorData.message,
+          stack: errorData.stack,
+          source: errorData.filename,
+          context: errorData.context
+        }
+      });
+
+      if (fixError) {
+        console.error('AI auto-fix failed:', fixError);
+        return;
+      }
+
+      console.log('✅ AI Function (error) → ai-error-fix:', fixData);
+    } catch (err) {
+      console.error('Auto-fix trigger failed:', err);
+    }
+  }
+
+  private extractComponentFromStack(stack?: string): string {
+    if (!stack) return 'unknown';
+    
+    const lines = stack.split('\n');
+    for (const line of lines) {
+      if (line.includes('.tsx') || line.includes('.ts')) {
+        const match = line.match(/\/([^\/]+\.(tsx?|jsx?))/);
+        if (match) return match[1];
+      }
+    }
+    
+    return 'unknown';
+  }
+
+  // Manual error reporting method
+  async reportError(message: string, context?: ErrorContext, severity: ErrorSeverity = 'medium') {
+    await this.handleError({
+      type: 'manual_report',
+      message,
+      context: {
+        ...context,
+        severity,
+        manual: true
+      }
+    });
+  }
+
+  // Performance monitoring
+  async reportPerformanceIssue(metric: string, value: number, threshold: number) {
+    if (value > threshold) {
+      await this.handleError({
+        type: 'performance_issue',
+        message: `Performance threshold exceeded: ${metric} = ${value} (threshold: ${threshold})`,
+        context: { metric, value, threshold }
+      });
+    }
+  }
+
+  // API call monitoring
+  async monitorAPICall(endpoint: string, method: string, startTime: number, success: boolean, statusCode?: number) {
+    const duration = Date.now() - startTime;
+    
+    if (!success || (statusCode && statusCode >= 400)) {
+      await this.handleError({
+        type: 'api_error',
+        message: `API call failed: ${method} ${endpoint} (${statusCode || 'unknown'}) - ${duration}ms`,
+        context: { endpoint, method, duration, statusCode, success }
+      });
+    } else if (duration > 5000) {
+      await this.handleError({
+        type: 'api_performance',
+        message: `Slow API call: ${method} ${endpoint} - ${duration}ms`,
+        context: { endpoint, method, duration, statusCode, success }
+      });
+    }
   }
 }
+
+// Initialize the error monitor
+const errorMonitor = ErrorMonitorService.getInstance();
+
+// Auto-initialize when the module loads
+if (typeof window !== 'undefined') {
+  errorMonitor.initialize();
+}
+
+export { errorMonitor };
+export default ErrorMonitorService;

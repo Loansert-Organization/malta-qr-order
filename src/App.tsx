@@ -1,33 +1,39 @@
+import React from "react";
+import "./App.css";
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AnonymousAuthProvider } from "@/components/auth/AnonymousAuthProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import Index from "./pages/Index";
-import OrderPage from "./pages/OrderPage";
-import VendorOrderManagement from "./pages/VendorOrderManagement";
-import AdminDashboard from "./pages/AdminDashboard";
+import VendorDashboard from "./pages/VendorDashboard";
+import AdminPanel from "./pages/AdminPanel";
+import ProductionSystem from "./pages/ProductionSystem";
+import ProductionAudit from "./pages/ProductionAudit";
+import FullstackAudit from "./pages/FullstackAudit";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AnonymousAuthProvider>
+    <AuthProvider>
+      <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/order/:vendorSlug" element={<OrderPage />} />
-            <Route path="/vendor" element={<VendorOrderManagement />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/vendor" element={<VendorDashboard />} />
+            <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/production-system" element={<ProductionSystem />} />
+            <Route path="/production-audit" element={<ProductionAudit />} />
+            <Route path="/fullstack-audit" element={<FullstackAudit />} />
           </Routes>
         </BrowserRouter>
-      </AnonymousAuthProvider>
-    </TooltipProvider>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
