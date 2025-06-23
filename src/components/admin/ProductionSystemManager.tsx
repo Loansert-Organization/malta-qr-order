@@ -71,7 +71,10 @@ const ProductionSystemManager: React.FC = () => {
       setAnalytics(analyticsData);
       setHealthData(healthCheckData);
       setSecurityAudit(securityAuditData);
-      setSystemHealth(healthCheckData.overall);
+      
+      // Fix: Map 'critical' to 'unhealthy' to match the expected type
+      const mappedHealth = healthCheckData.overall === 'critical' ? 'unhealthy' : healthCheckData.overall;
+      setSystemHealth(mappedHealth);
 
       // Generate alerts based on system status
       const newAlerts: SystemAlert[] = [];
