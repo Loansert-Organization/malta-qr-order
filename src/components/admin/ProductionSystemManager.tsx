@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,7 @@ const ProductionSystemManager: React.FC = () => {
       const [analyticsData, healthCheckData, securityAuditData] = await Promise.all([
         icupaProductionSystem.getAnalytics().getDashboardData(),
         icupaProductionSystem.getHealthCheck().performHealthCheck(),
-        icupaProductionSystem.getSecurityAudit().runComprehensiveAudit()
+        icupaProductionSystem.runSecurityAudit().runComprehensiveAudit()
       ]);
 
       setAnalytics(analyticsData);
@@ -80,7 +81,7 @@ const ProductionSystemManager: React.FC = () => {
         newAlerts.push({
           id: `health_${Date.now()}`,
           message: `System health is ${healthCheckData.overall}`,
-          severity: healthCheckData.overall === 'unhealthy' ? 'critical' : 'medium',
+          severity: healthCheckData.overall === 'critical' ? 'critical' : 'medium',
           timestamp: new Date(),
           resolved: false
         });
@@ -113,7 +114,7 @@ const ProductionSystemManager: React.FC = () => {
 
   const handleRunSecurityAudit = async () => {
     try {
-      const auditResult = await icupaProductionSystem.getSecurityAudit().runComprehensiveAudit();
+      const auditResult = await icupaProductionSystem.runSecurityAudit().runComprehensiveAudit();
       setSecurityAudit(auditResult);
     } catch (error) {
       console.error('Security audit failed:', error);

@@ -40,13 +40,18 @@ export interface AnalyticsData {
   orders: {
     total: number;
     today: number;
+    thisWeek: number;
+    thisMonth: number;
   };
   revenue: {
     total: number;
     today: number;
+    thisWeek: number;
+    thisMonth: number;
   };
   vendors: {
     active: number;
+    total: number;
     topPerforming: Array<{
       name: string;
       revenue: number;
@@ -64,7 +69,9 @@ export interface SystemHealth {
     service: string;
     status: 'healthy' | 'degraded' | 'critical';
     responseTime: number;
+    message?: string;
   }>;
+  lastCheck: Date;
 }
 
 export interface SecurityAuditResult {
@@ -72,6 +79,8 @@ export interface SecurityAuditResult {
   issues: Array<{
     description: string;
     severity: 'low' | 'medium' | 'high' | 'critical';
+    category: string;
+    recommendation: string;
   }>;
 }
 
@@ -304,10 +313,21 @@ class ICUPAProductionSystem {
     return {
       getDashboardData: async (): Promise<AnalyticsData> => {
         return {
-          orders: { total: 1250, today: 45 },
-          revenue: { total: 15600, today: 580 },
+          orders: { 
+            total: 1250, 
+            today: 45,
+            thisWeek: 312,
+            thisMonth: 1156
+          },
+          revenue: { 
+            total: 15600, 
+            today: 580,
+            thisWeek: 4200,
+            thisMonth: 13800
+          },
           vendors: {
             active: 23,
+            total: 28,
             topPerforming: [
               { name: 'Café Central', revenue: 2500, orders: 156 },
               { name: 'Malta Bistro', revenue: 1800, orders: 98 },
@@ -328,7 +348,32 @@ class ICUPAProductionSystem {
           services: [
             { service: 'database', status: 'healthy' as const, responseTime: 45 },
             { service: 'api', status: 'healthy' as const, responseTime: 120 },
-            { service: 'ai_services', status: 'degraded' as const, responseTime: 280 }
+            { service: 'ai_services', status: 'degraded' as const, responseTime: 280, message: 'High latency detected' }
+          ],
+          lastCheck: new Date()
+        };
+      }
+    };
+  }
+
+  runSecurityAudit() {
+    return {
+      runComprehensiveAudit: async (): Promise<SecurityAuditResult> => {
+        return {
+          score: Math.floor(Math.random() * 30) + 70,
+          issues: [
+            {
+              description: 'Rate limiting not configured for all endpoints',
+              severity: 'medium' as const,
+              category: 'API Security',
+              recommendation: 'Implement comprehensive rate limiting'
+            },
+            {
+              description: 'Some user inputs not properly sanitized',
+              severity: 'high' as const,
+              category: 'Input Validation',
+              recommendation: 'Add input validation middleware'
+            }
           ]
         };
       }
