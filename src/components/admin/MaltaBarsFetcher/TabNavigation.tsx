@@ -26,7 +26,7 @@ const tabs = [
   { id: 'data', label: 'Data Management', icon: HardDrive },
 ];
 
-export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange }) => {
   return (
     <div className="flex flex-wrap gap-2 p-1 bg-gray-100 rounded-lg">
       {tabs.map((tab) => {
@@ -46,4 +46,6 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
       })}
     </div>
   );
-}
+};
+
+export default TabNavigation;
