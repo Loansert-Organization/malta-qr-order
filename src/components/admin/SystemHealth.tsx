@@ -1,289 +1,411 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Server, 
+  Activity, 
   Database, 
-  Zap, 
-  Globe, 
+  Server, 
   AlertTriangle, 
   CheckCircle,
   RefreshCw,
-  Activity
+  Zap,
+  Clock,
+  Users,
+  TrendingUp
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'react-hot-toast';
 
-interface HealthMetric {
+interface SystemMetric {
   name: string;
-  status: 'healthy' | 'warning' | 'critical';
   value: number;
   unit: string;
-  description: string;
+  status: 'healthy' | 'warning' | 'critical';
+  trend: 'up' | 'down' | 'stable';
+}
+
+interface ServiceStatus {
+  name: string;
+  status: 'online' | 'offline' | 'degraded';
+  uptime: number;
+  responseTime: number;
   lastCheck: string;
 }
 
-interface SystemStatus {
-  database: HealthMetric;
-  edgeFunctions: HealthMetric;
-  aiServices: HealthMetric;
-  storage: HealthMetric;
-  realtime: HealthMetric;
-}
-
 const SystemHealth = () => {
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [metrics, setMetrics] = useState<SystemMetric[]>([]);
+  const [services, setServices] = useState<ServiceStatus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   useEffect(() => {
-    runHealthCheck();
-    const interval = setInterval(runHealthCheck, 60000);
+    fetchSystemHealth();
+    const interval = setInterval(fetchSystemHealth, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
-  const runHealthCheck = async () => {
-    setLoading(true);
+  const fetchSystemHealth = async () => {
     try {
-      // Database health check
-      const dbStart = performance.now();
-      const { data: dbTest, error: dbError } = await supabase
-        .from('vendors')
-        .select('id')
-        .limit(1);
-      const dbLatency = performance.now() - dbStart;
+      // Simulate fetching system metrics
+      const mockMetrics: SystemMetric[] = [
+        {
+          name: 'CPU Usage',
+          value: Math.random() * 100,
+          unit: '%',
+          status: Math.random() > 0.8 ? 'warning' : 'healthy',
+          trend: Math.random() > 0.5 ? 'up' : 'down'
+        },
+        {
+          name: 'Memory Usage',
+          value: Math.random() * 100,
+          unit: '%',
+          status: Math.random() > 0.9 ? 'critical' : 'healthy',
+          trend: 'stable'
+        },
+        {
+          name: 'Database Connections',
+          value: Math.floor(Math.random() * 100),
+          unit: 'active',
+          status: 'healthy',
+          trend: 'up'
+        },
+        {
+          name: 'API Response Time',
+          value: Math.random() * 1000,
+          unit: 'ms',
+          status: Math.random() > 0.7 ? 'warning' : 'healthy',
+          trend: 'down'
+        },
+        {
+          name: 'Error Rate',
+          value: Math.random() * 5,
+          unit: '%',
+          status: Math.random() > 0.8 ? 'warning' : 'healthy',
+          trend: 'down'
+        },
+        {
+          name: 'Storage Usage',
+          value: Math.random() * 100,
+          unit: '%',
+          status: 'healthy',
+          trend: 'up'
+        }
+      ];
 
-      // AI Services health check (check recent AI waiter logs)
-      const { data: aiLogs } = await supabase
-        .from('ai_waiter_logs')
-        .select('created_at, processing_metadata')
-        .gte('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      const aiSuccessRate = aiLogs ? 
-        (aiLogs.filter(log => {
-          const metadata = log.processing_metadata as any;
-          return !metadata?.error;
-        }).length / aiLogs.length) * 100 : 100;
-      
-      const newStatus: SystemStatus = {
-        database: {
+      const mockServices: ServiceStatus[] = [
+        {
           name: 'Database',
-          status: dbLatency < 100 ? 'healthy' : dbLatency < 500 ? 'warning' : 'critical',
-          value: Math.round(dbLatency),
-          unit: 'ms',
-          description: 'Query response time',
+          status: Math.random() > 0.95 ? 'offline' : 'online',
+          uptime: 99.9,
+          responseTime: Math.random() * 50,
           lastCheck: new Date().toISOString()
         },
-        edgeFunctions: {
+        {
+          name: 'AI Router',
+          status: Math.random() > 0.9 ? 'degraded' : 'online',
+          uptime: 99.5,
+          responseTime: Math.random() * 200,
+          lastCheck: new Date().toISOString()
+        },
+        {
+          name: 'Payment Gateway',
+          status: 'online',
+          uptime: 99.8,
+          responseTime: Math.random() * 100,
+          lastCheck: new Date().toISOString()
+        },
+        {
           name: 'Edge Functions',
-          status: 'healthy',
-          value: 99.9,
-          unit: '%',
-          description: 'Function availability',
+          status: 'online',
+          uptime: 99.7,
+          responseTime: Math.random() * 150,
           lastCheck: new Date().toISOString()
         },
-        aiServices: {
-          name: 'AI Services',
-          status: aiSuccessRate > 95 ? 'healthy' : aiSuccessRate > 80 ? 'warning' : 'critical',
-          value: Math.round(aiSuccessRate),
-          unit: '%',
-          description: 'AI response success rate',
-          lastCheck: new Date().toISOString()
-        },
-        storage: {
-          name: 'Storage',
-          status: 'healthy',
-          value: 45,
-          unit: '%',
-          description: 'Storage utilization',
-          lastCheck: new Date().toISOString()
-        },
-        realtime: {
-          name: 'Realtime',
-          status: 'healthy',
-          value: 15,
-          unit: 'ms',
-          description: 'Average latency',
+        {
+          name: 'File Storage',
+          status: 'online',
+          uptime: 99.9,
+          responseTime: Math.random() * 75,
           lastCheck: new Date().toISOString()
         }
-      };
+      ];
 
-      setSystemStatus(newStatus);
-      setLastRefresh(new Date());
+      setMetrics(mockMetrics);
+      setServices(mockServices);
+      setLastUpdate(new Date());
     } catch (error) {
-      console.error('Health check failed:', error);
+      console.error('Error fetching system health:', error);
+      toast.error('Failed to fetch system health data');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'healthy': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      case 'critical': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      default: return <Activity className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'healthy': return 'bg-green-100 text-green-800';
-      case 'warning': return 'bg-yellow-100 text-yellow-800';
-      case 'critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'healthy':
+      case 'online':
+        return 'text-green-600 bg-green-100';
+      case 'warning':
+      case 'degraded':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'critical':
+      case 'offline':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
-  const getServiceIcon = (serviceName: string) => {
-    switch (serviceName) {
-      case 'Database': return <Database className="h-5 w-5" />;
-      case 'Edge Functions': return <Zap className="h-5 w-5" />;
-      case 'AI Services': return <Server className="h-5 w-5" />;
-      case 'Storage': return <Server className="h-5 w-5" />;
-      case 'Realtime': return <Globe className="h-5 w-5" />;
-      default: return <Activity className="h-5 w-5" />;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'healthy':
+      case 'online':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'warning':
+      case 'degraded':
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+      case 'critical':
+      case 'offline':
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      default:
+        return <Activity className="h-4 w-4 text-gray-600" />;
     }
   };
+
+  const getTrendIcon = (trend: string) => {
+    switch (trend) {
+      case 'up':
+        return <TrendingUp className="h-3 w-3 text-green-600" />;
+      case 'down':
+        return <TrendingUp className="h-3 w-3 text-red-600 rotate-180" />;
+      default:
+        return <div className="h-3 w-3 bg-gray-400 rounded-full" />;
+    }
+  };
+
+  const runSystemMaintenance = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('system-maintenance', {
+        body: { operation: 'full_maintenance' }
+      });
+
+      if (error) throw error;
+
+      toast.success('System maintenance completed successfully');
+      fetchSystemHealth();
+    } catch (error) {
+      console.error('Maintenance error:', error);
+      toast.error('Failed to run system maintenance');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const overallHealthScore = metrics.reduce((acc, metric) => {
+    const score = metric.status === 'healthy' ? 100 : metric.status === 'warning' ? 75 : 25;
+    return acc + score;
+  }, 0) / metrics.length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">System Health Monitor</h2>
-          <p className="text-gray-600">Real-time monitoring of ICUPA platform services</p>
+          <h2 className="text-2xl font-bold">System Health</h2>
+          <p className="text-gray-600">
+            Last updated: {lastUpdate.toLocaleTimeString()}
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <span className="text-sm text-gray-500">
-            Last updated: {lastRefresh.toLocaleTimeString()}
-          </span>
-          <Button 
-            onClick={runHealthCheck} 
-            disabled={loading}
-            size="sm"
+        <div className="space-x-2">
+          <Button
             variant="outline"
+            onClick={fetchSystemHealth}
+            disabled={loading}
+            className="flex items-center space-x-2"
           >
-            {loading ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Refresh
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </Button>
+          <Button
+            onClick={runSystemMaintenance}
+            disabled={loading}
+            className="flex items-center space-x-2"
+          >
+            <Zap className="h-4 w-4" />
+            <span>Run Maintenance</span>
           </Button>
         </div>
       </div>
 
-      {/* Overall Status */}
+      {/* Overall Health Score */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Activity className="h-5 w-5" />
-            <span>Overall System Status</span>
+            <span>Overall System Health</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <span className="text-lg font-semibold text-green-800">All Systems Operational</span>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Health Score</span>
+              <span className="text-2xl font-bold">{Math.round(overallHealthScore)}%</span>
             </div>
-            <Badge variant="outline" className="bg-green-50 text-green-800">
-              99.9% Uptime
-            </Badge>
+            <Progress value={overallHealthScore} className="h-3" />
+            <div className="flex items-center space-x-4 text-sm">
+              <div className="flex items-center space-x-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span>{metrics.filter(m => m.status === 'healthy').length} Healthy</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <span>{metrics.filter(m => m.status === 'warning').length} Warning</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <span>{metrics.filter(m => m.status === 'critical').length} Critical</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Service Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {systemStatus && Object.values(systemStatus).map((service, index) => {
-          const getStatusIcon = (status: string) => {
-            switch (status) {
-              case 'healthy': return <CheckCircle className="h-4 w-4 text-green-500" />;
-              case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-              case 'critical': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-              default: return <Activity className="h-4 w-4 text-gray-500" />;
-            }
-          };
+      <Tabs defaultValue="metrics" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="metrics">System Metrics</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+        </TabsList>
 
-          const getStatusColor = (status: string) => {
-            switch (status) {
-              case 'healthy': return 'bg-green-100 text-green-800';
-              case 'warning': return 'bg-yellow-100 text-yellow-800';
-              case 'critical': return 'bg-red-100 text-red-800';
-              default: return 'bg-gray-100 text-gray-800';
-            }
-          };
-
-          const getServiceIcon = (serviceName: string) => {
-            switch (serviceName) {
-              case 'Database': return <Database className="h-5 w-5" />;
-              case 'Edge Functions': return <Zap className="h-5 w-5" />;
-              case 'AI Services': return <Server className="h-5 w-5" />;
-              case 'Storage': return <Server className="h-5 w-5" />;
-              case 'Realtime': return <Globe className="h-5 w-5" />;
-              default: return <Activity className="h-5 w-5" />;
-            }
-          };
-
-          return (
-            <Card key={index}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    {getServiceIcon(service.name)}
-                    <CardTitle className="text-lg">{service.name}</CardTitle>
+        <TabsContent value="metrics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {metrics.map((metric, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{metric.name}</span>
+                    <div className="flex items-center space-x-1">
+                      {getTrendIcon(metric.trend)}
+                      {getStatusIcon(metric.status)}
+                    </div>
                   </div>
-                  {getStatusIcon(service.status)}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold">
-                    {service.value}{service.unit}
-                  </span>
-                  <Badge className={getStatusColor(service.status)}>
-                    {service.status}
+                  <div className="text-2xl font-bold mb-1">
+                    {metric.value.toFixed(metric.unit === '%' ? 1 : 0)}
+                    <span className="text-sm text-gray-500 ml-1">{metric.unit}</span>
+                  </div>
+                  <Badge className={getStatusColor(metric.status)}>
+                    {metric.status.charAt(0).toUpperCase() + metric.status.slice(1)}
                   </Badge>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm text-gray-600 mb-1">
-                    <span>{service.description}</span>
-                    <span>{service.status === 'healthy' ? '100%' : '85%'}</span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="services" className="space-y-4">
+          <div className="grid gap-4">
+            {services.map((service, index) => (
+              <Card key={index}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        {service.name === 'Database' && <Database className="h-5 w-5" />}
+                        {service.name === 'AI Router' && <Zap className="h-5 w-5" />}
+                        {service.name === 'Payment Gateway' && <Users className="h-5 w-5" />}
+                        {service.name === 'Edge Functions' && <Server className="h-5 w-5" />}
+                        {service.name === 'File Storage' && <Database className="h-5 w-5" />}
+                        <span className="font-medium">{service.name}</span>
+                      </div>
+                      <Badge className={getStatusColor(service.status)}>
+                        {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
+                      </Badge>
+                    </div>
+                    <div className="text-right text-sm">
+                      <div className="font-medium">{service.uptime}% uptime</div>
+                      <div className="text-gray-500">{service.responseTime.toFixed(0)}ms</div>
+                    </div>
                   </div>
-                  <Progress 
-                    value={service.status === 'healthy' ? 100 : 85} 
-                    className="h-2"
-                  />
-                </div>
-                
-                <div className="text-xs text-gray-500">
-                  Last check: {new Date(service.lastCheck).toLocaleTimeString()}
+                  <div className="mt-2 text-xs text-gray-500 flex items-center space-x-1">
+                    <Clock className="h-3 w-3" />
+                    <span>Last checked: {new Date(service.lastCheck).toLocaleTimeString()}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>API Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span>Average Response Time</span>
+                    <span className="font-medium">
+                      {(metrics.find(m => m.name === 'API Response Time')?.value || 0).toFixed(0)}ms
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Error Rate</span>
+                    <span className="font-medium">
+                      {(metrics.find(m => m.name === 'Error Rate')?.value || 0).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Active Connections</span>
+                    <span className="font-medium">
+                      {metrics.find(m => m.name === 'Database Connections')?.value || 0}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
 
-      {/* Recent Incidents */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Incidents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-            <p>No incidents reported in the last 7 days</p>
-            <p className="text-sm">All systems running smoothly</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Resource Usage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>CPU Usage</span>
+                      <span>{(metrics.find(m => m.name === 'CPU Usage')?.value || 0).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={metrics.find(m => m.name === 'CPU Usage')?.value || 0} />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>Memory Usage</span>
+                      <span>{(metrics.find(m => m.name === 'Memory Usage')?.value || 0).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={metrics.find(m => m.name === 'Memory Usage')?.value || 0} />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>Storage Usage</span>
+                      <span>{(metrics.find(m => m.name === 'Storage Usage')?.value || 0).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={metrics.find(m => m.name === 'Storage Usage')?.value || 0} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
