@@ -130,7 +130,6 @@ const MenuSection: React.FC<MenuSectionProps> = ({
                       <Button
                         size="sm"
                         onClick={() => handleAddToCart(item)}
-                        disabled={!item.available}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
                         <Plus className="h-4 w-4 mr-1" />
