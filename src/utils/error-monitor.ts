@@ -28,7 +28,6 @@ export class ErrorMonitor {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // Log errors with context
   async logError(
     error: Error | string,
     severity: ErrorSeverity = 'medium',
@@ -49,7 +48,6 @@ export class ErrorMonitor {
           severity: severity
         });
 
-      // Send critical errors to external monitoring (implement webhook)
       if (severity === 'critical') {
         await this.sendCriticalAlert(errorMessage, context);
       }
@@ -63,7 +61,6 @@ export class ErrorMonitor {
     }
   }
 
-  // Log performance metrics
   async logPerformance(metric: PerformanceMetric): Promise<void> {
     try {
       await this.supabase
@@ -77,8 +74,7 @@ export class ErrorMonitor {
           metadata: metric.metadata
         });
 
-      // Alert on slow requests
-      if (metric.responseTime > 5000) { // 5 seconds
+      if (metric.responseTime > 5000) {
         await this.logError(
           `Slow response detected: ${metric.endpoint} took ${metric.responseTime}ms`,
           'high',
@@ -90,7 +86,6 @@ export class ErrorMonitor {
     }
   }
 
-  // Track analytics events
   async trackEvent(
     eventName: string,
     properties: Record<string, any> = {},
@@ -110,7 +105,6 @@ export class ErrorMonitor {
     }
   }
 
-  // Store analytics metrics
   async storeMetric(
     metricName: string,
     value: number,
@@ -129,7 +123,6 @@ export class ErrorMonitor {
     }
   }
 
-  // Get error summary for dashboard
   async getErrorSummary(days: number = 7): Promise<any> {
     try {
       const { data } = await this.supabase
@@ -145,7 +138,6 @@ export class ErrorMonitor {
     }
   }
 
-  // Get performance metrics
   async getPerformanceMetrics(endpoint?: string, days: number = 7): Promise<any> {
     try {
       let query = this.supabase
@@ -171,7 +163,6 @@ export class ErrorMonitor {
   }
 
   private getSessionId(): string {
-    // Generate or retrieve session ID
     if (typeof window !== 'undefined') {
       let sessionId = sessionStorage.getItem('session_id');
       if (!sessionId) {
@@ -184,9 +175,7 @@ export class ErrorMonitor {
   }
 
   private async sendCriticalAlert(message: string, context: ErrorContext): Promise<void> {
-    // Implement webhook to Slack, Discord, or email service
     try {
-      // Example webhook implementation
       if (process.env.SLACK_WEBHOOK_URL) {
         await fetch(process.env.SLACK_WEBHOOK_URL, {
           method: 'POST',
@@ -210,7 +199,6 @@ export class ErrorMonitor {
   }
 }
 
-// React Hook for error boundary
 export function useErrorMonitor() {
   const monitor = new ErrorMonitor();
 
@@ -229,7 +217,6 @@ export function useErrorMonitor() {
   return { logError, trackEvent, logPerformance };
 }
 
-// Performance monitoring HOC
 export function withPerformanceMonitoring<T extends object>(
   Component: React.ComponentType<T>,
   componentName: string
@@ -255,11 +242,9 @@ export function withPerformanceMonitoring<T extends object>(
   };
 }
 
-// Global error handler setup
 export function setupGlobalErrorHandling() {
   const monitor = new ErrorMonitor();
 
-  // Handle unhandled promise rejections
   if (typeof window !== 'undefined') {
     window.addEventListener('unhandledrejection', (event) => {
       monitor.logError(
@@ -273,7 +258,6 @@ export function setupGlobalErrorHandling() {
       );
     });
 
-    // Handle JavaScript errors
     window.addEventListener('error', (event) => {
       monitor.logError(
         event.error || event.message,
@@ -292,7 +276,6 @@ export function setupGlobalErrorHandling() {
     });
   }
 
-  // For Node.js/server-side
   if (typeof process !== 'undefined') {
     process.on('unhandledRejection', (reason, promise) => {
       monitor.logError(
@@ -312,7 +295,6 @@ export function setupGlobalErrorHandling() {
   }
 }
 
-// Error Boundary Component
 export class ErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback?: React.ReactNode },
   { hasError: boolean }
