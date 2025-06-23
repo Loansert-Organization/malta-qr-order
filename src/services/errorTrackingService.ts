@@ -8,6 +8,10 @@ export interface ErrorContext {
   url?: string;
   userAgent?: string;
   timestamp?: string;
+  endpoint?: string;
+  method?: string;
+  statusCode?: number;
+  success?: boolean;
   additionalData?: Record<string, any>;
 }
 
@@ -131,13 +135,29 @@ class ErrorTrackingService {
   }
 
   async resolveError(errorId: string, notes?: string): Promise<void> {
+    const updateData: any = {
+      resolved: true,
+      resolved_at: new Date().toISOString()
+    };
+
+    if (notes) {
+      const { data: currentError } = await supabase
+        .from('error_logs')
+        .select('context')
+        .eq('id', errorId)
+        .single();
+
+      if (currentError) {
+        updateData.context = {
+          ...currentError.context,
+          resolution_notes: notes
+        };
+      }
+    }
+
     await supabase
       .from('error_logs')
-      .update({
-        resolved: true,
-        resolved_at: new Date().toISOString(),
-        context: supabase.raw(`context || '{"resolution_notes": "${notes || 'Resolved'}"}'::jsonb`)
-      })
+      .update(updateData)
       .eq('id', errorId);
   }
 }

@@ -38,10 +38,10 @@ class EnhancedPerformanceService {
       this.logPerformanceMetric({
         endpoint: window.location.pathname,
         method: 'GET',
-        responseTime: navEntry.loadEventEnd - navEntry.navigationStart,
+        responseTime: navEntry.loadEventEnd - navEntry.fetchStart,
         metadata: {
           type: 'page_load',
-          domContentLoaded: navEntry.domContentLoadedEventEnd - navEntry.navigationStart,
+          domContentLoaded: navEntry.domContentLoadedEventEnd - navEntry.fetchStart,
           firstContentfulPaint: this.getFirstContentfulPaint(),
           largestContentfulPaint: this.getLargestContentfulPaint()
         }
@@ -69,10 +69,10 @@ class EnhancedPerformanceService {
           this.logPerformanceMetric({
             endpoint: window.location.pathname,
             method: 'GET',
-            responseTime: navigation.loadEventEnd - navigation.navigationStart,
+            responseTime: navigation.loadEventEnd - navigation.fetchStart,
             metadata: {
               type: 'full_page_load',
-              domContentLoaded: navigation.domContentLoadedEventEnd - navigation.navigationStart,
+              domContentLoaded: navigation.domContentLoadedEventEnd - navigation.fetchStart,
               networkTime: navigation.responseEnd - navigation.requestStart,
               renderTime: navigation.loadEventEnd - navigation.responseEnd
             }
