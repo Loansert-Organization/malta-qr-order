@@ -1,71 +1,34 @@
 
-import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/components/auth/AuthProvider";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { ConsolidatedSessionProvider } from "@/providers/ConsolidatedSessionProvider";
+import { AnonymousAuthProvider } from "@/components/auth/AnonymousAuthProvider";
 import Index from "./pages/Index";
-import OrderDemo from "./pages/OrderDemo";
 import OrderPage from "./pages/OrderPage";
-import VendorDirectory from "./pages/VendorDirectory";
-import VendorRegistration from "./pages/VendorRegistration";
-import VendorDashboard from "./pages/VendorDashboard";
-import AdminPanel from "./pages/AdminPanel";
-import AISystemVerification from "./pages/AISystemVerification";
-import AnalyticsDashboard from "./pages/AnalyticsDashboard";
-import PWADashboard from "./pages/PWADashboard";
-import NotFound from "./pages/NotFound";
+import VendorOrderManagement from "./pages/VendorOrderManagement";
+import AdminDashboard from "./pages/AdminDashboard";
 
-// Create a stable query client instance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 3,
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-    mutations: {
-      retry: 2,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const App: React.FC = () => {
-  return (
-    <ErrorBoundary componentName="App">
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ConsolidatedSessionProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/vendors" element={<VendorDirectory />} />
-                  <Route path="/restaurants" element={<VendorDirectory />} />
-                  <Route path="/register" element={<VendorRegistration />} />
-                  <Route path="/order/:slug" element={<OrderDemo />} />
-                  <Route path="/order-page/:vendorSlug" element={<OrderPage />} />
-                  <Route path="/vendor/*" element={<VendorDashboard />} />
-                  <Route path="/admin/*" element={<AdminPanel />} />
-                  <Route path="/ai-verification" element={<AISystemVerification />} />
-                  <Route path="/analytics" element={<AnalyticsDashboard />} />
-                  <Route path="/pwa" element={<PWADashboard />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </ConsolidatedSessionProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
-  );
-};
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AnonymousAuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/order/:vendorSlug" element={<OrderPage />} />
+            <Route path="/vendor" element={<VendorOrderManagement />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Routes>
+        </BrowserRouter>
+      </AnonymousAuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;

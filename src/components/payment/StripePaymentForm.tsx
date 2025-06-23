@@ -1,20 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements
-} from '@stripe/react-stripe-js';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, CreditCard } from 'lucide-react';
+import { CreditCard, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
-// Use a test publishable key - in production, replace with your live key
-const stripePromise = loadStripe('pk_test_51QZRj6GLdHQgMQ8Q2vKLSIRjSyMF6R8y9f9i8h7g6e5d4c3b2a1z0');
+import { useToast } from '@/hooks/use-toast';
 
 interface StripePaymentFormProps {
   amount: number;
@@ -25,11 +15,11 @@ interface StripePaymentFormProps {
     email: string;
     phone: string;
   };
-  onPaymentSuccess: (paymentIntentId: string) => void;
+  onPaymentSuccess: (paymentIntentId?: string) => void;
   onPaymentError: (error: string) => void;
 }
 
-const PaymentForm: React.FC<StripePaymentFormProps> = ({
+const StripePaymentForm: React.FC<StripePaymentFormProps> = ({
   amount,
   currency,
   orderId,
@@ -37,145 +27,76 @@ const PaymentForm: React.FC<StripePaymentFormProps> = ({
   onPaymentSuccess,
   onPaymentError
 }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string>('');
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Create payment intent when component mounts
-    const createPaymentIntent = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('create-stripe-payment', {
-          body: {
-            amount,
-            currency,
-            orderId,
-            customerInfo
-          }
-        });
-
-        if (error) throw error;
-        setClientSecret(data.clientSecret);
-      } catch (error) {
-        console.error('Error creating payment intent:', error);
-        onPaymentError('Failed to initialize payment');
-      }
-    };
-
-    createPaymentIntent();
-  }, [amount, currency, orderId, customerInfo, onPaymentError]);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements || !clientSecret) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) {
-      setIsProcessing(false);
-      return;
-    }
-
+  const handlePayment = async () => {
+    setLoading(true);
     try {
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name: customerInfo.name,
-            email: customerInfo.email,
-            phone: customerInfo.phone,
-          },
-        },
+      const { data, error } = await supabase.functions.invoke('create-stripe-payment', {
+        body: {
+          amount: Math.round(amount * 100), // Convert to cents
+          currency: currency.toLowerCase(),
+          order_id: orderId,
+          customer_email: customerInfo.email || 'guest@icupa.mt'
+        }
       });
 
-      if (error) {
-        onPaymentError(error.message || 'Payment failed');
-        toast({
-          title: "Payment Failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else if (paymentIntent.status === 'succeeded') {
-        onPaymentSuccess(paymentIntent.id);
-        toast({
-          title: "Payment Successful!",
-          description: `Payment of €${amount.toFixed(2)} completed successfully.`
-        });
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      onPaymentError('An unexpected error occurred');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+      if (error) throw error;
 
-  const cardElementOptions = {
-    style: {
-      base: {
-        fontSize: '16px',
-        color: '#424770',
-        '::placeholder': {
-          color: '#aab7c4',
-        },
-      },
-    },
-    hidePostalCode: true,
+      // Open Stripe checkout in new tab
+      window.open(data.url, '_blank');
+      
+      toast({
+        title: "Payment Initiated",
+        description: "Please complete your payment in the new tab",
+      });
+
+      onPaymentSuccess();
+    } catch (error) {
+      console.error('Stripe payment error:', error);
+      onPaymentError(error.message || 'Payment failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <CreditCard className="h-5 w-5" />
-          <span>Card Payment</span>
+        <CardTitle className="flex items-center">
+          <CreditCard className="h-5 w-5 mr-2" />
+          Credit Card Payment
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="p-4 border rounded-lg">
-            <CardElement options={cardElementOptions} />
-          </div>
-          
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Total Amount:</span>
-              <span className="font-semibold">€{amount.toFixed(2)}</span>
-            </div>
-          </div>
+      <CardContent className="space-y-4">
+        <div className="bg-blue-50 p-3 rounded-lg">
+          <p className="text-sm text-blue-800">
+            You will be redirected to Stripe's secure checkout page to complete your payment.
+          </p>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <span className="font-medium">Amount:</span>
+          <span className="text-xl font-bold">€{amount.toFixed(2)}</span>
+        </div>
 
-          <Button
-            type="submit"
-            disabled={!stripe || !clientSecret || isProcessing}
-            className="w-full"
-            size="lg"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing Payment...
-              </>
-            ) : (
-              `Pay €${amount.toFixed(2)}`
-            )}
-          </Button>
-        </form>
+        <Button
+          onClick={handlePayment}
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Pay €${amount.toFixed(2)} with Stripe`
+          )}
+        </Button>
       </CardContent>
     </Card>
-  );
-};
-
-const StripePaymentForm: React.FC<StripePaymentFormProps> = (props) => {
-  return (
-    <Elements stripe={stripePromise}>
-      <PaymentForm {...props} />
-    </Elements>
   );
 };
 

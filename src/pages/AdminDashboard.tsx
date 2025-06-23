@@ -1,0 +1,96 @@
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, ShoppingCart, TrendingUp, Settings } from 'lucide-react';
+import AdminOrderTracking from '@/components/admin/AdminOrderTracking';
+
+const AdminDashboard = () => {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">ICUPA Malta Admin</h1>
+              <p className="text-gray-600">System Administration Dashboard</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
+        <Tabs defaultValue="orders" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="orders">Order Tracking</TabsTrigger>
+            <TabsTrigger value="vendors">Vendor Management</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">System Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="orders" className="mt-6">
+            <AdminOrderTracking />
+          </TabsContent>
+
+          <TabsContent value="vendors" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  Vendor Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Vendor management interface coming soon</p>
+                  <p className="text-sm">Manage vendor onboarding, approval, and settings</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="h-5 w-5 mr-2" />
+                  Platform Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Analytics dashboard coming soon</p>
+                  <p className="text-sm">Track platform performance, revenue, and growth metrics</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Settings className="h-5 w-5 mr-2" />
+                  System Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <Settings className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>System settings coming soon</p>
+                  <p className="text-sm">Configure platform settings, AI models, and integrations</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;

@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -16,8 +17,8 @@ serve(async (req) => {
   try {
     const { paymentIntentId, orderId } = await req.json();
 
-    if (!paymentIntentId || !orderId) {
-      throw new Error("Payment intent ID and order ID are required");
+    if (!orderId) {
+      throw new Error("Order ID is required");
     }
 
     // Initialize Stripe
@@ -32,54 +33,47 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    // Retrieve payment intent from Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    let orderStatus = 'pending';
     let paymentStatus = 'pending';
-
-    // Update order status based on payment intent status
-    switch (paymentIntent.status) {
-      case 'succeeded':
-        orderStatus = 'confirmed';
-        paymentStatus = 'paid';
-        break;
-      case 'requires_payment_method':
-      case 'requires_confirmation':
-      case 'requires_action':
-        orderStatus = 'pending';
-        paymentStatus = 'pending';
-        break;
-      case 'canceled':
-        orderStatus = 'cancelled';
-        paymentStatus = 'failed';
-        break;
-      default:
-        orderStatus = 'pending';
-        paymentStatus = 'pending';
+    
+    if (paymentIntentId) {
+      // Check Stripe payment status
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      paymentStatus = paymentIntent.status;
+      
+      // Update payment record
+      await supabase
+        .from('payments')
+        .update({
+          status: paymentStatus === 'succeeded' ? 'paid' : paymentStatus,
+          processed_at: paymentStatus === 'succeeded' ? new Date().toISOString() : null
+        })
+        .eq('order_id', orderId);
     }
 
-    // Update order in database
-    const { data: updatedOrder, error } = await supabase
+    // Get current order status
+    const { data: order, error: orderError } = await supabase
       .from('orders')
-      .update({
-        status: orderStatus,
-        payment_status: paymentStatus,
-        updated_at: new Date().toISOString()
-      })
+      .select('status, payment_status')
       .eq('id', orderId)
-      .select()
       .single();
 
-    if (error) {
-      throw error;
+    if (orderError) throw orderError;
+
+    // Update order payment status if payment succeeded
+    if (paymentStatus === 'succeeded' && order.payment_status !== 'paid') {
+      await supabase
+        .from('orders')
+        .update({
+          payment_status: 'paid'
+        })
+        .eq('id', orderId);
     }
 
     return new Response(
       JSON.stringify({
-        paymentStatus: paymentIntent.status,
-        orderStatus: orderStatus,
-        order: updatedOrder
+        paymentStatus,
+        orderStatus: order.status,
+        paymentRecordStatus: order.payment_status
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
