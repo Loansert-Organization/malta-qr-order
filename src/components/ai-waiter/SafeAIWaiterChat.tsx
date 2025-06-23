@@ -1,0 +1,60 @@
+
+import React from 'react';
+import { AIErrorBoundary } from '@/components/ErrorBoundaries/AIErrorBoundary';
+import { useAIService } from '@/hooks/useAIService';
+import { useSession } from '@/providers/ConsolidatedSessionProvider';
+import MaltaAIWaiterChat from './MaltaAIWaiterChat';
+
+interface SafeAIWaiterChatProps {
+  vendorId?: string;
+  menuItems?: any[];
+  onClose?: () => void;
+}
+
+const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({ 
+  vendorId, 
+  menuItems, 
+  onClose 
+}) => {
+  const { session } = useSession();
+  const aiService = useAIService({
+    timeout: 30000,
+    retries: 2,
+    fallbackMessage: "I apologize, but I'm experiencing technical difficulties. You can still browse the menu manually or try asking me again in a moment."
+  });
+
+  return (
+    <AIErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('AI Waiter Error:', error, errorInfo);
+        // Could send to monitoring service
+      }}
+      fallback={
+        <div className="p-6 text-center">
+          <h3 className="text-lg font-semibold mb-2">AI Assistant Unavailable</h3>
+          <p className="text-gray-600 mb-4">
+            Our AI waiter is temporarily unavailable. You can still browse the menu manually.
+          </p>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Continue Browsing Menu
+            </button>
+          )}
+        </div>
+      }
+    >
+      <MaltaAIWaiterChat
+        vendorId={vendorId}
+        menuItems={menuItems}
+        onClose={onClose}
+        guestSessionId={session?.sessionToken}
+        aiService={aiService}
+      />
+    </AIErrorBoundary>
+  );
+};
+
+export default SafeAIWaiterChat;

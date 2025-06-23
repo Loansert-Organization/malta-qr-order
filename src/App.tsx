@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { ConsolidatedSessionProvider } from "@/providers/ConsolidatedSessionProvider";
 import Index from "./pages/Index";
 import OrderDemo from "./pages/OrderDemo";
 import OrderPage from "./pages/OrderPage";
@@ -37,26 +38,28 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary componentName="App">
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/vendors" element={<VendorDirectory />} />
-              <Route path="/restaurants" element={<VendorDirectory />} />
-              <Route path="/register" element={<VendorRegistration />} />
-              <Route path="/order/:slug" element={<OrderDemo />} />
-              <Route path="/order-page/:vendorSlug" element={<OrderPage />} />
-              <Route path="/vendor/*" element={<VendorDashboard />} />
-              <Route path="/admin/*" element={<AdminPanel />} />
-              <Route path="/ai-verification" element={<AISystemVerification />} />
-              <Route path="/analytics" element={<AnalyticsDashboard />} />
-              <Route path="/pwa" element={<PWADashboard />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <ConsolidatedSessionProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/vendors" element={<VendorDirectory />} />
+                <Route path="/restaurants" element={<VendorDirectory />} />
+                <Route path="/register" element={<VendorRegistration />} />
+                <Route path="/order/:slug" element={<OrderDemo />} />
+                <Route path="/order-page/:vendorSlug" element={<OrderPage />} />
+                <Route path="/vendor/*" element={<VendorDashboard />} />
+                <Route path="/admin/*" element={<AdminPanel />} />
+                <Route path="/ai-verification" element={<AISystemVerification />} />
+                <Route path="/analytics" element={<AnalyticsDashboard />} />
+                <Route path="/pwa" element={<PWADashboard />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ConsolidatedSessionProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
