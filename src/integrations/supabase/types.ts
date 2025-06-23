@@ -9,6 +9,82 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_logs: {
+        Row: {
+          agent_response: Json | null
+          created_at: string
+          id: number
+          satisfaction_score: number | null
+          session_id: string
+          user_query: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          agent_response?: Json | null
+          created_at?: string
+          id?: number
+          satisfaction_score?: number | null
+          session_id: string
+          user_query?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          agent_response?: Json | null
+          created_at?: string
+          id?: number
+          satisfaction_score?: number | null
+          session_id?: string
+          user_query?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_logs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_suggestions: {
+        Row: {
+          created_at: string
+          id: number
+          is_applied: boolean | null
+          session_id: string
+          suggestion_payload: Json
+          suggestion_type: string
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_applied?: boolean | null
+          session_id: string
+          suggestion_payload: Json
+          suggestion_type: string
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_applied?: boolean | null
+          session_id?: string
+          suggestion_payload?: Json
+          suggestion_type?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_waiter_logs: {
         Row: {
           ai_model_used: string | null
@@ -399,14 +475,80 @@ export type Database = {
           },
         ]
       }
+      menu_categories: {
+        Row: {
+          display_order: number
+          id: string
+          is_smart_category: boolean | null
+          name: string
+          smart_rules: Json | null
+          vendor_id: string
+        }
+        Insert: {
+          display_order?: number
+          id?: string
+          is_smart_category?: boolean | null
+          name: string
+          smart_rules?: Json | null
+          vendor_id: string
+        }
+        Update: {
+          display_order?: number
+          id?: string
+          is_smart_category?: boolean | null
+          name?: string
+          smart_rules?: Json | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_modifiers: {
+        Row: {
+          additional_price: number
+          id: string
+          menu_item_id: string
+          name: string
+        }
+        Insert: {
+          additional_price?: number
+          id?: string
+          menu_item_id: string
+          name: string
+        }
+        Update: {
+          additional_price?: number
+          id?: string
+          menu_item_id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_modifiers_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           allergens: Json | null
           available: boolean | null
           bar_id: string | null
           category: string | null
+          category_id: string | null
           created_at: string
           description: string | null
+          dietary_tags: string[] | null
           id: string
           image_url: string | null
           is_vegetarian: boolean | null
@@ -424,8 +566,10 @@ export type Database = {
           available?: boolean | null
           bar_id?: string | null
           category?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
+          dietary_tags?: string[] | null
           id?: string
           image_url?: string | null
           is_vegetarian?: boolean | null
@@ -443,8 +587,10 @@ export type Database = {
           available?: boolean | null
           bar_id?: string | null
           category?: string | null
+          category_id?: string | null
           created_at?: string
           description?: string | null
+          dietary_tags?: string[] | null
           id?: string
           image_url?: string | null
           is_vegetarian?: boolean | null
@@ -466,10 +612,62 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "menu_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "menu_items_menu_id_fkey"
             columns: ["menu_id"]
             isOneToOne: false
             referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_qa_issues: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: number
+          is_resolved: boolean | null
+          issue_type: string
+          menu_item_id: string
+          resolved_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: number
+          is_resolved?: boolean | null
+          issue_type: string
+          menu_item_id: string
+          resolved_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: number
+          is_resolved?: boolean | null
+          issue_type?: string
+          menu_item_id?: string
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_qa_issues_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_qa_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -652,6 +850,35 @@ export type Database = {
           },
         ]
       }
+      order_heatmap_data: {
+        Row: {
+          created_at: string
+          id: number
+          location: unknown
+          order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          location: unknown
+          order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          location?: unknown
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_heatmap_data_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -659,6 +886,7 @@ export type Database = {
           menu_item_id: string
           order_id: string
           quantity: number
+          selected_modifiers: Json | null
           total_price: number
           unit_price: number
         }
@@ -668,6 +896,7 @@ export type Database = {
           menu_item_id: string
           order_id: string
           quantity?: number
+          selected_modifiers?: Json | null
           total_price: number
           unit_price: number
         }
@@ -677,6 +906,7 @@ export type Database = {
           menu_item_id?: string
           order_id?: string
           quantity?: number
+          selected_modifiers?: Json | null
           total_price?: number
           unit_price?: number
         }
@@ -735,6 +965,8 @@ export type Database = {
       orders: {
         Row: {
           actual_ready_time: string | null
+          agreed_to_terms: boolean
+          client_id: string | null
           created_at: string
           customer_email: string | null
           customer_name: string | null
@@ -747,12 +979,16 @@ export type Database = {
           payment_method: string | null
           payment_status: string | null
           status: string | null
+          table_identifier: string | null
           total_amount: number
           updated_at: string
           vendor_id: string
+          whatsapp_consent: boolean
         }
         Insert: {
           actual_ready_time?: string | null
+          agreed_to_terms?: boolean
+          client_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string | null
@@ -765,12 +1001,16 @@ export type Database = {
           payment_method?: string | null
           payment_status?: string | null
           status?: string | null
+          table_identifier?: string | null
           total_amount: number
           updated_at?: string
           vendor_id: string
+          whatsapp_consent?: boolean
         }
         Update: {
           actual_ready_time?: string | null
+          agreed_to_terms?: boolean
+          client_id?: string | null
           created_at?: string
           customer_email?: string | null
           customer_name?: string | null
@@ -783,11 +1023,20 @@ export type Database = {
           payment_method?: string | null
           payment_status?: string | null
           status?: string | null
+          table_identifier?: string | null
           total_amount?: number
           updated_at?: string
           vendor_id?: string
+          whatsapp_consent?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -977,6 +1226,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          full_name: string | null
           id: string
           role: string | null
           updated_at: string
@@ -985,6 +1235,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          full_name?: string | null
           id?: string
           role?: string | null
           updated_at?: string
@@ -993,6 +1244,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          full_name?: string | null
           id?: string
           role?: string | null
           updated_at?: string
@@ -1005,6 +1257,38 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qr_analytics: {
+        Row: {
+          id: number
+          ip_address: string | null
+          qr_code_id: string
+          scanned_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          id?: number
+          ip_address?: string | null
+          qr_code_id: string
+          scanned_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          id?: number
+          ip_address?: string | null
+          qr_code_id?: string
+          scanned_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_analytics_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "qr_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -1434,47 +1718,79 @@ export type Database = {
       vendors: {
         Row: {
           active: boolean | null
+          business_name: string
+          category: string | null
           created_at: string
           description: string | null
           id: string
+          is_active: boolean
           location: string | null
+          location_geo: unknown | null
+          location_text: string | null
           logo_url: string | null
           name: string
+          owner_id: string | null
           revolut_link: string | null
+          revolut_payment_link: string | null
           slug: string
+          stripe_account_id: string | null
           stripe_link: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           active?: boolean | null
+          business_name: string
+          category?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           location?: string | null
+          location_geo?: unknown | null
+          location_text?: string | null
           logo_url?: string | null
           name: string
+          owner_id?: string | null
           revolut_link?: string | null
+          revolut_payment_link?: string | null
           slug: string
+          stripe_account_id?: string | null
           stripe_link?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           active?: boolean | null
+          business_name?: string
+          category?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           location?: string | null
+          location_geo?: unknown | null
+          location_text?: string | null
           logo_url?: string | null
           name?: string
+          owner_id?: string | null
           revolut_link?: string | null
+          revolut_payment_link?: string | null
           slug?: string
+          stripe_account_id?: string | null
           stripe_link?: string | null
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vendors_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1495,6 +1811,7 @@ export type Database = {
       }
     }
     Enums: {
+      order_status: "new" | "preparing" | "completed" | "cancelled"
       order_status_enum:
         | "pending"
         | "confirmed"
@@ -1502,6 +1819,7 @@ export type Database = {
         | "ready"
         | "completed"
         | "cancelled"
+      user_role: "client" | "vendor" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1617,6 +1935,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      order_status: ["new", "preparing", "completed", "cancelled"],
       order_status_enum: [
         "pending",
         "confirmed",
@@ -1625,6 +1944,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      user_role: ["client", "vendor", "admin"],
     },
   },
 } as const
