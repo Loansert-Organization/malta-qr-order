@@ -1,11 +1,12 @@
 
-import { MenuItem, AIInsights, WeatherData } from './types';
+import { MenuItem } from '@/hooks/useOrderDemo/types';
+import { WeatherData, SmartMenuContextData } from './types';
 
 export const smartSortItems = (
   menuItems: MenuItem[],
   searchQuery: string,
   selectedCategory: string,
-  aiInsights?: AIInsights,
+  contextData?: SmartMenuContextData,
   weatherData?: WeatherData
 ): MenuItem[] => {
   let items = [...menuItems];
@@ -15,8 +16,8 @@ export const smartSortItems = (
     const query = searchQuery.toLowerCase();
     items = items.filter(item => 
       item.name.toLowerCase().includes(query) ||
-      item.description.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query)
+      (item.description && item.description.toLowerCase().includes(query)) ||
+      (item.category && item.category.toLowerCase().includes(query))
     );
   }
 
@@ -34,23 +35,31 @@ export const smartSortItems = (
     if (a.popular) scoreA += 50;
     if (b.popular) scoreB += 50;
 
-    // AI trending items boost
-    if (aiInsights?.trending_items.includes(a.name)) scoreA += 40;
-    if (aiInsights?.trending_items.includes(b.name)) scoreB += 40;
-
     // Weather-based recommendations
-    if (weatherData?.recommendations.some(rec => 
-      a.category.toLowerCase().includes(rec) || 
-      a.name.toLowerCase().includes(rec)
-    )) scoreA += 30;
-    if (weatherData?.recommendations.some(rec => 
-      b.category.toLowerCase().includes(rec) || 
-      b.name.toLowerCase().includes(rec)
-    )) scoreB += 30;
+    if (weatherData && weatherData.temperature) {
+      // Hot weather - boost cold drinks and light items
+      if (weatherData.temperature > 25) {
+        if (a.category === 'Drink' || a.subcategory === 'Cold Drink') scoreA += 30;
+        if (b.category === 'Drink' || b.subcategory === 'Cold Drink') scoreB += 30;
+      }
+      // Cool weather - boost hot items
+      if (weatherData.temperature < 18) {
+        if (a.subcategory === 'Hot Drink' || a.category === 'Food') scoreA += 30;
+        if (b.subcategory === 'Hot Drink' || b.category === 'Food') scoreB += 30;
+      }
+    }
 
     // Time-based priorities
-    if (aiInsights?.time_based_priorities.includes(a.category.toLowerCase())) scoreA += 25;
-    if (aiInsights?.time_based_priorities.includes(b.category.toLowerCase())) scoreB += 25;
+    if (contextData) {
+      const { timeOfDay } = contextData;
+      if (timeOfDay === 'morning') {
+        if (a.subcategory === 'Hot Drink' || a.name.toLowerCase().includes('coffee')) scoreA += 25;
+        if (b.subcategory === 'Hot Drink' || b.name.toLowerCase().includes('coffee')) scoreB += 25;
+      } else if (timeOfDay === 'evening') {
+        if (a.subcategory === 'Cocktail' || a.category === 'Drink') scoreA += 25;
+        if (b.subcategory === 'Cocktail' || b.category === 'Drink') scoreB += 25;
+      }
+    }
 
     // Availability boost
     if (a.available) scoreA += 20;
@@ -62,17 +71,23 @@ export const smartSortItems = (
 
 export const smartSortCategories = (
   categories: string[],
-  aiInsights?: AIInsights
+  contextData?: SmartMenuContextData
 ): string[] => {
   return categories.sort((a, b) => {
     let scoreA = 0;
     let scoreB = 0;
 
-    if (aiInsights?.recommended_categories.includes(a.toLowerCase())) scoreA += 10;
-    if (aiInsights?.recommended_categories.includes(b.toLowerCase())) scoreB += 10;
-
-    if (aiInsights?.time_based_priorities.includes(a.toLowerCase())) scoreA += 8;
-    if (aiInsights?.time_based_priorities.includes(b.toLowerCase())) scoreB += 8;
+    if (contextData) {
+      const { timeOfDay } = contextData;
+      
+      if (timeOfDay === 'morning') {
+        if (a.toLowerCase().includes('drink') || a.toLowerCase().includes('coffee')) scoreA += 10;
+        if (b.toLowerCase().includes('drink') || b.toLowerCase().includes('coffee')) scoreB += 10;
+      } else if (timeOfDay === 'evening') {
+        if (a.toLowerCase().includes('drink') || a.toLowerCase().includes('cocktail')) scoreA += 10;
+        if (b.toLowerCase().includes('drink') || b.toLowerCase().includes('cocktail')) scoreB += 10;
+      }
+    }
 
     return scoreB - scoreA;
   });
