@@ -249,7 +249,7 @@ export function withPerformanceMonitoring<T extends object>(
           metadata: { componentName }
         });
       };
-    }, [logPerformance, componentName]);
+    }, [logPerformance]);
 
     return React.createElement(Component, props);
   };
