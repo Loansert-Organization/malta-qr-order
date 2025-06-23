@@ -28,16 +28,16 @@ class ErrorTrackingService {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const contextData = context ? {
-        ...context,
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString()
-      } : {
+      const baseContext = {
         url: window.location.href,
         userAgent: navigator.userAgent,
         timestamp: new Date().toISOString()
       };
+
+      const contextData = context && typeof context === 'object' ? {
+        ...baseContext,
+        ...context
+      } : baseContext;
 
       await supabase.from('error_logs').insert({
         error_type: errorType,
@@ -52,7 +52,7 @@ class ErrorTrackingService {
       if (severity === 'critical') {
         console.error(`🚨 CRITICAL ERROR: ${errorType}`, {
           message: errorMessage,
-          context,
+          context: contextData,
           stackTrace
         });
       }
@@ -62,7 +62,7 @@ class ErrorTrackingService {
   }
 
   async logJavaScriptError(error: Error, context?: ErrorContext): Promise<void> {
-    const contextData = context ? {
+    const contextData = context && typeof context === 'object' ? {
       ...context,
       component: context.component || 'unknown'
     } : {
@@ -87,7 +87,7 @@ class ErrorTrackingService {
   ): Promise<void> {
     const severity: ErrorSeverity = status >= 500 ? 'critical' : status >= 400 ? 'high' : 'medium';
     
-    const contextData = context ? {
+    const contextData = context && typeof context === 'object' ? {
       ...context,
       endpoint,
       method,
@@ -112,7 +112,7 @@ class ErrorTrackingService {
     context?: ErrorContext
   ): Promise<void> {
     if (!success) {
-      const contextData = context ? {
+      const contextData = context && typeof context === 'object' ? {
         ...context,
         action,
         success
@@ -168,7 +168,7 @@ class ErrorTrackingService {
         .eq('id', errorId)
         .single();
 
-      if (currentError && currentError.context) {
+      if (currentError && currentError.context && typeof currentError.context === 'object') {
         updateData.context = {
           ...currentError.context,
           resolution_notes: notes

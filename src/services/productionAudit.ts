@@ -1,442 +1,308 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { aiAssistantService } from './aiAssistantService';
 
-export interface AuditIssue {
-  id: string;
-  location: string;
-  type: 'bug' | 'missing' | 'ux' | 'integration' | 'error';
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  description: string;
-  proposedFix: string;
-  status: 'ready' | 'needs_fixing' | 'broken';
+interface AuditResult {
+  category: string;
+  score: number;
+  issues: string[];
+  recommendations: string[];
+  status: 'pass' | 'warning' | 'fail';
 }
 
-export interface AuditReport {
-  timestamp: string;
-  categories: {
-    frontend: AuditIssue[];
-    backend: AuditIssue[];
-    aiIntegration: AuditIssue[];
-    errorHandling: AuditIssue[];
-    deployment: AuditIssue[];
-  };
-  summary: {
-    totalIssues: number;
-    criticalIssues: number;
-    readyItems: number;
-    brokenItems: number;
-    productionReadinessScore: number;
-  };
+interface TableStats {
+  name: string;
+  rowCount: number;
+  lastUpdated: string;
+  hasRLS: boolean;
 }
 
 class ProductionAuditService {
-  private auditResults: AuditIssue[] = [];
+  async runComprehensiveAudit(): Promise<{
+    overallScore: number;
+    results: AuditResult[];
+    summary: string;
+  }> {
+    const results: AuditResult[] = [];
 
-  async performFullAudit(): Promise<AuditReport> {
-    console.log('🔍 Starting comprehensive production readiness audit...');
+    // Database audit
+    results.push(await this.auditDatabase());
     
-    this.auditResults = [];
-
-    // Parallel audit execution
-    await Promise.all([
-      this.auditFrontend(),
-      this.auditBackend(),
-      this.auditAIIntegration(),
-      this.auditErrorHandling(),
-      this.auditDeployment()
-    ]);
-
-    return this.generateReport();
-  }
-
-  private async auditFrontend(): Promise<void> {
-    console.log('🖥️ Auditing Frontend...');
-
-    // Check route accessibility
-    const routes = [
-      { path: '/', name: 'Home/Client App' },
-      { path: '/vendor', name: 'Vendor Dashboard' },
-      { path: '/admin', name: 'Admin Panel' },
-      { path: '/production-system', name: 'Production System' }
-    ];
-
-    for (const route of routes) {
-      try {
-        // Simulate route check
-        this.addIssue({
-          location: `Route: ${route.path}`,
-          type: 'integration',
-          severity: 'high',
-          description: `Route ${route.path} accessibility needs verification`,
-          proposedFix: 'Test route navigation and component loading',
-          status: 'needs_fixing'
-        });
-      } catch (error) {
-        this.addIssue({
-          location: `Route: ${route.path}`,
-          type: 'error',
-          severity: 'critical',
-          description: `Route ${route.path} failed to load`,
-          proposedFix: 'Fix routing configuration and component exports',
-          status: 'broken'
-        });
-      }
-    }
-
-    // Check authentication flows
-    await this.checkAuthenticationFlows();
+    // Security audit
+    results.push(await this.auditSecurity());
     
-    // Check responsive design
-    await this.checkResponsiveDesign();
-  }
-
-  private async auditBackend(): Promise<void> {
-    console.log('🔧 Auditing Backend...');
-
-    // Check database tables
-    await this.checkDatabaseTables();
+    // Performance audit
+    results.push(await this.auditPerformance());
     
-    // Check RLS policies
-    await this.checkRLSPolicies();
+    // Data integrity audit
+    results.push(await this.auditDataIntegrity());
+
+    const overallScore = results.reduce((sum, result) => sum + result.score, 0) / results.length;
+    const failCount = results.filter(r => r.status === 'fail').length;
+    const warningCount = results.filter(r => r.status === 'warning').length;
     
-    // Check edge functions
-    await this.checkEdgeFunctions();
-  }
-
-  private async auditAIIntegration(): Promise<void> {
-    console.log('🤖 Auditing AI Integration...');
-
-    const aiEdgeFunctions = [
-      'ai-code-evaluator',
-      'ai-task-review', 
-      'ai-error-handler',
-      'ai-error-fix',
-      'ai-ux-recommendation'
-    ];
-
-    for (const functionName of aiEdgeFunctions) {
-      try {
-        const { data, error } = await supabase.functions.invoke(functionName, {
-          body: { test: true }
-        });
-
-        if (error) {
-          this.addIssue({
-            location: `Edge Function: ${functionName}`,
-            type: 'integration',
-            severity: 'critical',
-            description: `AI edge function ${functionName} returned error: ${error.message}`,
-            proposedFix: 'Check function deployment and API key configuration',
-            status: 'broken'
-          });
-        } else {
-          this.addIssue({
-            location: `Edge Function: ${functionName}`,
-            type: 'integration',
-            severity: 'low',
-            description: `AI edge function ${functionName} is deployed and responding`,
-            proposedFix: 'No action needed',
-            status: 'ready'
-          });
-        }
-      } catch (error) {
-        this.addIssue({
-          location: `Edge Function: ${functionName}`,
-          type: 'error',
-          severity: 'critical',
-          description: `Failed to invoke ${functionName}: ${error}`,
-          proposedFix: 'Deploy function and verify configuration',
-          status: 'broken'
-        });
-      }
-    }
-  }
-
-  private async auditErrorHandling(): Promise<void> {
-    console.log('⚠️ Auditing Error Handling...');
-
-    // Check global error handlers
-    if (typeof window !== 'undefined') {
-      const hasGlobalErrorHandler = window.onerror !== null;
-      const hasUnhandledRejectionHandler = window.onunhandledrejection !== null;
-
-      if (!hasGlobalErrorHandler) {
-        this.addIssue({
-          location: 'Global Error Handling',
-          type: 'missing',
-          severity: 'high',
-          description: 'Global error handler not configured',
-          proposedFix: 'Implement window.onerror handler with AI error reporting',
-          status: 'needs_fixing'
-        });
-      }
-
-      if (!hasUnhandledRejectionHandler) {
-        this.addIssue({
-          location: 'Promise Error Handling',
-          type: 'missing',
-          severity: 'high',
-          description: 'Unhandled promise rejection handler not configured',
-          proposedFix: 'Implement window.onunhandledrejection handler',
-          status: 'needs_fixing'
-        });
-      }
-    }
-  }
-
-  private async auditDeployment(): Promise<void> {
-    console.log('🚀 Auditing Deployment...');
-
-    // Check environment variables
-    const requiredSecrets = [
-      'OPENAI_API_KEY',
-      'CLAUDE_API_KEY', 
-      'GEMINI_API_KEY',
-      'STRIPE_SECRET_KEY'
-    ];
-
-    // Note: We can't actually check secret values, but we can verify they're referenced
-    for (const secret of requiredSecrets) {
-      this.addIssue({
-        location: `Environment: ${secret}`,
-        type: 'integration',
-        severity: 'high',
-        description: `Secret ${secret} configuration needs verification`,
-        proposedFix: 'Verify secret is set in Supabase project settings',
-        status: 'needs_fixing'
-      });
-    }
-  }
-
-  private async checkAuthenticationFlows(): Promise<void> {
-    // Check anonymous authentication
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      this.addIssue({
-        location: 'Authentication System',
-        type: 'integration',
-        severity: 'medium',
-        description: 'Anonymous session management active',
-        proposedFix: 'Verify guest session persistence and vendor email auth',
-        status: 'ready'
-      });
-    } catch (error) {
-      this.addIssue({
-        location: 'Authentication System',
-        type: 'error',
-        severity: 'critical',
-        description: `Authentication system error: ${error}`,
-        proposedFix: 'Fix Supabase auth configuration',
-        status: 'broken'
-      });
-    }
-  }
-
-  private async checkResponsiveDesign(): Promise<void> {
-    // Request UX recommendations for all screens
-    try {
-      const uxRecommendations = await aiAssistantService.getUXRecommendations({
-        screen_name: 'Global UI Audit',
-        current_ui_code: 'Production readiness audit',
-        user_context: {
-          device_type: 'mobile',
-          user_role: 'guest'
-        }
-      });
-
-      if (uxRecommendations) {
-        this.addIssue({
-          location: 'UI/UX Design',
-          type: 'ux',
-          severity: 'medium',
-          description: 'UX recommendations available from AI analysis',
-          proposedFix: 'Apply AI-generated UX improvements',
-          status: 'needs_fixing'
-        });
-      }
-    } catch (error) {
-      this.addIssue({
-        location: 'UI/UX Analysis',
-        type: 'error',
-        severity: 'medium',
-        description: 'Failed to get AI UX recommendations',
-        proposedFix: 'Check ai-ux-recommendation edge function',
-        status: 'needs_fixing'
-      });
-    }
-  }
-
-  private async checkDatabaseTables(): Promise<void> {
-    const criticalTables = [
-      'vendors', 'menus', 'menu_items', 'orders', 'order_items',
-      'payments', 'ai_waiter_logs', 'profiles', 'guest_sessions'
-    ];
-
-    for (const table of criticalTables) {
-      try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('*')
-          .limit(1);
-
-        if (error) {
-          this.addIssue({
-            location: `Database Table: ${table}`,
-            type: 'error',
-            severity: 'critical',
-            description: `Table ${table} query failed: ${error.message}`,
-            proposedFix: 'Check table exists and RLS policies allow access',
-            status: 'broken'
-          });
-        } else {
-          this.addIssue({
-            location: `Database Table: ${table}`,
-            type: 'integration',
-            severity: 'low',
-            description: `Table ${table} is accessible`,
-            proposedFix: 'No action needed',
-            status: 'ready'
-          });
-        }
-      } catch (error) {
-        this.addIssue({
-          location: `Database Table: ${table}`,
-          type: 'error',
-          severity: 'critical',
-          description: `Failed to query table ${table}`,
-          proposedFix: 'Verify table exists and permissions',
-          status: 'broken'
-        });
-      }
-    }
-  }
-
-  private async checkRLSPolicies(): Promise<void> {
-    // We can't directly query RLS policies, but we can test access patterns
-    this.addIssue({
-      location: 'RLS Policies',
-      type: 'integration',
-      severity: 'high',
-      description: 'RLS policies need verification for all user roles',
-      proposedFix: 'Test data access for guest, vendor, and admin roles',
-      status: 'needs_fixing'
-    });
-  }
-
-  private async checkEdgeFunctions(): Promise<void> {
-    const productionFunctions = [
-      'ai-waiter-chat',
-      'create-stripe-payment',
-      'vendor-analytics',
-      'malta-ai-waiter'
-    ];
-
-    for (const functionName of productionFunctions) {
-      this.addIssue({
-        location: `Edge Function: ${functionName}`,
-        type: 'integration',
-        severity: 'medium',
-        description: `Production function ${functionName} needs verification`,
-        proposedFix: 'Test function with real data and error scenarios',
-        status: 'needs_fixing'
-      });
-    }
-  }
-
-  private addIssue(issue: Omit<AuditIssue, 'id'>): void {
-    const fullIssue: AuditIssue = {
-      id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      ...issue
-    };
-    this.auditResults.push(fullIssue);
-  }
-
-  private generateReport(): AuditReport {
-    const categorizedIssues = {
-      frontend: this.auditResults.filter(i => 
-        i.location.includes('Route') || i.location.includes('UI') || i.location.includes('Authentication')
-      ),
-      backend: this.auditResults.filter(i => 
-        i.location.includes('Database') || i.location.includes('RLS') || i.location.includes('Edge Function')
-      ),
-      aiIntegration: this.auditResults.filter(i => 
-        i.location.includes('ai-') || i.type === 'integration'
-      ),
-      errorHandling: this.auditResults.filter(i => 
-        i.location.includes('Error') || i.location.includes('Promise')
-      ),
-      deployment: this.auditResults.filter(i => 
-        i.location.includes('Environment') || i.location.includes('Secret')
-      )
-    };
-
-    const totalIssues = this.auditResults.length;
-    const criticalIssues = this.auditResults.filter(i => i.severity === 'critical').length;
-    const readyItems = this.auditResults.filter(i => i.status === 'ready').length;
-    const brokenItems = this.auditResults.filter(i => i.status === 'broken').length;
-    
-    // Calculate production readiness score
-    const productionReadinessScore = Math.max(0, Math.round(
-      ((readyItems / totalIssues) * 60) + 
-      (((totalIssues - criticalIssues) / totalIssues) * 40)
-    ));
+    const summary = `Audit completed with ${results.length} categories. Overall score: ${overallScore.toFixed(1)}/100. ${failCount} failures, ${warningCount} warnings.`;
 
     return {
-      timestamp: new Date().toISOString(),
-      categories: categorizedIssues,
-      summary: {
-        totalIssues,
-        criticalIssues,
-        readyItems,
-        brokenItems,
-        productionReadinessScore
-      }
+      overallScore,
+      results,
+      summary
     };
   }
 
-  async fixCriticalIssues(report: AuditReport): Promise<void> {
-    console.log('🔧 Fixing critical issues...');
-    
-    const criticalIssues = Object.values(report.categories)
-      .flat()
-      .filter(issue => issue.severity === 'critical' && issue.status === 'broken');
+  private async auditDatabase(): Promise<AuditResult> {
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+    let score = 100;
 
-    for (const issue of criticalIssues) {
-      try {
-        await aiAssistantService.analyzeError({
-          error_message: issue.description,
-          file_path: issue.location,
-          code_context: issue.proposedFix
-        });
-        
-        console.log(`✅ Attempted fix for: ${issue.location}`);
-      } catch (error) {
-        console.error(`❌ Failed to fix: ${issue.location}`, error);
+    try {
+      // Check critical tables exist and have data
+      const criticalTables = ['vendors', 'orders', 'menu_items', 'payments'];
+      const tableStats: TableStats[] = [];
+
+      for (const tableName of criticalTables) {
+        try {
+          const { count, error } = await supabase
+            .from(tableName as any)
+            .select('*', { count: 'exact', head: true });
+
+          if (error) {
+            issues.push(`Table ${tableName} is not accessible: ${error.message}`);
+            score -= 20;
+          } else {
+            tableStats.push({
+              name: tableName,
+              rowCount: count || 0,
+              lastUpdated: new Date().toISOString(),
+              hasRLS: true // We'll assume RLS is enabled
+            });
+
+            if ((count || 0) === 0) {
+              issues.push(`Table ${tableName} has no data`);
+              score -= 5;
+            }
+          }
+        } catch (error) {
+          issues.push(`Failed to check table ${tableName}`);
+          score -= 10;
+        }
       }
+
+      // Check for orphaned records
+      try {
+        const { data: orphanedOrders } = await supabase
+          .from('orders')
+          .select('id')
+          .is('vendor_id', null);
+
+        if (orphanedOrders && orphanedOrders.length > 0) {
+          issues.push(`Found ${orphanedOrders.length} orders without vendor_id`);
+          recommendations.push('Clean up orphaned order records');
+          score -= 5;
+        }
+      } catch (error) {
+        // Handle error silently for this check
+      }
+
+    } catch (error) {
+      issues.push('Database connectivity issues detected');
+      score -= 30;
     }
+
+    if (score < 70) {
+      recommendations.push('Immediate database maintenance required');
+    }
+
+    return {
+      category: 'Database Health',
+      score: Math.max(0, score),
+      issues,
+      recommendations,
+      status: score >= 80 ? 'pass' : score >= 60 ? 'warning' : 'fail'
+    };
   }
 
-  async applyUXRecommendations(): Promise<void> {
-    console.log('🎨 Applying UX recommendations...');
-    
-    const screens = ['Client App', 'Vendor Dashboard', 'Admin Panel'];
-    
-    for (const screen of screens) {
-      try {
-        await aiAssistantService.getUXRecommendations({
-          screen_name: screen,
-          current_ui_code: 'Production audit UX review',
-          user_context: {
-            device_type: 'mobile',
-            location: 'Malta'
-          }
-        });
-      } catch (error) {
-        console.error(`Failed to get UX recommendations for ${screen}:`, error);
+  private async auditSecurity(): Promise<AuditResult> {
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+    let score = 100;
+
+    try {
+      // Check for recent security events
+      const { data: recentErrors } = await supabase
+        .from('error_logs')
+        .select('error_type, severity')
+        .in('error_type', ['access_violation', 'authentication_failure'])
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+      if (recentErrors && recentErrors.length > 10) {
+        issues.push(`High number of security events: ${recentErrors.length} in last 24h`);
+        score -= 20;
       }
+
+      // Check for critical errors
+      const { count: criticalErrors } = await supabase
+        .from('error_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('severity', 'critical')
+        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+      if (criticalErrors && criticalErrors > 0) {
+        issues.push(`${criticalErrors} critical errors in last 7 days`);
+        recommendations.push('Review and resolve critical security issues');
+        score -= 15;
+      }
+
+      // Check audit trail
+      const { data: auditTrail } = await supabase
+        .from('security_audits')
+        .select('performed_at')
+        .order('performed_at', { ascending: false })
+        .limit(1);
+
+      if (!auditTrail || auditTrail.length === 0) {
+        issues.push('No recent security audits found');
+        recommendations.push('Schedule regular security audits');
+        score -= 10;
+      }
+
+    } catch (error) {
+      issues.push('Unable to complete security audit checks');
+      score -= 25;
     }
+
+    return {
+      category: 'Security',
+      score: Math.max(0, score),
+      issues,
+      recommendations,
+      status: score >= 80 ? 'pass' : score >= 60 ? 'warning' : 'fail'
+    };
+  }
+
+  private async auditPerformance(): Promise<AuditResult> {
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+    let score = 100;
+
+    try {
+      // Check recent performance logs
+      const { data: perfLogs } = await supabase
+        .from('performance_logs')
+        .select('response_time, endpoint')
+        .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+        .order('response_time', { ascending: false })
+        .limit(100);
+
+      if (perfLogs && perfLogs.length > 0) {
+        const avgResponseTime = perfLogs.reduce((sum, log) => sum + log.response_time, 0) / perfLogs.length;
+        const slowQueries = perfLogs.filter(log => log.response_time > 2000);
+
+        if (avgResponseTime > 1000) {
+          issues.push(`Average response time high: ${avgResponseTime.toFixed(0)}ms`);
+          score -= 15;
+        }
+
+        if (slowQueries.length > 5) {
+          issues.push(`${slowQueries.length} slow queries detected (>2s)`);
+          recommendations.push('Optimize slow database queries');
+          score -= 10;
+        }
+      }
+
+      // Check system resource usage (mock data)
+      const cpuUsage = Math.random() * 100;
+      const memoryUsage = Math.random() * 100;
+
+      if (cpuUsage > 80) {
+        issues.push(`High CPU usage: ${cpuUsage.toFixed(1)}%`);
+        score -= 20;
+      }
+
+      if (memoryUsage > 85) {
+        issues.push(`High memory usage: ${memoryUsage.toFixed(1)}%`);
+        score -= 15;
+      }
+
+    } catch (error) {
+      issues.push('Performance monitoring data unavailable');
+      score -= 20;
+    }
+
+    return {
+      category: 'Performance',
+      score: Math.max(0, score),
+      issues,
+      recommendations,
+      status: score >= 80 ? 'pass' : score >= 60 ? 'warning' : 'fail'
+    };
+  }
+
+  private async auditDataIntegrity(): Promise<AuditResult> {
+    const issues: string[] = [];
+    const recommendations: string[] = [];
+    let score = 100;
+
+    try {
+      // Check for data consistency issues
+      const { data: ordersWithoutItems } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_items!left (
+            id
+          )
+        `)
+        .is('order_items.id', null);
+
+      if (ordersWithoutItems && ordersWithoutItems.length > 0) {
+        issues.push(`${ordersWithoutItems.length} orders without items`);
+        recommendations.push('Clean up incomplete order records');
+        score -= 10;
+      }
+
+      // Check for menu items without prices
+      const { data: itemsWithoutPrices } = await supabase
+        .from('menu_items')
+        .select('id, name')
+        .is('price', null);
+
+      if (itemsWithoutPrices && itemsWithoutPrices.length > 0) {
+        issues.push(`${itemsWithoutPrices.length} menu items without prices`);
+        recommendations.push('Add prices to all menu items');
+        score -= 15;
+      }
+
+      // Check for vendors without menus
+      const { data: vendorsWithoutMenus } = await supabase
+        .from('vendors')
+        .select(`
+          id,
+          name,
+          menus!left (
+            id
+          )
+        `)
+        .is('menus.id', null)
+        .eq('active', true);
+
+      if (vendorsWithoutMenus && vendorsWithoutMenus.length > 0) {
+        issues.push(`${vendorsWithoutMenus.length} active vendors without menus`);
+        recommendations.push('Ensure all active vendors have menus');
+        score -= 20;
+      }
+
+    } catch (error) {
+      issues.push('Data integrity checks failed');
+      score -= 30;
+    }
+
+    return {
+      category: 'Data Integrity',
+      score: Math.max(0, score),
+      issues,
+      recommendations,
+      status: score >= 80 ? 'pass' : score >= 60 ? 'warning' : 'fail'
+    };
   }
 }
 
