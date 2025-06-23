@@ -34,12 +34,8 @@ export const useOrderDemo = (slug: string | undefined) => {
   const stableMenuItems = useMemo(() => menuItems, [menuItems]);
   const { searchQuery, handleSearch } = useSearchManager(stableMenuItems);
 
-  // Initialize dynamic layout with stable vendor ID
-  const { layout } = useDynamicLayout({
-    vendorId,
-    contextData,
-    guestSessionId: sessionId
-  });
+  // Initialize dynamic layout with just vendor ID as string
+  const { layout } = useDynamicLayout(vendorId);
 
   // Stable cart functions to prevent infinite loops
   const addToCart = useCallback((item: any) => {
