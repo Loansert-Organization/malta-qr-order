@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/components/auth/AuthProvider";
+import { AnonymousAuthProvider } from "@/components/auth/AnonymousAuthProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import OrderDemo from "./pages/OrderDemo";
@@ -18,7 +18,6 @@ import AISystemVerification from "./pages/AISystemVerification";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import PWADashboard from "./pages/PWADashboard";
 import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Create a stable query client instance
 const queryClient = new QueryClient({
@@ -40,7 +39,7 @@ const App: React.FC = () => {
     <ErrorBoundary componentName="App">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AuthProvider>
+          <AnonymousAuthProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -51,25 +50,9 @@ const App: React.FC = () => {
                 <Route path="/order/:slug" element={<OrderDemo />} />
                 <Route path="/order-page/:vendorSlug" element={<OrderPage />} />
                 
-                {/* Vendor routes - allow anonymous access for demo purposes */}
-                <Route
-                  path="/vendor/*"
-                  element={
-                    <ProtectedRoute allowedRoles={['vendor', 'admin']} allowAnonymous={true}>
-                      <VendorDashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                
-                {/* Admin routes - require authentication */}
-                <Route
-                  path="/admin/*"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                      <AdminPanel />
-                    </ProtectedRoute>
-                  }
-                />
+                {/* All routes are now open to everyone - no protection needed */}
+                <Route path="/vendor/*" element={<VendorDashboard />} />
+                <Route path="/admin/*" element={<AdminPanel />} />
                 
                 <Route path="/ai-verification" element={<AISystemVerification />} />
                 <Route path="/analytics" element={<AnalyticsDashboard />} />
@@ -77,7 +60,7 @@ const App: React.FC = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </AuthProvider>
+          </AnonymousAuthProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

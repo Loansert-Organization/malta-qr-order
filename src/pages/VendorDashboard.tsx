@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useAnonymousAuth } from '@/components/auth/AnonymousAuthProvider';
 
 // Import vendor components
 import MenuBuilder from '@/components/vendor/MenuBuilder';
@@ -20,6 +21,7 @@ interface Vendor {
 }
 
 const VendorDashboard = () => {
+  const { loading: authLoading } = useAnonymousAuth();
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,20 +35,7 @@ const VendorDashboard = () => {
       console.log('=== VENDOR DASHBOARD DEBUG ===');
       console.log('Starting vendor data fetch...');
       
-      // First, let's check if we can connect to Supabase at all
-      const { data: testConnection, error: connectionError } = await supabase
-        .from('vendors')
-        .select('count')
-        .limit(1);
-      
-      console.log('Connection test result:', { testConnection, connectionError });
-      
-      if (connectionError) {
-        console.error('Connection error:', connectionError);
-        throw new Error(`Database connection failed: ${connectionError.message}`);
-      }
-      
-      // Now fetch the specific vendor
+      // Fetch the Ta Kris vendor directly
       console.log('Fetching vendor with slug: ta-kris');
       const { data: vendorData, error: vendorError } = await supabase
         .from('vendors')
@@ -101,11 +90,13 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => {
-    console.log('VendorDashboard component mounted, starting data fetch...');
-    fetchVendorData();
-  }, []);
+    if (!authLoading) {
+      console.log('VendorDashboard component mounted, starting data fetch...');
+      fetchVendorData();
+    }
+  }, [authLoading]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -155,7 +146,7 @@ const VendorDashboard = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{vendor.name}</h1>
-            <p className="text-gray-600 mt-1">Vendor Dashboard</p>
+            <p className="text-gray-600 mt-1">Vendor Dashboard - Full Access Mode</p>
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500">Location: {vendor.location}</p>

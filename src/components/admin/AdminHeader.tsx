@@ -1,39 +1,32 @@
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { User } from '@supabase/supabase-js';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Shield, Users, Database } from 'lucide-react';
 
-interface Profile {
-  full_name?: string;
-  role: string;
-}
-
-interface AdminHeaderProps {
-  user: User;
-  profile: Profile | null;
-}
-
-const AdminHeader: React.FC<AdminHeaderProps> = ({ user, profile }) => {
+const AdminHeader = () => {
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">ICUPA Admin Panel</h1>
-            <p className="text-blue-100">Comprehensive platform management and analytics</p>
-            {profile && (
-              <p className="text-blue-200 text-sm mt-1">
-                Welcome, {profile.full_name || user.email}
-              </p>
-            )}
+    <div className="bg-white shadow-sm border-b">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-8 w-8 text-blue-600" />
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">ICUPA Malta Admin</h1>
+                <p className="text-sm text-gray-500">Anonymous Access Mode</p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <Badge variant="secondary" className="bg-white/20 text-white">
-              Malta Hospitality Platform
-            </Badge>
-            <Badge variant="secondary" className="bg-white/20 text-white">
-              AI-Powered
-            </Badge>
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Users className="h-4 w-4" />
+              <span>Full Access</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Database className="h-4 w-4" />
+              <span>Connected</span>
+            </div>
           </div>
         </div>
       </div>

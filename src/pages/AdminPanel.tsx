@@ -1,34 +1,25 @@
 
 import React, { useState } from 'react';
-import { useAuth } from '@/components/auth/AuthProvider';
-import AdminAuth from '@/components/admin/AdminAuth';
+import { useAnonymousAuth } from '@/components/auth/AnonymousAuthProvider';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminTabs from '@/components/admin/AdminTabs';
 
 const AdminPanel = () => {
-  const { user, profile, loading } = useAuth();
+  const { loading } = useAnonymousAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Handle authentication and authorization
-  const authComponent = (
-    <AdminAuth 
-      user={user}
-      profile={profile}
-      authModalOpen={authModalOpen}
-      setAuthModalOpen={setAuthModalOpen}
-      loading={loading}
-    />
-  );
-
-  if (authComponent) {
-    return authComponent;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
-  // Main admin panel for authenticated admin users
+  // No authentication required - everyone can access admin panel
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminHeader user={user!} profile={profile} />
+      <AdminHeader />
       <AdminTabs activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
