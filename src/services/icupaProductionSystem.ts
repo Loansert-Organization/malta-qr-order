@@ -308,7 +308,7 @@ class ICUPAProductionSystem {
     }
   }
 
-  // New methods to fix missing method errors
+  // Analytics service wrapper
   getAnalytics() {
     return {
       getDashboardData: async (): Promise<AnalyticsData> => {
@@ -340,6 +340,7 @@ class ICUPAProductionSystem {
     };
   }
 
+  // Health check service wrapper
   getHealthCheck() {
     return {
       performHealthCheck: async (): Promise<SystemHealth> => {
@@ -356,7 +357,8 @@ class ICUPAProductionSystem {
     };
   }
 
-  runSecurityAudit() {
+  // Security audit service wrapper
+  getSecurityAudit() {
     return {
       runComprehensiveAudit: async (): Promise<SecurityAuditResult> => {
         return {
@@ -380,6 +382,7 @@ class ICUPAProductionSystem {
     };
   }
 
+  // Support service wrapper
   getSupport() {
     return {
       createTicket: async (ticketData: any): Promise<string> => {

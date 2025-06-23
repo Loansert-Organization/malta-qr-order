@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ const SupportDashboard: React.FC = () => {
                     <Badge variant={
                       ticket.status === 'open' ? 'destructive' :
                       ticket.status === 'in_progress' ? 'default' :
-                      ticket.status === 'resolved' ? 'success' :
+                      ticket.status === 'resolved' ? 'default' :
                       'secondary'
                     }>
                       {ticket.status.replace('_', ' ')}

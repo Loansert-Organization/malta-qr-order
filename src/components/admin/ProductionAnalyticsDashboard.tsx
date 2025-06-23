@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -53,7 +52,7 @@ const ProductionAnalyticsDashboard: React.FC = () => {
         const [analytics, health, security] = await Promise.all([
           icupaProductionSystem.getAnalytics().getDashboardData(),
           icupaProductionSystem.getHealthCheck().performHealthCheck(),
-          Promise.resolve({ score: 85, issues: [{ description: 'Minor security issue', severity: 'low' as const }] })
+          icupaProductionSystem.getSecurityAudit().runComprehensiveAudit()
         ]);
 
         setAnalyticsData(analytics);
