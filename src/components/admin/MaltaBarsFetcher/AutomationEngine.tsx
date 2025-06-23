@@ -29,13 +29,19 @@ const AutomationEngine = () => {
 
   const fetchJobs = async () => {
     try {
+      console.log('Fetching automation jobs...');
       const { data, error } = await supabase
         .from('automation_jobs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching jobs:', error);
+        throw error;
+      }
+      
+      console.log('Fetched jobs:', data);
       
       // Type-safe mapping to ensure status matches our interface
       const typedJobs: AutomationJob[] = (data || []).map(job => ({
@@ -45,6 +51,7 @@ const AutomationEngine = () => {
       
       setJobs(typedJobs);
     } catch (error: any) {
+      console.error('Failed to fetch automation jobs:', error);
       toast({
         title: "Error",
         description: `Failed to fetch jobs: ${error.message}`,
@@ -54,6 +61,7 @@ const AutomationEngine = () => {
   };
 
   const startAutomation = async (jobType: string) => {
+    console.log('Starting automation:', jobType);
     setIsRunning(true);
     setProgress(0);
     
@@ -76,6 +84,7 @@ const AutomationEngine = () => {
         description: `${jobType} completed successfully!`
       });
     } catch (error: any) {
+      console.error('Automation failed:', error);
       toast({
         title: "Automation Failed",
         description: error.message,
@@ -84,110 +93,142 @@ const AutomationEngine = () => {
     } finally {
       setIsRunning(false);
       setProgress(0);
-      fetchJobs();
+      await fetchJobs();
     }
   };
 
   const runGoogleMapsFetch = async () => {
+    console.log('Running Google Maps fetch...');
     setProgress(25);
     
-    // Call the existing fetch-malta-bars function
-    const response = await supabase.functions.invoke('fetch-malta-bars');
-    
-    if (response.error) {
-      throw new Error(`Google Maps fetch failed: ${response.error.message}`);
+    try {
+      // Call the existing fetch-malta-bars function
+      const { data, error } = await supabase.functions.invoke('fetch-malta-bars');
+      
+      if (error) {
+        console.error('Google Maps fetch error:', error);
+        throw new Error(`Google Maps fetch failed: ${error.message}`);
+      }
+      
+      console.log('Google Maps fetch result:', data);
+      setProgress(100);
+    } catch (error) {
+      console.error('Error in runGoogleMapsFetch:', error);
+      throw error;
     }
-    
-    setProgress(100);
   };
 
   const runWebsiteDiscovery = async () => {
-    // Get bars without website URLs
-    const { data: bars, error } = await supabase
-      .from('bars')
-      .select('id, name, address')
-      .is('website_url', null);
+    console.log('Running website discovery...');
+    
+    try {
+      // Get bars without website URLs
+      const { data: bars, error } = await supabase
+        .from('bars')
+        .select('id, name, address')
+        .is('website_url', null);
 
-    if (error) throw error;
-
-    if (!bars || bars.length === 0) {
-      throw new Error('All bars already have website URLs.');
-    }
-
-    const totalBars = bars.length;
-    let processed = 0;
-
-    for (const bar of bars) {
-      try {
-        setProgress((processed / totalBars) * 100);
-        
-        // Simple Google search to find website
-        const searchQuery = `${bar.name} ${bar.address} Malta restaurant bar website`;
-        const websiteUrl = await discoverWebsite(searchQuery);
-        
-        if (websiteUrl) {
-          await supabase
-            .from('bars')
-            .update({ website_url: websiteUrl })
-            .eq('id', bar.id);
-        }
-
-        processed++;
-      } catch (error) {
-        console.error(`Error discovering website for ${bar.name}:`, error);
-        processed++;
+      if (error) {
+        console.error('Error fetching bars for website discovery:', error);
+        throw error;
       }
+
+      console.log('Bars without websites:', bars);
+
+      if (!bars || bars.length === 0) {
+        throw new Error('All bars already have website URLs.');
+      }
+
+      const totalBars = bars.length;
+      let processed = 0;
+
+      for (const bar of bars) {
+        try {
+          setProgress((processed / totalBars) * 100);
+          
+          // Simple Google search to find website
+          const searchQuery = `${bar.name} ${bar.address} Malta restaurant bar website`;
+          const websiteUrl = await discoverWebsite(searchQuery);
+          
+          if (websiteUrl) {
+            await supabase
+              .from('bars')
+              .update({ website_url: websiteUrl })
+              .eq('id', bar.id);
+          }
+
+          processed++;
+        } catch (error) {
+          console.error(`Error discovering website for ${bar.name}:`, error);
+          processed++;
+        }
+      }
+    } catch (error) {
+      console.error('Error in runWebsiteDiscovery:', error);
+      throw error;
     }
   };
 
   const runMenuExtraction = async () => {
-    // Get bars with website URLs
-    const { data: bars, error } = await supabase
-      .from('bars')
-      .select('id, name, website_url')
-      .not('website_url', 'is', null);
+    console.log('Running menu extraction...');
+    
+    try {
+      // Get bars with website URLs
+      const { data: bars, error } = await supabase
+        .from('bars')
+        .select('id, name, website_url')
+        .not('website_url', 'is', null);
 
-    if (error) throw error;
-
-    if (!bars || bars.length === 0) {
-      throw new Error('No bars with website URLs found. Run website discovery first.');
-    }
-
-    const totalBars = bars.length;
-    let processed = 0;
-
-    for (const bar of bars) {
-      try {
-        setProgress((processed / totalBars) * 100);
-        
-        // Call the menu extraction function
-        const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/extract-menu-items`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-          },
-          body: JSON.stringify({
-            website_url: bar.website_url,
-            bar_id: bar.id
-          })
-        });
-
-        if (!response.ok) {
-          console.error(`Failed to process ${bar.name}:`, await response.text());
-        }
-
-        processed++;
-      } catch (error) {
-        console.error(`Error processing ${bar.name}:`, error);
-        processed++;
+      if (error) {
+        console.error('Error fetching bars for menu extraction:', error);
+        throw error;
       }
+
+      console.log('Bars with websites:', bars);
+
+      if (!bars || bars.length === 0) {
+        throw new Error('No bars with website URLs found. Run website discovery first.');
+      }
+
+      const totalBars = bars.length;
+      let processed = 0;
+
+      for (const bar of bars) {
+        try {
+          setProgress((processed / totalBars) * 100);
+          
+          console.log(`Processing menu for ${bar.name}...`);
+          
+          // Call the menu extraction function
+          const response = await supabase.functions.invoke('extract-menu-items', {
+            body: {
+              website_url: bar.website_url,
+              bar_id: bar.id
+            }
+          });
+
+          if (response.error) {
+            console.error(`Failed to process ${bar.name}:`, response.error);
+          } else {
+            console.log(`Successfully processed ${bar.name}`);
+          }
+
+          processed++;
+        } catch (error) {
+          console.error(`Error processing ${bar.name}:`, error);
+          processed++;
+        }
+      }
+    } catch (error) {
+      console.error('Error in runMenuExtraction:', error);
+      throw error;
     }
   };
 
   const discoverWebsite = async (searchQuery: string): Promise<string | null> => {
     // This is a simplified version - in production, you'd use Google Search API
     // For now, return null to avoid API costs
+    console.log('Website discovery query:', searchQuery);
     return null;
   };
 
@@ -210,6 +251,7 @@ const AutomationEngine = () => {
   };
 
   React.useEffect(() => {
+    console.log('AutomationEngine mounted, fetching jobs...');
     fetchJobs();
   }, []);
 
@@ -274,6 +316,7 @@ const AutomationEngine = () => {
               variant="outline"
               size="sm"
               onClick={fetchJobs}
+              disabled={isRunning}
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
