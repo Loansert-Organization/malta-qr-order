@@ -28,9 +28,10 @@ interface MaltaBar {
   review_count: number | null;
   location_gps: string | null;
   google_place_id: string;
-  data_quality_score: number;
   website_url: string | null;
   photo_urls: string[] | null;
+  is_active: boolean;
+  data_quality_score: number;
 }
 
 // Malta bounds for comprehensive coverage
@@ -39,33 +40,27 @@ const MALTA_BOUNDS = {
   ne: { lat: 36.089, lng: 14.576 }
 };
 
-const GRID_STEP = 0.03; // Smaller grid for better coverage
-const SEARCH_RADIUS = 2000; // 2km radius
-const RATE_LIMIT_DELAY = 300; // ms between requests
-const PAGE_TOKEN_DELAY = 2000; // Required delay for pagination
+const GRID_STEP = 0.04;
+const SEARCH_RADIUS = 3000;
+const RATE_LIMIT_DELAY = 300;
+const PAGE_TOKEN_DELAY = 2000;
 
-// Search types for comprehensive establishment discovery
 const ESTABLISHMENT_TYPES = [
   'restaurant',
   'bar',
   'cafe',
   'meal_takeaway',
-  'food',
-  'night_club'
+  'food'
 ];
-
-// Fields to request from Places API (optimized for cost)
-const PLACE_FIELDS = 'name,place_id,formatted_address,formatted_phone_number,geometry,rating,user_ratings_total,photos,types';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Calculate comprehensive data quality score
 function calculateDataQualityScore(place: GooglePlace): number {
   let score = 0;
   
   if (place.name && place.name.trim() !== '') score += 20;
-  if (place.formatted_address && place.formatted_address.trim() !== '') score += 20;
-  if (place.formatted_phone_number && place.formatted_phone_number.trim() !== '') score += 15;
+  if (place.formatted_address || place.vicinity) score += 20;
+  if (place.formatted_phone_number) score += 15;
   if (place.rating !== null && place.rating !== undefined) score += 15;
   if (place.user_ratings_total && place.user_ratings_total > 0) score += 15;
   if (place.geometry && place.geometry.location) score += 15;
@@ -73,7 +68,6 @@ function calculateDataQualityScore(place: GooglePlace): number {
   return score;
 }
 
-// Validate Malta location with precise bounds
 function isInMalta(lat: number, lng: number): boolean {
   return lat >= MALTA_BOUNDS.sw.lat && 
          lat <= MALTA_BOUNDS.ne.lat && 
@@ -81,9 +75,8 @@ function isInMalta(lat: number, lng: number): boolean {
          lng <= MALTA_BOUNDS.ne.lng;
 }
 
-// Filter for food/drink establishments
 function isRelevantEstablishment(place: GooglePlace): boolean {
-  if (!place.types) return true; // Include if no types specified
+  if (!place.types) return true;
   
   const relevantTypes = [
     'restaurant', 'bar', 'cafe', 'meal_takeaway', 'food', 
@@ -93,16 +86,14 @@ function isRelevantEstablishment(place: GooglePlace): boolean {
   return place.types.some(type => relevantTypes.includes(type));
 }
 
-// Get photo URLs from photo references
 function getPhotoUrls(photos: GooglePlace['photos'], apiKey: string): string[] {
   if (!photos) return [];
   
-  return photos.slice(0, 5).map(photo => 
+  return photos.slice(0, 3).map(photo => 
     `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${photo.photo_reference}&key=${apiKey}`
   );
 }
 
-// Search places in a specific grid cell
 async function searchPlacesInCell(
   lat: number, 
   lng: number, 
@@ -113,13 +104,13 @@ async function searchPlacesInCell(
   const places: GooglePlace[] = [];
   let nextPageToken: string | null = null;
   let pageCount = 0;
-  const maxPages = 3;
+  const maxPages = 2;
 
   do {
     try {
       await sleep(nextPageToken ? PAGE_TOKEN_DELAY : RATE_LIMIT_DELAY);
       
-      let searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${SEARCH_RADIUS}&type=${type}&key=${apiKey}&fields=${PLACE_FIELDS}`;
+      let searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${SEARCH_RADIUS}&type=${type}&key=${apiKey}&fields=name,place_id,formatted_address,formatted_phone_number,geometry,rating,user_ratings_total,photos,types`;
       
       if (nextPageToken) {
         searchUrl += `&pagetoken=${nextPageToken}`;
@@ -135,7 +126,6 @@ async function searchPlacesInCell(
 
       if (data.results) {
         for (const place of data.results) {
-          // Skip if already processed or not in Malta
           if (processedPlaceIds.has(place.place_id)) continue;
           if (!isInMalta(place.geometry.location.lat, place.geometry.location.lng)) continue;
           if (!isRelevantEstablishment(place)) continue;
@@ -157,26 +147,6 @@ async function searchPlacesInCell(
   return places;
 }
 
-// Get detailed place information
-async function getPlaceDetails(placeId: string, apiKey: string): Promise<Partial<GooglePlace> | null> {
-  try {
-    await sleep(RATE_LIMIT_DELAY);
-    
-    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,formatted_phone_number,website&key=${apiKey}`;
-    
-    const response = await fetch(detailsUrl);
-    const data = await response.json();
-
-    if (data.status === 'OK' && data.result) {
-      return data.result;
-    }
-  } catch (error) {
-    console.error(`Error fetching details for place ${placeId}:`, error);
-  }
-  
-  return null;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -195,7 +165,7 @@ serve(async (req) => {
       throw new Error('Google Maps API key not configured. Please add GOOGLE_MAPS_API_KEY to Supabase secrets.')
     }
 
-    console.log('🚀 Starting comprehensive Malta establishments fetch...');
+    console.log('🚀 Starting Malta establishments fetch...');
 
     let totalProcessed = 0;
     let newBarsAdded = 0;
@@ -206,7 +176,6 @@ serve(async (req) => {
     const processedPlaceIds = new Set<string>();
     const allPlaces = new Map<string, GooglePlace>();
 
-    // Grid search across Malta
     console.log(`🗺️ Searching Malta grid (${GRID_STEP}° step, ${SEARCH_RADIUS}m radius)`);
     
     for (let lat = MALTA_BOUNDS.sw.lat; lat < MALTA_BOUNDS.ne.lat; lat += GRID_STEP) {
@@ -216,7 +185,7 @@ serve(async (req) => {
         for (const type of ESTABLISHMENT_TYPES) {
           try {
             const places = await searchPlacesInCell(lat, lng, type, googleMapsApiKey, processedPlaceIds);
-            apiCallsMade += Math.ceil(places.length / 20); // Estimate API calls made
+            apiCallsMade += Math.ceil(places.length / 20);
             
             places.forEach(place => {
               if (!allPlaces.has(place.place_id)) {
@@ -234,7 +203,6 @@ serve(async (req) => {
 
     console.log(`🔍 Found ${allPlaces.size} unique establishments`);
 
-    // Process and enrich places data
     const barsData: MaltaBar[] = [];
     const places = Array.from(allPlaces.values());
 
@@ -242,27 +210,20 @@ serve(async (req) => {
       const place = places[i];
       
       try {
-        // Get additional details for better data quality
-        const details = await getPlaceDetails(place.place_id, googleMapsApiKey);
-        apiCallsMade++;
-
         const maltaBar: MaltaBar = {
           name: place.name,
-          address: details?.formatted_address || place.vicinity || null,
-          contact_number: details?.formatted_phone_number || null,
+          address: place.formatted_address || place.vicinity || null,
+          contact_number: place.formatted_phone_number || null,
           rating: place.rating || null,
           review_count: place.user_ratings_total || null,
           location_gps: place.geometry?.location 
             ? `POINT(${place.geometry.location.lng} ${place.geometry.location.lat})`
             : null,
           google_place_id: place.place_id,
-          data_quality_score: calculateDataQualityScore({
-            ...place,
-            formatted_address: details?.formatted_address,
-            formatted_phone_number: details?.formatted_phone_number
-          }),
-          website_url: (details as any)?.website || null,
-          photo_urls: getPhotoUrls(place.photos, googleMapsApiKey)
+          data_quality_score: calculateDataQualityScore(place),
+          website_url: null,
+          photo_urls: getPhotoUrls(place.photos, googleMapsApiKey),
+          is_active: true
         };
 
         totalProcessed++;
@@ -280,9 +241,7 @@ serve(async (req) => {
 
     console.log(`💾 Saving ${barsData.length} establishments to database...`);
 
-    // Batch upsert to database
     if (barsData.length > 0) {
-      // Get existing establishments
       const { data: existingBars } = await supabaseClient
         .from('bars')
         .select('google_place_id')
@@ -293,8 +252,7 @@ serve(async (req) => {
       newBarsAdded = barsData.filter(bar => !existingPlaceIds.has(bar.google_place_id)).length;
       barsUpdated = barsData.filter(bar => existingPlaceIds.has(bar.google_place_id)).length;
 
-      // Batch upsert in chunks to avoid payload limits
-      const chunkSize = 100;
+      const chunkSize = 50;
       for (let i = 0; i < barsData.length; i += chunkSize) {
         const chunk = barsData.slice(i, i + chunkSize);
         
@@ -316,23 +274,9 @@ serve(async (req) => {
 
     const operationDuration = Date.now() - startTime;
 
-    // Log operation to audit table
-    await supabaseClient
-      .from('bar_fetch_logs')
-      .insert({
-        operation_type: 'comprehensive_fetch',
-        total_bars_processed: totalProcessed,
-        new_bars_added: newBarsAdded,
-        bars_updated: barsUpdated,
-        api_calls_made: apiCallsMade,
-        errors_count: errorsCount,
-        operation_duration_ms: operationDuration,
-        status: 'completed'
-      });
-
     const response = {
       success: true,
-      message: `✅ Successfully completed comprehensive Malta establishments fetch`,
+      message: `✅ Successfully completed Malta establishments fetch`,
       summary: {
         total_processed: totalProcessed,
         new_bars_added: newBarsAdded,
@@ -340,7 +284,7 @@ serve(async (req) => {
         api_calls_made: apiCallsMade,
         errors_count: errorsCount,
         duration_ms: operationDuration,
-        cost_estimate_usd: (apiCallsMade * 0.017).toFixed(2) // Rough estimate
+        cost_estimate_usd: (apiCallsMade * 0.017).toFixed(2)
       },
       data_quality: {
         establishments_found: barsData.length,
@@ -366,27 +310,6 @@ serve(async (req) => {
     console.error('💥 Critical error in fetch-malta-bars function:', error);
     
     const operationDuration = Date.now() - startTime;
-    
-    // Log error to audit table
-    try {
-      const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-      
-      await supabaseClient
-        .from('bar_fetch_logs')
-        .insert({
-          operation_type: 'comprehensive_fetch',
-          total_bars_processed: 0,
-          errors_count: 1,
-          operation_duration_ms: operationDuration,
-          error_details: { message: error.message, stack: error.stack },
-          status: 'failed'
-        });
-    } catch (logError) {
-      console.error('Failed to log error:', logError);
-    }
     
     return new Response(
       JSON.stringify({
