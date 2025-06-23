@@ -33,8 +33,12 @@ class ErrorTrackingService {
         error_message: errorMessage,
         stack_trace: stackTrace,
         user_id: user?.id || null,
-        context: {
+        context: context ? {
           ...context,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString()
+        } : {
           url: window.location.href,
           userAgent: navigator.userAgent,
           timestamp: new Date().toISOString()
@@ -60,9 +64,11 @@ class ErrorTrackingService {
       'javascript_error',
       error.message,
       'high',
-      {
+      context ? {
         ...context,
-        component: context?.component || 'unknown'
+        component: context.component || 'unknown'
+      } : {
+        component: 'unknown'
       },
       error.stack
     );
@@ -81,8 +87,12 @@ class ErrorTrackingService {
       'api_error',
       `${method} ${endpoint}: ${message}`,
       severity,
-      {
+      context ? {
         ...context,
+        endpoint,
+        method,
+        statusCode: status
+      } : {
         endpoint,
         method,
         statusCode: status
@@ -100,8 +110,11 @@ class ErrorTrackingService {
         'user_action_failed',
         `User action failed: ${action}`,
         'medium',
-        {
+        context ? {
           ...context,
+          action,
+          success
+        } : {
           action,
           success
         }
@@ -147,7 +160,7 @@ class ErrorTrackingService {
         .eq('id', errorId)
         .single();
 
-      if (currentError) {
+      if (currentError && currentError.context) {
         updateData.context = {
           ...currentError.context,
           resolution_notes: notes

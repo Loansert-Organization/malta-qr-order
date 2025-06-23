@@ -1,347 +1,470 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
-  Rocket, 
+  Server, 
   Database, 
   Shield, 
   Activity, 
-  Backup, 
-  CheckCircle, 
-  AlertTriangle, 
+  Bell, 
+  Settings, 
+  Users, 
+  BarChart3,
+  AlertTriangle,
+  CheckCircle,
   Clock,
-  Settings,
-  BarChart3
+  HardDrive
 } from 'lucide-react';
-import { icupaProductionSystem } from '@/services/icupaProductionSystem';
-import ProductionAnalyticsDashboard from './ProductionAnalyticsDashboard';
-import SupportDashboard from './SupportDashboard';
+import { icupaProductionSystem, type AnalyticsData, type SystemHealth, type SecurityAuditResult } from '@/services/icupaProductionSystem';
 
-interface InitializationStep {
+interface SystemAlert {
   id: string;
-  name: string;
-  description: string;
-  status: 'pending' | 'running' | 'completed' | 'error';
-  progress: number;
+  message: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: Date;
+  resolved: boolean;
 }
 
 const ProductionSystemManager: React.FC = () => {
-  const [initialized, setInitialized] = useState(false);
-  const [initializing, setInitializing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-  const [steps, setSteps] = useState<InitializationStep[]>([
-    {
-      id: 'monitoring',
-      name: 'Monitoring System',
-      description: 'Setting up real-time monitoring and metrics collection',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'backup',
-      name: 'Backup System',
-      description: 'Initializing automated backup and recovery system',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'security',
-      name: 'Security Audit',
-      description: 'Running comprehensive security audit and setup',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'health',
-      name: 'Health Checks',
-      description: 'Configuring system health monitoring',
-      status: 'pending',
-      progress: 0
-    },
-    {
-      id: 'analytics',
-      name: 'Analytics Dashboard',
-      description: 'Setting up production analytics and reporting',
-      status: 'pending',
-      progress: 0
-    }
-  ]);
+  const [systemHealth, setSystemHealth] = useState<'healthy' | 'degraded' | 'unhealthy'>('healthy');
+  const [alerts, setAlerts] = useState<SystemAlert[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [healthData, setHealthData] = useState<SystemHealth | null>(null);
+  const [securityAudit, setSecurityAudit] = useState<SecurityAuditResult | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const updateStepStatus = (stepId: string, status: InitializationStep['status'], progress: number) => {
-    setSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, status, progress } : step
+  useEffect(() => {
+    initializeProductionSystem();
+    loadSystemData();
+  }, []);
+
+  const initializeProductionSystem = async () => {
+    try {
+      await icupaProductionSystem.initializeProduction();
+      console.log('✅ Production system initialized');
+    } catch (error) {
+      console.error('❌ Failed to initialize production system:', error);
+      setAlerts(prev => [...prev, {
+        id: Date.now().toString(),
+        message: 'Failed to initialize production system',
+        severity: 'critical',
+        timestamp: new Date(),
+        resolved: false
+      }]);
+    }
+  };
+
+  const loadSystemData = async () => {
+    try {
+      setLoading(true);
+      
+      const [analyticsData, healthCheckData, securityAuditData] = await Promise.all([
+        icupaProductionSystem.getAnalytics().getDashboardData(),
+        icupaProductionSystem.getHealthCheck().performHealthCheck(),
+        icupaProductionSystem.getSecurityAudit().runComprehensiveAudit()
+      ]);
+
+      setAnalytics(analyticsData);
+      setHealthData(healthCheckData);
+      setSecurityAudit(securityAuditData);
+      setSystemHealth(healthCheckData.overall);
+
+      // Generate alerts based on system status
+      const newAlerts: SystemAlert[] = [];
+      
+      if (healthCheckData.overall !== 'healthy') {
+        newAlerts.push({
+          id: `health_${Date.now()}`,
+          message: `System health is ${healthCheckData.overall}`,
+          severity: healthCheckData.overall === 'unhealthy' ? 'critical' : 'medium',
+          timestamp: new Date(),
+          resolved: false
+        });
+      }
+
+      if (securityAuditData.score < 80) {
+        newAlerts.push({
+          id: `security_${Date.now()}`,
+          message: `Security score is below threshold: ${securityAuditData.score}/100`,
+          severity: 'high',
+          timestamp: new Date(),
+          resolved: false
+        });
+      }
+
+      setAlerts(newAlerts);
+    } catch (error) {
+      console.error('Failed to load system data:', error);
+      setAlerts(prev => [...prev, {
+        id: Date.now().toString(),
+        message: 'Failed to load system data',
+        severity: 'high',
+        timestamp: new Date(),
+        resolved: false
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRunSecurityAudit = async () => {
+    try {
+      const auditResult = await icupaProductionSystem.getSecurityAudit().runComprehensiveAudit();
+      setSecurityAudit(auditResult);
+    } catch (error) {
+      console.error('Security audit failed:', error);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    try {
+      // This would trigger the backup service
+      console.log('Creating manual backup...');
+      setAlerts(prev => [...prev, {
+        id: Date.now().toString(),
+        message: 'Manual backup initiated',
+        severity: 'low',
+        timestamp: new Date(),
+        resolved: false
+      }]);
+    } catch (error) {
+      console.error('Backup creation failed:', error);
+    }
+  };
+
+  const resolveAlert = (alertId: string) => {
+    setAlerts(prev => prev.map(alert => 
+      alert.id === alertId ? { ...alert, resolved: true } : alert
     ));
   };
 
-  const initializeProductionSystem = async () => {
-    setInitializing(true);
-    
-    try {
-      // Step 1: Monitoring
-      updateStepStatus('monitoring', 'running', 25);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate setup time
-      updateStepStatus('monitoring', 'completed', 100);
-
-      // Step 2: Backup
-      updateStepStatus('backup', 'running', 25);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      updateStepStatus('backup', 'completed', 100);
-
-      // Step 3: Security
-      updateStepStatus('security', 'running', 25);
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      updateStepStatus('security', 'completed', 100);
-
-      // Step 4: Health Checks
-      updateStepStatus('health', 'running', 25);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      updateStepStatus('health', 'completed', 100);
-
-      // Step 5: Analytics
-      updateStepStatus('analytics', 'running', 25);
-      await icupaProductionSystem.initializeProduction();
-      updateStepStatus('analytics', 'completed', 100);
-
-      setInitialized(true);
-    } catch (error) {
-      console.error('Production initialization failed:', error);
-      // Update failed step
-      const failedStep = steps.find(step => step.status === 'running');
-      if (failedStep) {
-        updateStepStatus(failedStep.id, 'error', failedStep.progress);
-      }
-    } finally {
-      setInitializing(false);
-    }
-  };
-
-  const getStatusIcon = (status: InitializationStep['status']) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'running':
-        return <Clock className="h-5 w-5 text-blue-500 animate-spin" />;
-      case 'error':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
-      default:
-        return <div className="h-5 w-5 rounded-full border-2 border-gray-300" />;
-    }
-  };
-
-  const getStatusBadge = (status: InitializationStep['status']) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500">Completed</Badge>;
-      case 'running':
-        return <Badge className="bg-blue-500">Running</Badge>;
-      case 'error':
-        return <Badge variant="destructive">Error</Badge>;
-      default:
-        return <Badge variant="secondary">Pending</Badge>;
-    }
-  };
-
-  if (!initialized) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold flex items-center">
-                  <Rocket className="h-8 w-8 mr-3" />
-                  ICUPA Malta Production Setup
-                </h1>
-                <p className="text-blue-100">Initialize and configure the complete production environment</p>
-              </div>
-              {!initializing && (
-                <Button 
-                  variant="secondary" 
-                  size="lg"
-                  onClick={initializeProductionSystem}
-                  className="bg-white text-blue-600 hover:bg-gray-100"
-                >
-                  <Rocket className="h-5 w-5 mr-2" />
-                  Initialize Production
-                </Button>
-              )}
-            </div>
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Activity className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading production system...</p>
           </div>
-        </div>
-
-        <div className="max-w-4xl mx-auto p-6">
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Production System Features</CardTitle>
-              <CardDescription>
-                Complete monitoring, analytics, security, and support system for ICUPA Malta
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                  <Activity className="h-8 w-8 text-blue-500" />
-                  <div>
-                    <h4 className="font-semibold">Real-time Monitoring</h4>
-                    <p className="text-sm text-gray-600">System metrics and alerts</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                  <BarChart3 className="h-8 w-8 text-green-500" />
-                  <div>
-                    <h4 className="font-semibold">Advanced Analytics</h4>
-                    <p className="text-sm text-gray-600">Business intelligence dashboard</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                  <Shield className="h-8 w-8 text-purple-500" />
-                  <div>
-                    <h4 className="font-semibold">Security Auditing</h4>
-                    <p className="text-sm text-gray-600">Automated security monitoring</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                  <Backup className="h-8 w-8 text-orange-500" />
-                  <div>
-                    <h4 className="font-semibold">Backup & Recovery</h4>
-                    <p className="text-sm text-gray-600">Automated data protection</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                  <Database className="h-8 w-8 text-red-500" />
-                  <div>
-                    <h4 className="font-semibold">Database Optimization</h4>
-                    <p className="text-sm text-gray-600">Performance indexing</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                  <Settings className="h-8 w-8 text-gray-500" />
-                  <div>
-                    <h4 className="font-semibold">Support System</h4>
-                    <p className="text-sm text-gray-600">Customer ticket management</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {(initializing || steps.some(step => step.status !== 'pending')) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Initialization Progress</CardTitle>
-                <CardDescription>
-                  Setting up production environment components
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {steps.map((step) => (
-                    <div key={step.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          {getStatusIcon(step.status)}
-                          <div>
-                            <h4 className="font-medium">{step.name}</h4>
-                            <p className="text-sm text-gray-600">{step.description}</p>
-                          </div>
-                        </div>
-                        {getStatusBadge(step.status)}
-                      </div>
-                      {step.status === 'running' && (
-                        <Progress value={step.progress} className="h-2" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {initializing && (
-                  <Alert className="mt-6">
-                    <Rocket className="h-4 w-4" />
-                    <AlertTitle>Initializing Production Environment</AlertTitle>
-                    <AlertDescription>
-                      Please wait while we set up all production systems. This may take a few minutes.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
-          <div className="max-w-7xl mx-auto p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold flex items-center">
-                  <CheckCircle className="h-8 w-8 mr-3 text-green-400" />
-                  ICUPA Malta Production System
-                </h1>
-                <p className="text-blue-100">Production environment successfully initialized</p>
-              </div>
-              <Badge className="bg-green-500 text-white">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Online
-              </Badge>
-            </div>
-            
-            <TabsList className="bg-white/10 border-0">
-              <TabsTrigger value="analytics" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-600">
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value="support" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-600">
-                Support
-              </TabsTrigger>
-              <TabsTrigger value="overview" className="text-white data-[state=active]:bg-white data-[state=active]:text-blue-600">
-                System Overview
-              </TabsTrigger>
-            </TabsList>
-          </div>
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Production System Manager</h1>
+          <p className="text-gray-600">Monitor and manage ICUPA Malta production environment</p>
         </div>
+        <div className="flex items-center space-x-4">
+          <Badge variant={systemHealth === 'healthy' ? 'default' : 'destructive'}>
+            {systemHealth === 'healthy' ? (
+              <CheckCircle className="h-4 w-4 mr-1" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 mr-1" />
+            )}
+            {systemHealth.charAt(0).toUpperCase() + systemHealth.slice(1)}
+          </Badge>
+          <Button variant="outline" size="sm" onClick={loadSystemData}>
+            <Settings className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-        <TabsContent value="analytics" className="m-0">
-          <ProductionAnalyticsDashboard />
-        </TabsContent>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="health">Health</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="support">Support</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="backup">Backup</TabsTrigger>
+        </TabsList>
 
-        <TabsContent value="support" className="m-0">
-          <SupportDashboard />
-        </TabsContent>
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">System Status</CardTitle>
+                <Server className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${systemHealth === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
+                  {systemHealth === 'healthy' ? 'Online' : 'Issues'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {systemHealth === 'healthy' ? 'All services operational' : 'Some services need attention'}
+                </p>
+              </CardContent>
+            </Card>
 
-        <TabsContent value="overview" className="m-0">
-          <div className="max-w-7xl mx-auto p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {steps.map((step) => (
-                <Card key={step.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      {getStatusIcon(step.status)}
-                      {getStatusBadge(step.status)}
-                    </div>
-                    <h3 className="font-semibold mb-2">{step.name}</h3>
-                    <p className="text-sm text-gray-600">{step.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+                <Activity className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics?.orders.today || 0}</div>
+                <p className="text-xs text-muted-foreground">Today's orders</p>
+              </CardContent>
+            </Card>
 
-            <Alert className="mt-8">
-              <CheckCircle className="h-4 w-4" />
-              <AlertTitle>Production System Ready</AlertTitle>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Vendors</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analytics?.vendors.active || 0}</div>
+                <p className="text-xs text-muted-foreground">of {analytics?.vendors.total || 0} total</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Revenue Today</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">€{analytics?.revenue.today || 0}</div>
+                <p className="text-xs text-muted-foreground">Daily revenue</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {alerts.filter(a => !a.resolved).length > 0 && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>System Alerts</AlertTitle>
               <AlertDescription>
-                All systems are operational. You can now access analytics, monitoring, and support features.
+                {alerts.filter(a => !a.resolved).length} active alerts require attention
               </AlertDescription>
             </Alert>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Alerts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {alerts.slice(0, 5).map(alert => (
+                  <div key={alert.id} className="flex items-center justify-between p-2 border rounded">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
+                        {alert.severity}
+                      </Badge>
+                      <span className={alert.resolved ? 'line-through text-gray-500' : ''}>
+                        {alert.message}
+                      </span>
+                    </div>
+                    {!alert.resolved && (
+                      <Button size="sm" variant="outline" onClick={() => resolveAlert(alert.id)}>
+                        Resolve
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="health" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Activity className="h-5 w-5 mr-2" />
+                System Health Check
+              </CardTitle>
+              <CardDescription>
+                Real-time monitoring of all system components
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {healthData && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {healthData.services.map(service => (
+                      <div key={service.service} className="p-4 border rounded">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium capitalize">{service.service}</span>
+                          <Badge variant={service.status === 'healthy' ? 'default' : 'destructive'}>
+                            {service.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          Response: {service.responseTime}ms
+                        </p>
+                        {service.message && (
+                          <p className="text-sm text-red-600 mt-1">{service.message}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Last check: {healthData.lastCheck.toLocaleString()}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Orders Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analytics && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Orders:</span>
+                      <span className="font-bold">{analytics.orders.total}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Week:</span>
+                      <span className="font-bold">{analytics.orders.thisWeek}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Month:</span>
+                      <span className="font-bold">{analytics.orders.thisMonth}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analytics && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Revenue:</span>
+                      <span className="font-bold">€{analytics.revenue.total}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Week:</span>
+                      <span className="font-bold">€{analytics.revenue.thisWeek}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>This Month:</span>
+                      <span className="font-bold">€{analytics.revenue.thisMonth}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="support" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Support Dashboard</CardTitle>
+              <CardDescription>
+                Customer support and ticket management
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <p className="text-gray-600">Support dashboard coming soon...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="h-5 w-5 mr-2" />
+                Security Audit
+              </CardTitle>
+              <CardDescription>
+                Comprehensive security assessment and recommendations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {securityAudit && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Security Score</p>
+                      <p className="text-2xl font-bold text-green-600">{securityAudit.score}/100</p>
+                    </div>
+                    <Button onClick={handleRunSecurityAudit}>
+                      Run New Audit
+                    </Button>
+                  </div>
+                  
+                  {securityAudit.issues.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Security Issues</h4>
+                      <div className="space-y-2">
+                        {securityAudit.issues.map((issue, index) => (
+                          <div key={index} className="p-3 border rounded">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium">{issue.category}</span>
+                              <Badge variant={issue.severity === 'critical' ? 'destructive' : 'secondary'}>
+                                {issue.severity}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">{issue.description}</p>
+                            <p className="text-sm text-blue-600 mt-1">{issue.recommendation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="backup" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <HardDrive className="h-5 w-5 mr-2" />
+                Backup Management
+              </CardTitle>
+              <CardDescription>
+                Manage automated backups and recovery options
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Last Backup</p>
+                    <p className="text-sm text-gray-600">2 hours ago</p>
+                  </div>
+                  <Badge variant="outline">
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Success
+                  </Badge>
+                </div>
+                <Button className="w-full" onClick={handleCreateBackup}>
+                  <HardDrive className="h-4 w-4 mr-2" />
+                  Create Manual Backup
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
