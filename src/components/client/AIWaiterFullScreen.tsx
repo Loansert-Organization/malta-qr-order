@@ -1,248 +1,369 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Mic, MicOff, Loader2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { 
+  ArrowLeft, 
+  Send, 
+  Mic, 
+  MicOff, 
+  Bot, 
+  User,
+  Sparkles,
+  Plus
+} from 'lucide-react';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  type: 'user' | 'ai';
   content: string;
-  suggestions?: MenuItem[];
   timestamp: Date;
-}
-
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  category?: string;
+  suggestions?: any[];
 }
 
 interface AIWaiterFullScreenProps {
-  vendorId: string;
-  guestSessionId: string;
-  onClose: () => void;
-  onAddToCart: (item: MenuItem) => void;
+  onBack: () => void;
+  onAddToCart: (item: any) => void;
+  vendorData: any;
+  menuItems: any[];
 }
 
 const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
-  vendorId,
-  guestSessionId,
-  onClose,
-  onAddToCart
+  onBack,
+  onAddToCart,
+  vendorData,
+  menuItems
 }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: "Bonġu! I'm Kai, your AI waiter. I can help you discover our menu, suggest dishes based on your preferences, and even consider Malta's weather today. What sounds good to you?",
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Initialize with welcome message
+    const welcomeMessage: Message = {
+      id: '1',
+      type: 'ai',
+      content: `Hello! I'm your AI waiter for ${vendorData?.business_name || 'this restaurant'}. I can help you find the perfect meal based on your preferences, dietary needs, or mood. What are you in the mood for today?`,
+      timestamp: new Date(),
+      suggestions: [
+        { text: "Something light and healthy", category: "preference" },
+        { text: "Best cocktails", category: "drinks" },
+        { text: "Local Maltese specialties", category: "local" },
+        { text: "I'm feeling adventurous", category: "mood" }
+      ]
+    };
+    setMessages([welcomeMessage]);
+  }, [vendorData]);
+
+  useEffect(() => {
+    scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const sendMessage = async (content: string) => {
+    if (!content.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
-      content: input,
+      type: 'user',
+      content,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+    setInputMessage('');
+    setIsTyping(true);
 
     try {
-      // Mock AI response with suggestions
+      // Simulate AI processing
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      const aiResponse: Message = {
+      const aiResponse = await generateAIResponse(content);
+      
+      const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "Based on your request, I'd recommend these authentic Maltese dishes that pair perfectly with our local wines. Each suggestion considers the current weather and time of day for the perfect dining experience.",
-        suggestions: [
-          {
-            id: '1',
-            name: 'Maltese Ftira',
-            description: 'Traditional sourdough with tomatoes, olives, and local cheese',
-            price: 8.50,
-            category: 'starters'
-          },
-          {
-            id: '2',
-            name: 'Bragioli',
-            description: 'Maltese beef olives with herbs and local spices',
-            price: 18.50,
-            category: 'mains'
-          }
-        ],
-        timestamp: new Date()
+        type: 'ai',
+        content: aiResponse.text,
+        timestamp: new Date(),
+        suggestions: aiResponse.suggestions
       };
 
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('AI Waiter error:', error);
+      console.error('Error getting AI response:', error);
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again or browse our menu directly!",
+        type: 'ai',
+        content: "I'm sorry, I'm having trouble processing your request right now. Can you try asking again?",
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
-  const handleVoiceToggle = () => {
-    setIsListening(!isListening);
-    // Mock voice recognition
-    if (!isListening) {
-      setTimeout(() => {
-        setInput("What's your signature dish?");
+  const generateAIResponse = async (userInput: string): Promise<{text: string, suggestions?: any[]}> => {
+    // Mock AI responses based on user input
+    const input = userInput.toLowerCase();
+    
+    if (input.includes('drink') || input.includes('cocktail') || input.includes('beer')) {
+      return {
+        text: "Great choice! For drinks, I'd recommend our signature Kinnie Cocktail - it's uniquely Maltese and very refreshing. We also have excellent local wines and craft beers. Would you like something alcoholic or non-alcoholic?",
+        suggestions: [
+          { id: 1, name: "Kinnie Cocktail", price: 7.50, category: "drinks" },
+          { id: 2, name: "Local Wine Selection", price: 6.00, category: "drinks" },
+          { id: 3, name: "Craft Beer", price: 4.50, category: "drinks" }
+        ]
+      };
+    }
+    
+    if (input.includes('healthy') || input.includes('light') || input.includes('salad')) {
+      return {
+        text: "Perfect! For something light and healthy, I recommend our Mediterranean Salad with fresh local ingredients, or our grilled fish with seasonal vegetables. Both are packed with nutrients and very satisfying.",
+        suggestions: [
+          { id: 4, name: "Mediterranean Salad", price: 12.00, category: "healthy" },
+          { id: 5, name: "Grilled Sea Bass", price: 18.00, category: "healthy" },
+          { id: 6, name: "Quinoa Bowl", price: 14.00, category: "healthy" }
+        ]
+      };
+    }
+    
+    if (input.includes('maltese') || input.includes('local') || input.includes('traditional')) {
+      return {
+        text: "Excellent! You must try our authentic Maltese specialties. Our Ftira is made fresh daily, and our Pastizzi are a local favorite. For something more substantial, try our Bragioli - it's a traditional beef olive dish.",
+        suggestions: [
+          { id: 7, name: "Maltese Ftira", price: 8.50, category: "local" },
+          { id: 8, name: "Pastizzi Platter", price: 6.00, category: "local" },
+          { id: 9, name: "Bragioli", price: 16.00, category: "local" }
+        ]
+      };
+    }
+    
+    return {
+      text: "I'd be happy to help you choose! Could you tell me more about what you're looking for? Are you interested in something specific like appetizers, main courses, or drinks? Or do you have any dietary preferences I should know about?",
+      suggestions: [
+        { text: "Show me appetizers", category: "category" },
+        { text: "I'm vegetarian", category: "dietary" },
+        { text: "What's your chef's recommendation?", category: "recommendation" }
+      ]
+    };
+  };
+
+  const handleSuggestionClick = (suggestion: any) => {
+    if (suggestion.id) {
+      // It's a menu item suggestion
+      const message = `Tell me more about the ${suggestion.name}`;
+      sendMessage(message);
+    } else {
+      // It's a text suggestion
+      sendMessage(suggestion.text);
+    }
+  };
+
+  const handleAddToCart = (item: any) => {
+    onAddToCart(item);
+    
+    const confirmMessage: Message = {
+      id: Date.now().toString(),
+      type: 'ai',
+      content: `Great choice! I've added ${item.name} to your cart. Would you like to add anything else or are you ready to check out?`,
+      timestamp: new Date(),
+      suggestions: [
+        { text: "Add a drink", category: "upsell" },
+        { text: "Show me desserts", category: "upsell" },
+        { text: "I'm ready to order", category: "checkout" }
+      ]
+    };
+    
+    setMessages(prev => [...prev, confirmMessage]);
+  };
+
+  const startVoiceRecognition = () => {
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new (window as any).webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+      
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInputMessage(transcript);
         setIsListening(false);
-      }, 2000);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+      };
+      
+      recognition.onerror = () => {
+        setIsListening(false);
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognition.start();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
       {/* Header */}
-      <div className="bg-gray-800 p-4 flex items-center justify-between border-b border-gray-700">
+      <div className="bg-gray-800 p-4 border-b border-gray-700">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-lg">K</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+              <Bot className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-semibold">AI Waiter</h1>
+              <p className="text-xs text-gray-400">Malta's Smart Assistant</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-white font-semibold">Kai - AI Waiter</h1>
-            <p className="text-gray-400 text-sm">Powered by Malta's hospitality AI</p>
+          <div className="ml-auto">
+            <Badge variant="secondary" className="bg-green-600 text-white">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Online
+            </Badge>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="text-gray-400 hover:text-white"
-        >
-          <X className="h-5 w-5" />
-        </Button>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg p-3 ${
-                message.role === 'user'
+          <div key={message.id} className="space-y-2">
+            <div className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] p-3 rounded-lg ${
+                message.type === 'user'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-white'
-              }`}
-            >
-              <p className="text-sm">{message.content}</p>
-              <p className="text-xs opacity-70 mt-1">
-                {message.timestamp.toLocaleTimeString()}
-              </p>
-
-              {/* AI Suggestions */}
-              {message.suggestions && message.suggestions.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs font-semibold text-blue-300">AI Recommendations:</p>
-                  {message.suggestions.map((item) => (
-                    <Card key={item.id} className="bg-gray-700 border-gray-600">
-                      <CardContent className="p-3">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-white text-sm">{item.name}</h4>
-                            <p className="text-xs text-gray-300 mt-1">{item.description}</p>
-                            <div className="flex items-center space-x-2 mt-2">
-                              <span className="text-blue-400 font-semibold">€{item.price.toFixed(2)}</span>
-                              {item.category && (
-                                <Badge variant="outline" className="text-xs">
-                                  {item.category}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => onAddToCart(item)}
-                            className="ml-2 bg-blue-600 hover:bg-blue-700"
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  : 'bg-gray-800 text-white border border-gray-700'
+              }`}>
+                <div className="flex items-start space-x-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    message.type === 'user' ? 'bg-blue-700' : 'bg-purple-600'
+                  }`}>
+                    {message.type === 'user' ? (
+                      <User className="h-3 w-3" />
+                    ) : (
+                      <Bot className="h-3 w-3" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm">{message.content}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* AI Suggestions */}
+            {message.type === 'ai' && message.suggestions && (
+              <div className="ml-8 space-y-2">
+                {message.suggestions.map((suggestion, index) => (
+                  <div key={index}>
+                    {suggestion.id ? (
+                      // Menu item suggestion
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium text-white">{suggestion.name}</h4>
+                              <p className="text-green-400 text-sm">€{suggestion.price.toFixed(2)}</p>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAddToCart(suggestion)}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      // Text suggestion
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="text-gray-300 border-gray-600 hover:bg-gray-700"
+                      >
+                        {suggestion.text}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
 
-        {isLoading && (
+        {/* Typing Indicator */}
+        {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 rounded-lg p-3 flex items-center space-x-2">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-              <span className="text-gray-300 text-sm">Kai is thinking...</span>
+            <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Bot className="h-4 w-4 text-purple-400" />
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                </div>
+              </div>
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input Area */}
       <div className="p-4 bg-gray-800 border-t border-gray-700">
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
           <div className="flex-1 relative">
             <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about our menu..."
-              className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 pr-12"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              placeholder="Ask me anything about the menu..."
+              className="bg-gray-700 border-gray-600 text-white pr-12"
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage(inputMessage)}
             />
             <Button
-              size="sm"
               variant="ghost"
-              onClick={handleVoiceToggle}
-              className={`absolute right-1 top-1 h-8 w-8 p-0 ${
-                isListening ? 'text-red-400' : 'text-gray-400'
-              }`}
+              size="sm"
+              onClick={startVoiceRecognition}
+              disabled={isListening}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </Button>
           </div>
           <Button
-            onClick={handleSendMessage}
-            disabled={isLoading || !input.trim()}
+            onClick={() => sendMessage(inputMessage)}
+            disabled={!inputMessage.trim() || isTyping}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Send className="h-4 w-4" />

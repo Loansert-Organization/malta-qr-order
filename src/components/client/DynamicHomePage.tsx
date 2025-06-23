@@ -1,251 +1,306 @@
 
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Star, Search, Mic, QrCode } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-
-interface Vendor {
-  id: string;
-  name: string;
-  location?: string;
-  description?: string;
-}
+import { 
+  Star, 
+  Clock, 
+  MapPin, 
+  Sparkles, 
+  TrendingUp,
+  Sun,
+  CloudRain,
+  MessageCircle
+} from 'lucide-react';
 
 interface DynamicHomePageProps {
-  vendor: Vendor;
-  onMenuClick: () => void;
-  onAIWaiterClick: () => void;
-  onQRScanClick: () => void;
-}
-
-interface AILayoutData {
-  heroMessage: string;
-  sections: Array<{
-    title: string;
-    items: Array<{
-      id: string;
-      name: string;
-      description: string;
-      price: number;
-      image?: string;
-      popular?: boolean;
-    }>;
-  }>;
-  promoMessage?: string;
-  timeBasedMessage?: string;
+  vendorData: any;
+  weatherData: any;
+  contextData: any;
+  onCategorySelect: (category: string) => void;
+  onItemSelect: (item: any) => void;
+  onOpenAIWaiter: () => void;
 }
 
 const DynamicHomePage: React.FC<DynamicHomePageProps> = ({
-  vendor,
-  onMenuClick,
-  onAIWaiterClick,
-  onQRScanClick
+  vendorData,
+  weatherData,
+  contextData,
+  onCategorySelect,
+  onItemSelect,
+  onOpenAIWaiter
 }) => {
-  const [layoutData, setLayoutData] = useState<AILayoutData | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isVoiceSearch, setIsVoiceSearch] = useState(false);
+  const [heroContent, setHeroContent] = useState<any>(null);
+  const [promoSection, setPromoSection] = useState<any>(null);
+  const [featuredItems, setFeaturedItems] = useState<any[]>([]);
 
   useEffect(() => {
-    generateAILayout();
-  }, [vendor.id]);
+    generateDynamicContent();
+  }, [vendorData, weatherData, contextData]);
 
-  const generateAILayout = async () => {
-    // Mock AI-generated layout based on time, location, and vendor
-    const currentHour = new Date().getHours();
-    const isHappyHour = currentHour >= 17 && currentHour <= 19;
-    const isEvening = currentHour >= 18;
-    
-    const mockLayout: AILayoutData = {
-      heroMessage: isHappyHour 
-        ? "🍹 Happy Hour until 8 PM! Special prices on cocktails"
-        : isEvening 
-          ? "✨ Perfect evening for dining! Check out tonight's specials"
-          : "🌟 Welcome! Discover our signature dishes",
-      sections: [
-        {
-          title: isEvening ? "Popular Tonight" : "Most Ordered Today",
-          items: [
-            {
-              id: '1',
-              name: 'Maltese Ftira',
-              description: 'Traditional sourdough with local cheese',
-              price: 8.50,
-              popular: true
-            },
-            {
-              id: '2', 
-              name: 'Bragioli',
-              description: 'Maltese beef olives with herbs',
-              price: 18.50,
-              popular: true
-            }
-          ]
-        },
-        {
-          title: isHappyHour ? "Happy Hour Specials" : "Chef's Recommendations",
-          items: [
-            {
-              id: '3',
-              name: 'Kinnie Cocktail',
-              description: 'Malta\'s signature drink with a twist',
-              price: isHappyHour ? 5.50 : 7.50
-            }
-          ]
-        }
-      ],
-      promoMessage: isHappyHour ? "🎉 All cocktails 25% off until 8 PM!" : undefined,
-      timeBasedMessage: `📍 ${vendor.location} • Open until 11 PM`
+  const generateDynamicContent = () => {
+    const timeOfDay = contextData?.timeOfDay || 'evening';
+    const isHappyHour = checkHappyHour();
+    const weatherCondition = weatherData?.weather?.[0]?.main || 'Clear';
+
+    // Generate hero content based on context
+    const heroData = generateHeroContent(timeOfDay, weatherCondition, isHappyHour);
+    setHeroContent(heroData);
+
+    // Generate promotional content
+    const promoData = generatePromoContent(timeOfDay, isHappyHour);
+    setPromoSection(promoData);
+
+    // Generate featured items
+    const featured = generateFeaturedItems(timeOfDay, weatherCondition);
+    setFeaturedItems(featured);
+  };
+
+  const checkHappyHour = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    return hour >= 17 && hour <= 19; // 5 PM to 7 PM
+  };
+
+  const generateHeroContent = (timeOfDay: string, weather: string, isHappyHour: boolean) => {
+    if (isHappyHour) {
+      return {
+        title: "🍹 Happy Hour Active!",
+        subtitle: "Special prices until 7 PM",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        cta: "View Happy Hour Menu"
+      };
+    }
+
+    if (timeOfDay === 'morning') {
+      return {
+        title: "☀️ Good Morning Malta!",
+        subtitle: "Start your day with fresh breakfast",
+        background: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+        cta: "Browse Breakfast"
+      };
+    }
+
+    if (weather === 'Rain') {
+      return {
+        title: "🌧️ Cozy Indoor Vibes",
+        subtitle: "Warm drinks and comfort food",
+        background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+        cta: "Hot Beverages"
+      };
+    }
+
+    return {
+      title: `Welcome to ${vendorData?.business_name || 'ICUPA Malta'}`,
+      subtitle: "Discover amazing flavors tonight",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      cta: "Explore Menu"
     };
-
-    setLayoutData(mockLayout);
   };
 
-  const handleVoiceSearch = () => {
-    setIsVoiceSearch(true);
-    // Mock voice search - in real implementation would use Web Speech API
-    setTimeout(() => {
-      setSearchQuery("What's good with wine?");
-      setIsVoiceSearch(false);
-    }, 2000);
+  const generatePromoContent = (timeOfDay: string, isHappyHour: boolean) => {
+    if (isHappyHour) {
+      return {
+        type: "happy_hour",
+        title: "🎉 Happy Hour Special",
+        description: "25% off all cocktails and appetizers",
+        timeLeft: "2 hours remaining",
+        urgent: true
+      };
+    }
+
+    if (timeOfDay === 'evening') {
+      return {
+        type: "dinner_combo",
+        title: "🍽️ Dinner Combo Deal",
+        description: "Main course + drink for €18",
+        timeLeft: "Today only",
+        urgent: false
+      };
+    }
+
+    return null;
   };
 
-  if (!layoutData) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>AI is personalizing your experience...</p>
-        </div>
-      </div>
-    );
-  }
+  const generateFeaturedItems = (timeOfDay: string, weather: string) => {
+    // Mock featured items based on context
+    const baseItems = [
+      { id: 1, name: "Maltese Ftira", price: 8.50, category: "local", image: "🥖" },
+      { id: 2, name: "Mediterranean Salad", price: 12.00, category: "healthy", image: "🥗" },
+      { id: 3, name: "Kinnie Cocktail", price: 7.50, category: "drinks", image: "🍹" },
+      { id: 4, name: "Pastizzi Platter", price: 6.00, category: "snacks", image: "🥧" }
+    ];
+
+    // Filter based on context
+    if (timeOfDay === 'morning') {
+      return baseItems.filter(item => ['healthy', 'local'].includes(item.category));
+    }
+
+    if (weather === 'Rain') {
+      return baseItems.filter(item => ['drinks', 'snacks'].includes(item.category));
+    }
+
+    return baseItems;
+  };
+
+  const getWeatherIcon = () => {
+    const condition = weatherData?.weather?.[0]?.main;
+    switch (condition) {
+      case 'Rain': return <CloudRain className="h-5 w-5" />;
+      case 'Clear': return <Sun className="h-5 w-5" />;
+      default: return <Sun className="h-5 w-5" />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      {/* AI-Curated Hero Banner */}
-      <div className="relative h-64 bg-gradient-to-r from-blue-600 to-purple-600 overflow-hidden">
-        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-        <div className="relative p-6 flex flex-col justify-center h-full">
-          <h1 className="text-2xl font-bold mb-2">{vendor.name}</h1>
-          <p className="text-lg mb-4">{layoutData.heroMessage}</p>
-          <div className="flex items-center space-x-4 text-sm">
-            <div className="flex items-center space-x-1">
-              <MapPin className="h-4 w-4" />
-              <span>{vendor.location}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Clock className="h-4 w-4" />
-              <span>Open Now</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Star className="h-4 w-4 fill-current text-yellow-400" />
-              <span>AI-Enhanced</span>
-            </div>
+      {/* Dynamic Hero Section */}
+      {heroContent && (
+        <div 
+          className="relative h-64 flex items-center justify-center text-center"
+          style={{ background: heroContent.background }}
+        >
+          <div className="max-w-md mx-auto p-6">
+            <h1 className="text-3xl font-bold mb-2 text-white">
+              {heroContent.title}
+            </h1>
+            <p className="text-lg mb-4 text-white/90">
+              {heroContent.subtitle}
+            </p>
+            <Button 
+              size="lg" 
+              className="bg-white text-gray-900 hover:bg-gray-100"
+              onClick={() => onCategorySelect('featured')}
+            >
+              {heroContent.cta}
+            </Button>
           </div>
-        </div>
-      </div>
-
-      {/* Promo Message */}
-      {layoutData.promoMessage && (
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4 text-center">
-          <p className="font-semibold">{layoutData.promoMessage}</p>
+          
+          {/* Weather indicator */}
+          <div className="absolute top-4 right-4 flex items-center space-x-2 text-white/80">
+            {getWeatherIcon()}
+            <span className="text-sm">
+              {weatherData?.main?.temp ? `${Math.round(weatherData.main.temp)}°C` : 'Malta'}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="p-4 bg-gray-800">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search menu or ask AI... (e.g., 'What's good with wine?')"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-12 bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-          />
-          <Button
-            size="sm"
-            variant={isVoiceSearch ? "default" : "ghost"}
-            className="absolute right-1 top-1 h-8 w-8 p-0"
-            onClick={handleVoiceSearch}
-            disabled={isVoiceSearch}
-          >
-            <Mic className={`h-4 w-4 ${isVoiceSearch ? 'animate-pulse' : ''}`} />
-          </Button>
+      {/* Promotional Section */}
+      {promoSection && (
+        <div className="p-4">
+          <Card className={`bg-gradient-to-r ${promoSection.urgent ? 'from-red-600 to-pink-600' : 'from-blue-600 to-purple-600'} border-none`}>
+            <CardContent className="p-4 text-center">
+              <h3 className="text-xl font-bold text-white mb-2">
+                {promoSection.title}
+              </h3>
+              <p className="text-white/90 mb-2">
+                {promoSection.description}
+              </p>
+              <Badge variant="secondary" className="bg-white/20 text-white">
+                <Clock className="h-3 w-3 mr-1" />
+                {promoSection.timeLeft}
+              </Badge>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      )}
 
-      {/* Smart Menu Sections */}
-      <div className="p-4 space-y-6">
-        {layoutData.sections.map((section, index) => (
-          <div key={index}>
-            <h2 className="text-xl font-semibold mb-3 flex items-center">
-              {section.title}
-              {section.title.includes('Popular') && (
-                <Badge variant="secondary" className="ml-2">🔥 Trending</Badge>
-              )}
-            </h2>
-            <div className="grid gap-4">
-              {section.items.map((item) => (
-                <Card key={item.id} className="bg-gray-800 border-gray-700 hover:bg-gray-750 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-semibold text-white">{item.name}</h3>
-                          {item.popular && (
-                            <Badge variant="secondary" className="text-xs">Popular</Badge>
-                          )}
-                        </div>
-                        <p className="text-gray-300 text-sm mb-2">{item.description}</p>
-                        <p className="text-blue-400 font-semibold">€{item.price.toFixed(2)}</p>
-                      </div>
-                      <Button size="sm" className="ml-4">
-                        Add to Cart
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="p-4 space-y-3">
-        <Button 
-          onClick={onMenuClick}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-3"
-        >
-          View Complete Menu
-        </Button>
+      {/* Smart Categories */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Quick Picks</h2>
+          <Sparkles className="h-5 w-5 text-yellow-400" />
+        </div>
         
-        <Button 
-          onClick={onAIWaiterClick}
-          variant="outline"
-          className="w-full border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white text-lg py-3"
-        >
-          🤖 Chat with AI Waiter
-        </Button>
-
-        <Button 
-          onClick={onQRScanClick}
-          variant="outline"
-          className="w-full border-gray-500 text-gray-300 hover:bg-gray-700 flex items-center justify-center space-x-2"
-        >
-          <QrCode className="h-5 w-5" />
-          <span>Scan QR to Order</span>
-        </Button>
+        <div className="grid grid-cols-2 gap-3">
+          {['🍽️ Mains', '🍹 Drinks', '🥗 Light Bites', '🍰 Desserts'].map((category, index) => (
+            <Button
+              key={index}
+              variant="outline"
+              className="h-16 bg-gray-800 border-gray-700 hover:bg-gray-700"
+              onClick={() => onCategorySelect(category.split(' ')[1].toLowerCase())}
+            >
+              <div className="text-center">
+                <div className="text-2xl mb-1">{category.split(' ')[0]}</div>
+                <div className="text-sm">{category.split(' ')[1]}</div>
+              </div>
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {/* Time-based Message */}
-      {layoutData.timeBasedMessage && (
-        <div className="p-4 text-center text-gray-400 text-sm">
-          {layoutData.timeBasedMessage}
+      {/* Featured Items */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Featured Tonight</h2>
+          <TrendingUp className="h-5 w-5 text-green-400" />
         </div>
-      )}
+        
+        <div className="space-y-3">
+          {featuredItems.map((item) => (
+            <Card key={item.id} className="bg-gray-800 border-gray-700">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="text-3xl">{item.image}</div>
+                  <div>
+                    <h3 className="font-medium text-white">{item.name}</h3>
+                    <p className="text-green-400 font-semibold">€{item.price.toFixed(2)}</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => onItemSelect(item)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Add
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* AI Waiter CTA */}
+      <div className="p-4">
+        <Card className="bg-gradient-to-r from-purple-600 to-blue-600 border-none">
+          <CardContent className="p-4 text-center">
+            <MessageCircle className="h-8 w-8 mx-auto mb-2 text-white" />
+            <h3 className="font-semibold text-white mb-2">Need Help Choosing?</h3>
+            <p className="text-white/90 text-sm mb-3">
+              Chat with our AI waiter for personalized recommendations
+            </p>
+            <Button
+              variant="secondary"
+              onClick={onOpenAIWaiter}
+              className="bg-white text-purple-600 hover:bg-gray-100"
+            >
+              Chat with AI Waiter
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Location Info */}
+      <div className="p-4 pb-8">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-300">
+                  {vendorData?.location || 'Malta'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                <span className="text-sm text-gray-300">4.8</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -1,279 +1,288 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Star, Clock, Leaf, Flame, Wheat } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-
-interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image?: string;
-  popular?: boolean;
-  prep_time?: string;
-  dietary_tags?: string[];
-  available: boolean;
-}
+import { 
+  Search, 
+  Filter, 
+  Star, 
+  Clock, 
+  Leaf, 
+  Flame,
+  ArrowLeft,
+  ShoppingCart
+} from 'lucide-react';
 
 interface MenuBrowsePageProps {
-  vendorId: string;
-  onAddToCart: (item: MenuItem, modifiers?: any[]) => void;
-  onAIWaiterClick: () => void;
+  menuItems: any[];
+  categories: string[];
+  onAddToCart: (item: any) => void;
+  onBack: () => void;
+  cartItemsCount: number;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 const MenuBrowsePage: React.FC<MenuBrowsePageProps> = ({
-  vendorId,
+  menuItems,
+  categories,
   onAddToCart,
-  onAIWaiterClick
+  onBack,
+  cartItemsCount,
+  searchQuery,
+  onSearchChange
 }) => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [smartFilters, setSmartFilters] = useState<string[]>([]);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMenuData();
-  }, [vendorId]);
-
-  const fetchMenuData = async () => {
-    try {
-      // Mock data - in real implementation would fetch from Supabase
-      const mockItems: MenuItem[] = [
-        {
-          id: '1',
-          name: 'Maltese Ftira',
-          description: 'Traditional Maltese sourdough bread with tomatoes, olives, and local cheese',
-          price: 8.50,
-          category: 'starters',
-          popular: true,
-          prep_time: '15 min',
-          dietary_tags: ['vegetarian'],
-          available: true
-        },
-        {
-          id: '2',
-          name: 'Bragioli',
-          description: 'Traditional Maltese beef olives stuffed with breadcrumbs, bacon, and herbs',
-          price: 18.50,
-          category: 'mains',
-          popular: true,
-          prep_time: '25 min',
-          dietary_tags: [],
-          available: true
-        },
-        {
-          id: '3',
-          name: 'Grilled Sea Bass',
-          description: 'Fresh local sea bass with Mediterranean herbs and lemon',
-          price: 24.00,
-          category: 'mains',
-          prep_time: '30 min',
-          dietary_tags: ['gluten-free'],
-          available: true
-        },
-        {
-          id: '4',
-          name: 'Spicy Arrabbiata',
-          description: 'Pasta with spicy tomato sauce and fresh basil',
-          price: 14.50,
-          category: 'pasta',
-          dietary_tags: ['vegetarian', 'spicy'],
-          available: true
-        },
-        {
-          id: '5',
-          name: 'Kinnie Cocktail',
-          description: 'Malta\'s signature bitter orange drink with premium spirits',
-          price: 7.50,
-          category: 'drinks',
-          popular: true,
-          available: true
-        }
-      ];
-
-      setMenuItems(mockItems);
-      
-      const uniqueCategories = ['all', ...Array.from(new Set(mockItems.map(item => item.category)))];
-      setCategories(uniqueCategories);
-
-      // Generate smart filters based on available dietary tags
-      const allTags = Array.from(new Set(mockItems.flatMap(item => item.dietary_tags || [])));
-      setSmartFilters(allTags);
-      
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching menu:', error);
-      setLoading(false);
-    }
-  };
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [dietaryFilters, setDietaryFilters] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('popular');
 
   const filteredItems = menuItems.filter(item => {
-    const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilters = activeFilters.length === 0 || 
-                          activeFilters.some(filter => item.dietary_tags?.includes(filter));
-    
-    return matchesCategory && matchesSearch && matchesFilters && item.available;
+    // Category filter
+    if (selectedCategory !== 'all' && item.category !== selectedCategory) {
+      return false;
+    }
+
+    // Search filter
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+
+    // Dietary filters
+    if (dietaryFilters.length > 0) {
+      const itemTags = item.dietary_tags || [];
+      if (!dietaryFilters.some(filter => itemTags.includes(filter))) {
+        return false;
+      }
+    }
+
+    return true;
   });
 
-  const toggleFilter = (filter: string) => {
-    setActiveFilters(prev => 
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    switch (sortBy) {
+      case 'price_low':
+        return a.price - b.price;
+      case 'price_high':
+        return b.price - a.price;
+      case 'name':
+        return a.name.localeCompare(b.name);
+      case 'popular':
+      default:
+        return (b.popular ? 1 : 0) - (a.popular ? 1 : 0);
+    }
+  });
+
+  const toggleDietaryFilter = (filter: string) => {
+    setDietaryFilters(prev => 
       prev.includes(filter) 
         ? prev.filter(f => f !== filter)
         : [...prev, filter]
     );
   };
 
-  const getFilterIcon = (filter: string) => {
-    switch (filter) {
-      case 'vegetarian': return <Leaf className="h-3 w-3" />;
-      case 'spicy': return <Flame className="h-3 w-3" />;
-      case 'gluten-free': return <Wheat className="h-3 w-3" />;
+  const getDietaryIcon = (tag: string) => {
+    switch (tag) {
+      case 'vegetarian': return <Leaf className="h-3 w-3 text-green-500" />;
+      case 'spicy': return <Flame className="h-3 w-3 text-red-500" />;
+      case 'popular': return <Star className="h-3 w-3 text-yellow-500" />;
       default: return null;
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p>Loading menu...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <div className="bg-gray-800 p-4 sticky top-0 z-10 border-b border-gray-700">
-        <h1 className="text-xl font-bold mb-3">Menu</h1>
-        
+        <div className="flex items-center justify-between mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Menu</h1>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+
         {/* Search Bar */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search dishes..."
+            placeholder="Search menu items..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10 bg-gray-700 border-gray-600 text-white"
           />
         </div>
 
-        {/* Smart Filters */}
-        {smartFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            <span className="text-sm text-gray-400 mr-2">Filters:</span>
-            {smartFilters.map(filter => (
+        {/* Category Tabs */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          <Button
+            variant={selectedCategory === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSelectedCategory('all')}
+            className="whitespace-nowrap"
+          >
+            All Items
+          </Button>
+          {categories.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedCategory(category)}
+              className="whitespace-nowrap"
+            >
+              {category.charAt(0).toUpperCase() + category.slice(1)}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between mb-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="text-gray-300 border-gray-600"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+          
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-gray-700 border-gray-600 text-white rounded px-3 py-1 text-sm"
+          >
+            <option value="popular">Most Popular</option>
+            <option value="price_low">Price: Low to High</option>
+            <option value="price_high">Price: High to Low</option>
+            <option value="name">Name A-Z</option>
+          </select>
+        </div>
+
+        {showFilters && (
+          <div className="flex flex-wrap gap-2">
+            {['vegetarian', 'spicy', 'gluten_free'].map((filter) => (
               <Button
                 key={filter}
+                variant={dietaryFilters.includes(filter) ? 'default' : 'outline'}
                 size="sm"
-                variant={activeFilters.includes(filter) ? "default" : "outline"}
-                onClick={() => toggleFilter(filter)}
-                className="h-7 text-xs flex items-center space-x-1"
+                onClick={() => toggleDietaryFilter(filter)}
+                className="text-xs"
               >
-                {getFilterIcon(filter)}
-                <span className="capitalize">{filter.replace('-', ' ')}</span>
+                {filter.replace('_', ' ')}
               </Button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Category Tabs */}
-      <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
-        <TabsList className="w-full justify-start overflow-x-auto bg-gray-800 border-b border-gray-700 rounded-none">
-          {categories.map(category => (
-            <TabsTrigger
-              key={category}
-              value={category}
-              className="capitalize whitespace-nowrap data-[state=active]:bg-blue-600"
-            >
-              {category === 'all' ? 'All Items' : category}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {/* Menu Items */}
-        <div className="p-4">
-          <div className="grid gap-4">
-            {filteredItems.map(item => (
-              <Card key={item.id} className="bg-gray-800 border-gray-700">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="font-semibold text-white">{item.name}</h3>
-                        {item.popular && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Star className="h-3 w-3 mr-1" />
-                            Popular
-                          </Badge>
-                        )}
-                      </div>
+      {/* Menu Items */}
+      <div className="p-4 space-y-4">
+        {sortedItems.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-400">No items found matching your criteria</p>
+          </div>
+        ) : (
+          sortedItems.map((item) => (
+            <Card key={item.id} className="bg-gray-800 border-gray-700">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <h3 className="font-semibold text-white">{item.name}</h3>
+                      {item.popular && (
+                        <Badge variant="secondary" className="bg-yellow-600 text-white text-xs">
+                          <Star className="h-3 w-3 mr-1" />
+                          Popular
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {item.description && (
+                      <p className="text-sm text-gray-300 mb-2">
+                        {item.description}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center space-x-3 mb-2">
+                      <span className="text-lg font-bold text-green-400">
+                        €{item.price.toFixed(2)}
+                      </span>
                       
-                      <p className="text-gray-300 text-sm mb-2">{item.description}</p>
-                      
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span className="text-blue-400 font-semibold">€{item.price.toFixed(2)}</span>
-                        {item.prep_time && (
-                          <div className="flex items-center space-x-1 text-gray-400 text-xs">
-                            <Clock className="h-3 w-3" />
-                            <span>{item.prep_time}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Dietary Tags */}
-                      {item.dietary_tags && item.dietary_tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {item.dietary_tags.map(tag => (
-                            <Badge key={tag} variant="outline" className="text-xs border-gray-600 text-gray-300">
-                              {getFilterIcon(tag)}
-                              <span className="ml-1 capitalize">{tag.replace('-', ' ')}</span>
-                            </Badge>
-                          ))}
+                      {item.prep_time && (
+                        <div className="flex items-center text-xs text-gray-400">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {item.prep_time}
                         </div>
                       )}
                     </div>
                     
-                    <Button 
-                      size="sm" 
-                      className="ml-4 bg-blue-600 hover:bg-blue-700"
+                    {/* Dietary Tags */}
+                    {item.dietary_tags && item.dietary_tags.length > 0 && (
+                      <div className="flex items-center space-x-1">
+                        {item.dietary_tags.map((tag: string, index: number) => (
+                          <div key={index} className="flex items-center">
+                            {getDietaryIcon(tag)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Item Image and Add Button */}
+                  <div className="ml-4 text-center">
+                    <div className="w-16 h-16 bg-gray-700 rounded-lg mb-2 flex items-center justify-center text-2xl">
+                      🍽️
+                    </div>
+                    <Button
+                      size="sm"
                       onClick={() => onAddToCart(item)}
+                      className="bg-blue-600 hover:bg-blue-700 text-xs px-3"
                     >
-                      Add to Cart
+                      Add
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+                
+                {/* Allergens */}
+                {item.allergens && item.allergens.length > 0 && (
+                  <div className="mt-3 pt-2 border-t border-gray-700">
+                    <p className="text-xs text-gray-400">
+                      <strong>Allergens:</strong> {item.allergens.join(', ')}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
-          {filteredItems.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-400 mb-4">No items found matching your criteria</p>
-              <Button 
-                onClick={onAIWaiterClick}
-                variant="outline"
-                className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white"
-              >
-                Ask AI Waiter for Recommendations
-              </Button>
-            </div>
-          )}
-        </div>
-      </Tabs>
+      {/* Bottom Spacing for FAB */}
+      <div className="h-20"></div>
     </div>
   );
 };
