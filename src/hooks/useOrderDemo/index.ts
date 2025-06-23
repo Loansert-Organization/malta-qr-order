@@ -6,6 +6,7 @@ import { useSearchManager } from './useSearchManager';
 import { useDynamicLayout } from '../useDynamicLayout';
 import { useGuestSession } from '../useGuestSession';
 import { AIGuard } from '@/lib/ai-guards';
+import { contextService } from '@/services/contextService';
 
 export const useOrderDemo = (slug: string | undefined) => {
   const [contextData, setContextData] = useState({
@@ -41,22 +42,33 @@ export const useOrderDemo = (slug: string | undefined) => {
     guestSessionId: sessionId
   });
 
+  // Track interaction helper
+  const trackInteraction = useCallback(async (action: string, metadata?: any) => {
+    try {
+      await contextService.trackInteraction(action, metadata);
+    } catch (error) {
+      console.error('Failed to track interaction:', error);
+    }
+  }, []);
+
   // Stable cart functions to prevent infinite loops
   const addToCart = useCallback((item: any) => {
     try {
       rawAddToCart(item);
+      trackInteraction('add_to_cart', { item_id: item.id, item_name: item.name });
     } catch (error) {
       AIGuard.handleComponentError(error as Error, 'useOrderDemo.addToCart');
     }
-  }, [rawAddToCart]);
+  }, [rawAddToCart, trackInteraction]);
 
   const removeFromCart = useCallback((itemId: string) => {
     try {
       rawRemoveFromCart(itemId);
+      trackInteraction('remove_from_cart', { item_id: itemId });
     } catch (error) {
       AIGuard.handleComponentError(error as Error, 'useOrderDemo.removeFromCart');
     }
-  }, [rawRemoveFromCart]);
+  }, [rawRemoveFromCart, trackInteraction]);
 
   // Update context data when weather changes
   useEffect(() => {

@@ -35,7 +35,17 @@ export const useGuestSession = (vendorId?: string) => {
             .update({ last_activity: new Date().toISOString() })
             .eq('id', existingSession.id);
           
-          setGuestSession(existingSession);
+          // Transform database format to interface format
+          const transformedSession: GuestSession = {
+            id: existingSession.id,
+            sessionToken: existingSession.session_token,
+            vendorId: existingSession.vendor_id || ANONYMOUS_UUID,
+            createdAt: existingSession.created_at,
+            lastActivity: existingSession.last_activity,
+            metadata: existingSession.metadata || {}
+          };
+          
+          setGuestSession(transformedSession);
         } else {
           // Create new session
           const { data: newSession, error } = await supabase
@@ -49,7 +59,18 @@ export const useGuestSession = (vendorId?: string) => {
             .single();
 
           if (error) throw error;
-          setGuestSession(newSession);
+          
+          // Transform database format to interface format
+          const transformedSession: GuestSession = {
+            id: newSession.id,
+            sessionToken: newSession.session_token,
+            vendorId: newSession.vendor_id || ANONYMOUS_UUID,
+            createdAt: newSession.created_at,
+            lastActivity: newSession.last_activity,
+            metadata: newSession.metadata || {}
+          };
+          
+          setGuestSession(transformedSession);
         }
       } catch (error) {
         console.error('Failed to initialize guest session:', error);
