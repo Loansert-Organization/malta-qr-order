@@ -14,14 +14,19 @@ export const useOrderDemo = (slug: string | undefined) => {
     weather: null as any
   });
 
-  // Initialize guest session first
-  const { guestSession, sessionId } = useGuestSession();
+  // Stabilize slug to prevent unnecessary re-renders
+  const stableSlug = useMemo(() => slug || '', [slug]);
 
-  // Initialize vendor data with dependency array
-  const { vendor, menuItems, loading, weatherData } = useVendorData(slug);
+  // Initialize guest session first - this should be stable
+  const { guestSession, sessionId, loading: sessionLoading } = useGuestSession();
 
-  // Initialize cart manager with stable vendor ID
+  // Initialize vendor data with stable slug
+  const { vendor, menuItems, loading: vendorLoading, weatherData } = useVendorData(stableSlug);
+
+  // Get stable vendor ID
   const vendorId = useMemo(() => vendor?.id || '', [vendor?.id]);
+  
+  // Initialize cart manager with stable vendor ID
   const {
     cart,
     addToCart: rawAddToCart,
@@ -31,17 +36,21 @@ export const useOrderDemo = (slug: string | undefined) => {
   } = useCartManager(vendorId);
 
   // Initialize search with stable menu items
-  const stableMenuItems = useMemo(() => menuItems, [menuItems]);
+  const stableMenuItems = useMemo(() => menuItems || [], [menuItems]);
   const { searchQuery, handleSearch } = useSearchManager(stableMenuItems);
 
-  // Initialize dynamic layout with just vendor ID as string
+  // Initialize dynamic layout with stable vendor ID
   const { layout } = useDynamicLayout(vendorId);
 
-  // Stable cart functions to prevent infinite loops
-  const addToCart = useCallback((item: any) => {
+  // Combine loading states
+  const loading = sessionLoading || vendorLoading;
+
+  // Stable cart functions with error handling
+  const addToCart = useCallback(async (item: any) => {
     try {
-      rawAddToCart(item);
+      await rawAddToCart(item);
     } catch (error) {
+      console.error('Error adding to cart:', error);
       AIGuard.handleComponentError(error as Error, 'useOrderDemo.addToCart');
     }
   }, [rawAddToCart]);
@@ -50,6 +59,7 @@ export const useOrderDemo = (slug: string | undefined) => {
     try {
       rawRemoveFromCart(itemId);
     } catch (error) {
+      console.error('Error removing from cart:', error);
       AIGuard.handleComponentError(error as Error, 'useOrderDemo.removeFromCart');
     }
   }, [rawRemoveFromCart]);
@@ -64,7 +74,7 @@ export const useOrderDemo = (slug: string | undefined) => {
     }
   }, [weatherData]);
 
-  // Update time of day context
+  // Update time of day context - run once on mount and every minute
   useEffect(() => {
     const updateTimeContext = () => {
       const hour = new Date().getHours();
@@ -76,12 +86,12 @@ export const useOrderDemo = (slug: string | undefined) => {
     };
 
     updateTimeContext();
-    const interval = setInterval(updateTimeContext, 60000); // Update every minute
-
+    const interval = setInterval(updateTimeContext, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  return {
+  // Memoize return object to prevent unnecessary re-renders
+  return useMemo(() => ({
     // Data
     vendor,
     layout,
@@ -101,5 +111,20 @@ export const useOrderDemo = (slug: string | undefined) => {
     handleSearch,
     getTotalPrice,
     getTotalItems
-  };
+  }), [
+    vendor,
+    layout,
+    weatherData,
+    stableMenuItems,
+    cart,
+    searchQuery,
+    contextData,
+    sessionId,
+    loading,
+    addToCart,
+    removeFromCart,
+    handleSearch,
+    getTotalPrice,
+    getTotalItems
+  ]);
 };

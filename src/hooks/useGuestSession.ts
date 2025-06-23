@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getGuestSessionId, ANONYMOUS_UUID } from '@/lib/constants';
 
@@ -15,56 +15,76 @@ interface GuestSession {
 export const useGuestSession = (vendorId?: string) => {
   const [guestSession, setGuestSession] = useState<GuestSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Stabilize vendorId to prevent effect re-runs
+  const stableVendorId = useMemo(() => vendorId || ANONYMOUS_UUID, [vendorId]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeGuestSession = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         const sessionToken = getGuestSessionId();
         
         // Check if session exists in database
-        const { data: existingSession } = await supabase
+        const { data: existingSession, error: fetchError } = await supabase
           .from('guest_sessions')
           .select('*')
           .eq('session_token', sessionToken)
           .maybeSingle();
 
-        if (existingSession) {
+        if (fetchError) {
+          console.warn('Failed to fetch guest session:', fetchError);
+        }
+
+        if (existingSession && isMounted) {
           // Update last activity
-          await supabase
+          const { error: updateError } = await supabase
             .from('guest_sessions')
             .update({ last_activity: new Date().toISOString() })
             .eq('id', existingSession.id);
+
+          if (updateError) {
+            console.warn('Failed to update session activity:', updateError);
+          }
           
           // Transform database format to interface format
           const transformedSession: GuestSession = {
             id: existingSession.id,
             sessionToken: existingSession.session_token,
-            vendorId: existingSession.vendor_id || ANONYMOUS_UUID,
+            vendorId: existingSession.vendor_id || stableVendorId,
             createdAt: existingSession.created_at,
             lastActivity: existingSession.last_activity,
             metadata: existingSession.metadata || {}
           };
           
           setGuestSession(transformedSession);
-        } else {
+        } else if (isMounted) {
           // Create new session
-          const { data: newSession, error } = await supabase
+          const { data: newSession, error: createError } = await supabase
             .from('guest_sessions')
             .insert({
               session_token: sessionToken,
-              vendor_id: vendorId || ANONYMOUS_UUID,
-              metadata: { created_from: 'web_app' }
+              vendor_id: stableVendorId,
+              metadata: { created_from: 'web_app', created_at: new Date().toISOString() }
             })
             .select()
             .single();
 
-          if (error) throw error;
+          if (createError) {
+            console.warn('Failed to create guest session:', createError);
+            throw createError;
+          }
           
           // Transform database format to interface format
           const transformedSession: GuestSession = {
             id: newSession.id,
             sessionToken: newSession.session_token,
-            vendorId: newSession.vendor_id || ANONYMOUS_UUID,
+            vendorId: newSession.vendor_id || stableVendorId,
             createdAt: newSession.created_at,
             lastActivity: newSession.last_activity,
             metadata: newSession.metadata || {}
@@ -72,28 +92,47 @@ export const useGuestSession = (vendorId?: string) => {
           
           setGuestSession(transformedSession);
         }
-      } catch (error) {
-        console.error('Failed to initialize guest session:', error);
-        // Fallback to basic session
-        setGuestSession({
-          id: getGuestSessionId(),
-          sessionToken: getGuestSessionId(),
-          vendorId: vendorId || ANONYMOUS_UUID,
-          createdAt: new Date().toISOString(),
-          lastActivity: new Date().toISOString(),
-          metadata: {}
-        });
+      } catch (err) {
+        console.error('Failed to initialize guest session:', err);
+        
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : 'Failed to initialize session');
+          
+          // Fallback to basic session
+          const fallbackSession: GuestSession = {
+            id: getGuestSessionId(),
+            sessionToken: getGuestSessionId(),
+            vendorId: stableVendorId,
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
+            metadata: { fallback: true }
+          };
+          
+          setGuestSession(fallbackSession);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     initializeGuestSession();
-  }, [vendorId]);
 
-  return {
+    return () => {
+      isMounted = false;
+    };
+  }, [stableVendorId]);
+
+  const sessionId = useMemo(() => 
+    guestSession?.sessionToken || getGuestSessionId(), 
+    [guestSession?.sessionToken]
+  );
+
+  return useMemo(() => ({
     guestSession,
     loading,
-    sessionId: guestSession?.sessionToken || getGuestSessionId()
-  };
+    error,
+    sessionId
+  }), [guestSession, loading, error, sessionId]);
 };
