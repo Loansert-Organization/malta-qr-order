@@ -10,8 +10,20 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Check if user needs authentication
-  const needsAuth = !user || (profile && profile.role !== 'admin');
+  console.log('AdminPanel render:', { user, profile, loading });
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // For now, allow anonymous access to admin panel (as per restoration requirements)
+  // In a real app, you'd want proper admin authentication
+  const needsAuth = false; // Temporarily disabled for system restoration
 
   if (needsAuth) {
     return (

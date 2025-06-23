@@ -6,7 +6,7 @@ import { LogOut, Shield, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AdminHeader = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isAnonymous } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -29,7 +29,7 @@ const AdminHeader = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {user && (
+            {user ? (
               <>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <User className="h-4 w-4" />
@@ -50,6 +50,14 @@ const AdminHeader = () => {
                   <span>Sign Out</span>
                 </Button>
               </>
+            ) : (
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <User className="h-4 w-4" />
+                <span>Anonymous Admin Access</span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                  System Restoration Mode
+                </span>
+              </div>
             )}
           </div>
         </div>

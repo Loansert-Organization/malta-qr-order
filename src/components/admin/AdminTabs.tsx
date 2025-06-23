@@ -26,6 +26,26 @@ interface AdminTabsProps {
 }
 
 const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
+  // Mock vendors data for now to prevent blank pages
+  const mockVendors = [
+    {
+      id: '1',
+      name: 'Demo Restaurant',
+      slug: 'demo-restaurant',
+      location: 'Valletta, Malta',
+      active: true,
+      created_at: new Date().toISOString()
+    }
+  ];
+
+  const handleToggleVendorStatus = (vendorId: string, currentStatus: boolean) => {
+    console.log('Toggle vendor status:', vendorId, currentStatus);
+  };
+
+  const handleSelectVendor = (vendor: any) => {
+    console.log('Select vendor:', vendor);
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -70,9 +90,9 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
 
         <TabsContent value="vendors">
           <VendorManagement 
-            vendors={[]} 
-            onToggleVendorStatus={() => {}} 
-            onSelectVendor={() => {}} 
+            vendors={mockVendors} 
+            onToggleVendorStatus={handleToggleVendorStatus} 
+            onSelectVendor={handleSelectVendor} 
           />
         </TabsContent>
 
