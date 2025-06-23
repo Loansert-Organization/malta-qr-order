@@ -74,14 +74,16 @@ export interface SystemHealth {
   lastCheck: Date;
 }
 
+export interface SecurityAuditIssue {
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  recommendation: string;
+}
+
 export interface SecurityAuditResult {
   score: number;
-  issues: Array<{
-    description: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    category: string;
-    recommendation: string;
-  }>;
+  issues: SecurityAuditIssue[];
 }
 
 class ICUPAProductionSystem {
@@ -281,33 +283,6 @@ class ICUPAProductionSystem {
     }
   }
 
-  async runSecurityAudit(): Promise<SecurityAudit> {
-    try {
-      // Perform security checks
-      const auditResults = await this.performSecurityChecks();
-      
-      const auditData = {
-        audit_score: auditResults.score,
-        issues_found: auditResults.issues as any,
-        recommendations: auditResults.recommendations as any,
-        audit_type: 'automated',
-        performed_at: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from('security_audits')
-        .insert([auditData])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Failed to run security audit:', error);
-      throw error;
-    }
-  }
-
   // Analytics service wrapper
   getAnalytics() {
     return {
@@ -400,21 +375,6 @@ class ICUPAProductionSystem {
   async initializeProduction(): Promise<void> {
     // Initialize production environment
     console.log('Initializing production environment...');
-  }
-
-  private async performSecurityChecks() {
-    return {
-      score: Math.floor(Math.random() * 30) + 70,
-      issues: [
-        'Rate limiting not configured for all endpoints',
-        'Some user inputs not properly sanitized'
-      ],
-      recommendations: [
-        'Implement comprehensive rate limiting',
-        'Add input validation middleware',
-        'Enable audit logging for all admin actions'
-      ]
-    };
   }
 
   async recordSystemMetric(name: string, value: number, tags?: Record<string, any>): Promise<void> {

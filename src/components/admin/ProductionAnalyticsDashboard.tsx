@@ -1,333 +1,235 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { TrendingUp, TrendingDown, Users, ShoppingCart, DollarSign, Clock, MapPin, Star, AlertCircle, CheckCircle, Shield, Activity, Database, Zap } from 'lucide-react';
-import { icupaProductionSystem, type AnalyticsData, type SystemHealth, type SecurityAuditResult } from '@/services/icupaProductionSystem';
-
-interface MetricCardProps {
-  title: string;
-  value: string;
-  change: string;
-  icon: React.ComponentType<any>;
-  trend: 'up' | 'down';
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, change, icon: Icon, trend }) => (
-  <Card>
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          <div className="flex items-center mt-2">
-            {trend === 'up' ? (
-              <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-            )}
-            <span className={`text-sm ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-              {change}
-            </span>
-          </div>
-        </div>
-        <div className="p-3 bg-blue-50 rounded-full">
-          <Icon className="h-6 w-6 text-blue-600" />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  BarChart3, 
+  TrendingUp, 
+  Users, 
+  ShoppingCart, 
+  DollarSign,
+  Activity,
+  RefreshCw
+} from 'lucide-react';
+import { icupaProductionSystem, type AnalyticsData } from '@/services/icupaProductionSystem';
 
 const ProductionAnalyticsDashboard: React.FC = () => {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
-  const [securityAudit, setSecurityAudit] = useState<SecurityAuditResult | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [analytics, health, security] = await Promise.all([
-          icupaProductionSystem.getAnalytics().getDashboardData(),
-          icupaProductionSystem.getHealthCheck().performHealthCheck(),
-          icupaProductionSystem.getSecurityAudit().runComprehensiveAudit()
-        ]);
-
-        setAnalyticsData(analytics);
-        setSystemHealth(health);
-        setSecurityAudit(security);
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-    const interval = setInterval(loadData, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
+    loadAnalytics();
   }, []);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+      const analyticsData = await icupaProductionSystem.getAnalytics().getDashboardData();
+      setAnalytics(analyticsData);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading production analytics...</p>
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <Activity className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading analytics...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="text-center py-20">
+          <p className="text-gray-500">No analytics data available</p>
+          <Button onClick={loadAnalytics} className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">ICUPA Malta Production Dashboard</h1>
-              <p className="text-blue-100">Complete system monitoring and analytics</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Badge variant="secondary" className="bg-white/20 text-white">
-                <Activity className="h-4 w-4 mr-1" />
-                Live
-              </Badge>
-              <Badge 
-                variant="secondary" 
-                className={`${
-                  systemHealth?.overall === 'healthy' 
-                    ? 'bg-green-500/20 text-green-100' 
-                    : systemHealth?.overall === 'degraded'
-                    ? 'bg-yellow-500/20 text-yellow-100'
-                    : 'bg-red-500/20 text-red-100'
-                }`}
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                {systemHealth?.overall || 'Unknown'}
-              </Badge>
-            </div>
-          </div>
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Production Analytics</h1>
+          <p className="text-gray-600">
+            Real-time insights and performance metrics - Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
         </div>
+        <Button onClick={loadAnalytics} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="support">Support</TabsTrigger>
-          </TabsList>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.orders.total}</div>
+            <p className="text-xs text-muted-foreground">
+              {analytics.orders.today} today
+            </p>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="overview">
-            <div className="space-y-6">
-              {/* Key Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard
-                  title="Total Orders"
-                  value={analyticsData?.orders.total.toString() || '0'}
-                  change="+12.5%"
-                  icon={ShoppingCart}
-                  trend="up"
-                />
-                <MetricCard
-                  title="Revenue"
-                  value={`€${analyticsData?.revenue.total.toLocaleString() || '0'}`}
-                  change="+8.2%"
-                  icon={DollarSign}
-                  trend="up"
-                />
-                <MetricCard
-                  title="Active Vendors"
-                  value={analyticsData?.vendors.active.toString() || '0'}
-                  change="+3.1%"
-                  icon={MapPin}
-                  trend="up"
-                />
-                <MetricCard
-                  title="Customer Satisfaction"
-                  value="4.8"
-                  change="+0.2"
-                  icon={Star}
-                  trend="up"
-                />
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">€{analytics.revenue.total}</div>
+            <p className="text-xs text-muted-foreground">
+              €{analytics.revenue.today} today
+            </p>
+          </CardContent>
+        </Card>
 
-              {/* System Health Overview */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Activity className="h-5 w-5 mr-2" />
-                      System Health
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {systemHealth?.services.map((service) => (
-                        <div key={service.service} className="flex items-center justify-between">
-                          <span className="font-medium capitalize">{service.service}</span>
-                          <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant={
-                                service.status === 'healthy' ? 'default' : 
-                                service.status === 'degraded' ? 'secondary' : 
-                                'destructive'
-                              }
-                            >
-                              {service.status}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              {service.responseTime}ms
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Vendors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.vendors.active}</div>
+            <p className="text-xs text-muted-foreground">
+              of {analytics.vendors.total} total
+            </p>
+          </CardContent>
+        </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Shield className="h-5 w-5 mr-2" />
-                      Security Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600 mb-2">
-                        {securityAudit?.score || 0}/100
-                      </div>
-                      <p className="text-gray-600 mb-4">Security Score</p>
-                      <div className="space-y-2">
-                        {securityAudit?.issues.slice(0, 3).map((issue, index) => (
-                          <div key={index} className="flex items-center text-sm">
-                            <AlertCircle className="h-4 w-4 text-yellow-500 mr-2" />
-                            <span>{issue.description}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">AI Sessions</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.aiUsage.totalSessions}</div>
+            <p className="text-xs text-muted-foreground">AI interactions</p>
+          </CardContent>
+        </Card>
+      </div>
 
-              {/* Recent Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Today's Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {analyticsData?.orders.today || 0}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="vendors">Top Vendors</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Orders Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span>This Week</span>
+                    <Badge variant="default">{analytics.orders.thisWeek}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>This Month</span>
+                    <Badge variant="secondary">{analytics.orders.thisMonth}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>All Time</span>
+                    <Badge variant="outline">{analytics.orders.total}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span>This Week</span>
+                    <Badge variant="default">€{analytics.revenue.thisWeek}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>This Month</span>
+                    <Badge variant="secondary">€{analytics.revenue.thisMonth}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>All Time</span>
+                    <Badge variant="outline">€{analytics.revenue.total}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="vendors" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Performing Vendors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {analytics.vendors.topPerforming.map((vendor, index) => (
+                  <div key={vendor.name} className="flex items-center justify-between p-3 border rounded">
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="outline">#{index + 1}</Badge>
+                      <div>
+                        <p className="font-medium">{vendor.name}</p>
+                        <p className="text-sm text-gray-600">{vendor.orders} orders</p>
                       </div>
-                      <p className="text-gray-600">Orders Today</p>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        €{analyticsData?.revenue.today.toLocaleString() || '0'}
-                      </div>
-                      <p className="text-gray-600">Revenue Today</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {analyticsData?.aiUsage.totalSessions || 0}
-                      </div>
-                      <p className="text-gray-600">AI Sessions</p>
+                    <div className="text-right">
+                      <p className="font-bold">€{vendor.revenue}</p>
+                      <p className="text-sm text-gray-600">revenue</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Revenue Trend</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={[]}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="#93C5FD" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Top Vendors</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {analyticsData?.vendors.topPerforming.slice(0, 5).map((vendor, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="font-medium">{vendor.name}</span>
-                          <div className="text-right">
-                            <div className="font-bold">€{vendor.revenue.toLocaleString()}</div>
-                            <div className="text-sm text-gray-500">{vendor.orders} orders</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                ))}
               </div>
-            </div>
-          </TabsContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          <TabsContent value="monitoring">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Monitoring</CardTitle>
-                <CardDescription>Real-time system performance metrics</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Monitoring dashboard content will be displayed here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Overview</CardTitle>
-                <CardDescription>Security status and audit results</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Security dashboard content will be displayed here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="support">
-            <Card>
-              <CardHeader>
-                <CardTitle>Support Metrics</CardTitle>
-                <CardDescription>Customer support performance</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Support metrics will be displayed here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent value="trends" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Performance Trends
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">Trend analysis coming soon...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

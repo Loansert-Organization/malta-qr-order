@@ -50,6 +50,21 @@ const SupportDashboard: React.FC = () => {
     setLoading(false);
   };
 
+  const getTicketStatusVariant = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'destructive';
+      case 'in_progress':
+        return 'secondary';
+      case 'resolved':
+        return 'default';
+      case 'closed':
+        return 'outline';
+      default:
+        return 'outline';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -75,12 +90,7 @@ const SupportDashboard: React.FC = () => {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>{ticket.subject}</CardTitle>
-                    <Badge variant={
-                      ticket.status === 'open' ? 'destructive' :
-                      ticket.status === 'in_progress' ? 'default' :
-                      ticket.status === 'resolved' ? 'default' :
-                      'secondary'
-                    }>
+                    <Badge variant={getTicketStatusVariant(ticket.status)}>
                       {ticket.status.replace('_', ' ')}
                     </Badge>
                   </div>
