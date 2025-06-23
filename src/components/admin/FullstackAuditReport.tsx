@@ -153,47 +153,47 @@ const FullstackAuditReport: React.FC = () => {
         'payments', 'ai_waiter_logs', 'profiles', 'guest_sessions'
       ];
 
-      for (const table of criticalTables) {
+      for (const tableName of criticalTables) {
         try {
           const { data, error } = await supabase
-            .from(table)
+            .from(tableName as any)
             .select('*')
             .limit(1);
 
           if (error) {
             findings.push({
-              id: `table_${table}`,
+              id: `table_${tableName}`,
               category: 'database',
-              location: `Table: ${table}`,
+              location: `Table: ${tableName}`,
               type: 'error',
               severity: 'critical',
               status: 'broken',
-              description: `Table ${table} query failed: ${error.message}`,
+              description: `Table ${tableName} query failed: ${error.message}`,
               proposedFix: 'Check table exists and RLS policies allow access',
               impact: 'Core application functionality may be impaired'
             });
           } else {
             findings.push({
-              id: `table_${table}`,
+              id: `table_${tableName}`,
               category: 'database',
-              location: `Table: ${table}`,
+              location: `Table: ${tableName}`,
               type: 'integration',
               severity: 'low',
               status: 'ready',
-              description: `Table ${table} is accessible`,
+              description: `Table ${tableName} is accessible`,
               proposedFix: 'No action needed',
               impact: 'Table functionality is working correctly'
             });
           }
         } catch (tableError) {
           findings.push({
-            id: `table_${table}_critical`,
+            id: `table_${tableName}_critical`,
             category: 'database',
-            location: `Table: ${table}`,
+            location: `Table: ${tableName}`,
             type: 'error',
             severity: 'critical',
             status: 'broken',
-            description: `Failed to query table ${table}: ${tableError}`,
+            description: `Failed to query table ${tableName}: ${tableError}`,
             proposedFix: 'Verify table exists and permissions are correct',
             impact: 'Critical data operations may fail'
           });
@@ -368,20 +368,24 @@ const FullstackAuditReport: React.FC = () => {
       setAuditReport(report);
 
       // Log to system
-      await supabase.from('system_logs').insert({
-        log_type: 'fullstack_audit',
-        component: 'audit_report',
-        message: `Fullstack audit completed with ${productionReadinessScore}% readiness score`,
-        metadata: {
-          total_findings: totalFindings,
-          critical_issues: criticalIssues,
-          ready_items: readyItems,
-          broken_items: brokenItems,
-          production_readiness_score: productionReadinessScore,
-          timestamp: new Date().toISOString()
-        },
-        severity: productionReadinessScore >= 80 ? 'info' : productionReadinessScore >= 60 ? 'warning' : 'error'
-      });
+      try {
+        await supabase.from('system_logs').insert({
+          log_type: 'fullstack_audit',
+          component: 'audit_report',
+          message: `Fullstack audit completed with ${productionReadinessScore}% readiness score`,
+          metadata: {
+            total_findings: totalFindings,
+            critical_issues: criticalIssues,
+            ready_items: readyItems,
+            broken_items: brokenItems,
+            production_readiness_score: productionReadinessScore,
+            timestamp: new Date().toISOString()
+          } as any,
+          severity: productionReadinessScore >= 80 ? 'info' : productionReadinessScore >= 60 ? 'warning' : 'error'
+        });
+      } catch (logError) {
+        console.warn('Failed to log audit results:', logError);
+      }
 
     } catch (error) {
       console.error('Audit failed:', error);

@@ -1,8 +1,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAISupervision } from './useAISupervision';
-import { productionAuditService } from '@/services/productionAudit';
 
 interface ProductionMetrics {
   systemHealth: number;
@@ -16,30 +14,6 @@ interface ProductionMetrics {
 export const useProductionMonitoring = () => {
   const [metrics, setMetrics] = useState<ProductionMetrics | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
-  const { logSystemEvent } = useAISupervision();
-
-  const startMonitoring = async () => {
-    setIsMonitoring(true);
-    await logSystemEvent('monitoring_started', 'Production monitoring activated');
-
-    // Monitor system health every 5 minutes
-    const monitoringInterval = setInterval(async () => {
-      try {
-        await collectMetrics();
-      } catch (error) {
-        console.error('Monitoring failed:', error);
-        await logSystemEvent('monitoring_error', `Monitoring failed: ${error}`);
-      }
-    }, 300000); // 5 minutes
-
-    // Initial metrics collection
-    await collectMetrics();
-
-    return () => {
-      clearInterval(monitoringInterval);
-      setIsMonitoring(false);
-    };
-  };
 
   const collectMetrics = async () => {
     const startTime = Date.now();
@@ -62,21 +36,25 @@ export const useProductionMonitoring = () => {
         systemHealth,
         errorRate,
         responseTime,
-        lastAuditScore: 0, // Will be updated by full audit
-        activeIssues: 0,   // Will be updated by full audit
+        lastAuditScore: 0,
+        activeIssues: 0,
         timestamp: new Date().toISOString()
       };
 
       setMetrics(newMetrics);
 
-      // Log metrics
-      await supabase.from('system_logs').insert({
-        log_type: 'monitoring_metrics',
-        component: 'production_monitoring',
-        message: 'System health metrics collected',
-        metadata: newMetrics,
-        severity: systemHealth > 80 ? 'info' : 'warning'
-      });
+      // Log metrics to system_logs
+      try {
+        await supabase.from('system_logs').insert({
+          log_type: 'monitoring_metrics',
+          component: 'production_monitoring',
+          message: 'System health metrics collected',
+          metadata: newMetrics as any,
+          severity: systemHealth > 80 ? 'info' : 'warning'
+        });
+      } catch (logError) {
+        console.warn('Failed to log metrics:', logError);
+      }
 
     } catch (error) {
       console.error('Failed to collect metrics:', error);
@@ -94,33 +72,31 @@ export const useProductionMonitoring = () => {
     }
   };
 
-  const runQuickHealthCheck = async () => {
-    await logSystemEvent('health_check_started', 'Quick health check initiated');
+  const startMonitoring = () => {
+    setIsMonitoring(true);
     
-    try {
-      const report = await productionAuditService.performFullAudit();
-      
-      if (metrics) {
-        setMetrics({
-          ...metrics,
-          lastAuditScore: report.summary.productionReadinessScore,
-          activeIssues: report.summary.criticalIssues,
-          timestamp: new Date().toISOString()
-        });
-      }
+    // Initial metrics collection
+    collectMetrics();
 
-      await logSystemEvent('health_check_completed', 
-        `Health check completed: ${report.summary.productionReadinessScore}% ready`);
-      
-      return report;
-    } catch (error) {
-      await logSystemEvent('health_check_failed', `Health check failed: ${error}`);
-      throw error;
-    }
+    // Monitor system health every 5 minutes
+    const monitoringInterval = setInterval(() => {
+      collectMetrics();
+    }, 300000); // 5 minutes
+
+    return () => {
+      clearInterval(monitoringInterval);
+      setIsMonitoring(false);
+    };
+  };
+
+  const runQuickHealthCheck = async () => {
+    await collectMetrics();
+    return metrics;
   };
 
   useEffect(() => {
-    return startMonitoring();
+    const cleanup = startMonitoring();
+    return cleanup;
   }, []);
 
   return {
