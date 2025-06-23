@@ -1,7 +1,17 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getGuestSessionId, ANONYMOUS_UUID } from '@/lib/constants';
+
+const ANONYMOUS_UUID = '00000000-0000-0000-0000-000000000002';
+
+const getGuestSessionId = () => {
+  let sessionId = localStorage.getItem('icupa_guest_session');
+  if (!sessionId) {
+    sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('icupa_guest_session', sessionId);
+  }
+  return sessionId;
+};
 
 interface GuestSession {
   id: string;

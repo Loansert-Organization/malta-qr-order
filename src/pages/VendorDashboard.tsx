@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useAnonymousAuth } from '@/components/auth/AnonymousAuthProvider';
 
 // Import vendor components
 import MenuBuilder from '@/components/vendor/MenuBuilder';
@@ -21,7 +20,6 @@ interface Vendor {
 }
 
 const VendorDashboard = () => {
-  const { loading: authLoading } = useAnonymousAuth();
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +88,11 @@ const VendorDashboard = () => {
   };
 
   useEffect(() => {
-    if (!authLoading) {
-      console.log('VendorDashboard component mounted, starting data fetch...');
-      fetchVendorData();
-    }
-  }, [authLoading]);
+    console.log('VendorDashboard component mounted, starting data fetch...');
+    fetchVendorData();
+  }, []);
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

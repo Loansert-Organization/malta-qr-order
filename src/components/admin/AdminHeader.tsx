@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Users, Database } from 'lucide-react';
 
 const AdminHeader = () => {
