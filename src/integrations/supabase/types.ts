@@ -94,6 +94,66 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string | null
+          event_name: string
+          id: string
+          properties: Json | null
+          session_id: string | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_name: string
+          id?: string
+          properties?: Json | null
+          session_id?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_name?: string
+          id?: string
+          properties?: Json | null
+          session_id?: string | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      analytics_metrics: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          dimensions: Json | null
+          hour: number | null
+          id: string
+          metric_name: string
+          metric_value: number
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          dimensions?: Json | null
+          hour?: number | null
+          id?: string
+          metric_name: string
+          metric_value: number
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          dimensions?: Json | null
+          hour?: number | null
+          id?: string
+          metric_name?: string
+          metric_value?: number
+        }
+        Relationships: []
+      }
       automation_jobs: {
         Row: {
           bar_id: string | null
@@ -180,6 +240,45 @@ export type Database = {
           review_count?: number | null
           updated_at?: string | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      error_logs: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          error_message: string
+          error_type: string
+          id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          severity: string | null
+          stack_trace: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          error_message: string
+          error_type: string
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -467,6 +566,92 @@ export type Database = {
           },
         ]
       }
+      notification_templates: {
+        Row: {
+          active: boolean | null
+          body: string
+          created_at: string | null
+          id: string
+          name: string
+          title: string
+          type: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          active?: boolean | null
+          body: string
+          created_at?: string | null
+          id?: string
+          name: string
+          title: string
+          type: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          active?: boolean | null
+          body?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          title?: string
+          type?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          data: Json | null
+          id: string
+          read_at: string | null
+          sent_at: string | null
+          status: string | null
+          template_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          read_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "notification_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -659,6 +844,39 @@ export type Database = {
           },
         ]
       }
+      performance_logs: {
+        Row: {
+          created_at: string | null
+          endpoint: string
+          id: string
+          metadata: Json | null
+          method: string
+          response_time: number
+          status_code: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          metadata?: Json | null
+          method: string
+          response_time: number
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          metadata?: Json | null
+          method?: string
+          response_time?: number
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       pinecone_embeddings: {
         Row: {
           created_at: string
@@ -838,6 +1056,39 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          blocked_until: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          requests_count: number | null
+          updated_at: string | null
+          user_id: string | null
+          window_start: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          requests_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          requests_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       system_logs: {
         Row: {
           component: string
@@ -892,6 +1143,86 @@ export type Database = {
           effective_date?: string
           id?: string
           version?: string
+        }
+        Relationships: []
+      }
+      vendor_approvals: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          documents: Json | null
+          id: string
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+          vendor_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          documents?: Json | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vendor_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          documents?: Json | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_approvals_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_bulk_operations: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          operation_type: string
+          parameters: Json | null
+          performed_by: string
+          results: Json | null
+          status: string | null
+          vendor_ids: string[]
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          operation_type: string
+          parameters?: Json | null
+          performed_by: string
+          results?: Json | null
+          status?: string | null
+          vendor_ids: string[]
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          operation_type?: string
+          parameters?: Json | null
+          performed_by?: string
+          results?: Json | null
+          status?: string | null
+          vendor_ids?: string[]
         }
         Relationships: []
       }
@@ -1006,6 +1337,7 @@ export type Database = {
           slug: string
           stripe_link: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           active?: boolean | null
@@ -1019,6 +1351,7 @@ export type Database = {
           slug: string
           stripe_link?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           active?: boolean | null
@@ -1032,6 +1365,7 @@ export type Database = {
           slug?: string
           stripe_link?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1040,6 +1374,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_anonymous_uuid: {
         Args: Record<PropertyKey, never>
         Returns: string
