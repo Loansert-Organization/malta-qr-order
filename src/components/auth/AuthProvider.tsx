@@ -8,6 +8,7 @@ interface Profile {
   user_id: string;
   role: 'guest' | 'vendor' | 'admin';
   vendor_id?: string;
+  full_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -19,7 +20,7 @@ interface AuthContextType {
   loading: boolean;
   isAnonymous: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -88,7 +89,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      setProfile(data);
+      // Ensure role type safety
+      if (data) {
+        const validRoles = ['guest', 'vendor', 'admin'];
+        const role = validRoles.includes(data.role) ? data.role as 'guest' | 'vendor' | 'admin' : 'guest';
+        
+        setProfile({
+          ...data,
+          role
+        } as Profile);
+      }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
     }
@@ -106,14 +116,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, fullName?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: redirectUrl,
+          data: fullName ? { full_name: fullName } : undefined
         }
       });
       return { error };

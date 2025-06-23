@@ -45,6 +45,7 @@ const UserMenu: React.FC = () => {
   };
 
   const RoleIcon = getRoleIcon(profile.role);
+  const displayName = profile.full_name || user.email?.split('@')[0] || 'User';
 
   return (
     <DropdownMenu>
@@ -52,7 +53,7 @@ const UserMenu: React.FC = () => {
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
             <AvatarFallback className="bg-blue-600 text-white">
-              {getInitials(profile.full_name)}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -62,7 +63,7 @@ const UserMenu: React.FC = () => {
           <div className="flex flex-col space-y-2">
             <div className="flex items-center space-x-2">
               <p className="text-sm font-medium leading-none">
-                {profile.full_name || 'User'}
+                {displayName}
               </p>
               <Badge className={getRoleColor(profile.role)} variant="secondary">
                 <RoleIcon className="h-3 w-3 mr-1" />
