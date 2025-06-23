@@ -598,6 +598,63 @@ export type Database = {
           },
         ]
       }
+      menu_analytics: {
+        Row: {
+          avg_rating: number | null
+          created_at: string | null
+          id: string
+          last_ordered_at: string | null
+          menu_item_id: string | null
+          page_views: number | null
+          revenue_trend: string | null
+          total_orders: number | null
+          total_revenue: number | null
+          updated_at: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          avg_rating?: number | null
+          created_at?: string | null
+          id?: string
+          last_ordered_at?: string | null
+          menu_item_id?: string | null
+          page_views?: number | null
+          revenue_trend?: string | null
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          avg_rating?: number | null
+          created_at?: string | null
+          id?: string
+          last_ordered_at?: string | null
+          menu_item_id?: string | null
+          page_views?: number | null
+          revenue_trend?: string | null
+          total_orders?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_analytics_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_analytics_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           display_order: number
@@ -1548,6 +1605,44 @@ export type Database = {
           },
         ]
       }
+      qr_scan_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_online: boolean | null
+          scanned_at: string | null
+          table_id: string | null
+          user_agent: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_online?: boolean | null
+          scanned_at?: string | null
+          table_id?: string | null
+          user_agent?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_online?: boolean | null
+          scanned_at?: string | null
+          table_id?: string | null
+          user_agent?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_scan_logs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           blocked_until: string | null
@@ -1833,6 +1928,69 @@ export type Database = {
           },
         ]
       }
+      vendor_applications: {
+        Row: {
+          applied_at: string | null
+          business_email: string
+          business_name: string
+          business_phone: string | null
+          business_type: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          instagram_handle: string | null
+          location: string | null
+          owner_email: string
+          owner_name: string
+          owner_phone: string | null
+          reviewed_at: string | null
+          reviewer_notes: string | null
+          status: string | null
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          business_email: string
+          business_name: string
+          business_phone?: string | null
+          business_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          instagram_handle?: string | null
+          location?: string | null
+          owner_email: string
+          owner_name: string
+          owner_phone?: string | null
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          business_email?: string
+          business_name?: string
+          business_phone?: string | null
+          business_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          instagram_handle?: string | null
+          location?: string | null
+          owner_email?: string
+          owner_name?: string
+          owner_phone?: string | null
+          reviewed_at?: string | null
+          reviewer_notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       vendor_approvals: {
         Row: {
           approved_at: string | null
@@ -1966,6 +2124,38 @@ export type Database = {
           },
         ]
       }
+      vendor_documents: {
+        Row: {
+          application_id: string | null
+          file_url: string
+          id: string
+          type: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          file_url: string
+          id?: string
+          type: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          file_url?: string
+          id?: string
+          type?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_documents_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_notifications: {
         Row: {
           created_at: string
@@ -2018,10 +2208,12 @@ export type Database = {
           category: string | null
           contact_person: string | null
           created_at: string
+          current_wait_time: number | null
           description: string | null
           email: string | null
           id: string
           is_active: boolean
+          is_open: boolean | null
           location: string | null
           location_geo: unknown | null
           location_text: string | null
@@ -2045,10 +2237,12 @@ export type Database = {
           category?: string | null
           contact_person?: string | null
           created_at?: string
+          current_wait_time?: number | null
           description?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
+          is_open?: boolean | null
           location?: string | null
           location_geo?: unknown | null
           location_text?: string | null
@@ -2072,10 +2266,12 @@ export type Database = {
           category?: string | null
           contact_person?: string | null
           created_at?: string
+          current_wait_time?: number | null
           description?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
+          is_open?: boolean | null
           location?: string | null
           location_geo?: unknown | null
           location_text?: string | null
@@ -2099,6 +2295,50 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_checklist: {
+        Row: {
+          application_id: string | null
+          bank_details: boolean | null
+          business_license: boolean | null
+          created_at: string | null
+          food_safety_cert: boolean | null
+          id: string
+          identity_verified: boolean | null
+          insurance_docs: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          bank_details?: boolean | null
+          business_license?: boolean | null
+          created_at?: string | null
+          food_safety_cert?: boolean | null
+          id?: string
+          identity_verified?: boolean | null
+          insurance_docs?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          bank_details?: boolean | null
+          business_license?: boolean | null
+          created_at?: string | null
+          food_safety_cert?: boolean | null
+          id?: string
+          identity_verified?: boolean | null
+          insurance_docs?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_checklist_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_applications"
             referencedColumns: ["id"]
           },
         ]
