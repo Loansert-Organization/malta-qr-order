@@ -1,6 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { Json } from '@/integrations/supabase/types';
 
 type Vendor = Tables<'vendors'>;
 type VendorApproval = Tables<'vendor_approvals'>;
@@ -243,3 +243,110 @@ class VendorManagementService {
 }
 
 export const vendorManagementService = new VendorManagementService();
+
+export const logVendorOperation = async (
+  operationType: string,
+  vendorIds: string[],
+  performedBy: string,
+  parameters: Record<string, any> = {},
+  results: Record<string, any> = {}
+) => {
+  try {
+    // Convert the parameters and results to valid JSON, excluding problematic fields
+    const sanitizedParameters = sanitizeForJson(parameters);
+    const sanitizedResults = sanitizeForJson(results);
+
+    const { error } = await supabase
+      .from('vendor_bulk_operations')
+      .insert({
+        operation_type: operationType,
+        vendor_ids: vendorIds,
+        performed_by: performedBy,
+        parameters: sanitizedParameters as Json,
+        results: sanitizedResults as Json,
+        status: 'completed'
+      });
+
+    if (error) {
+      console.error('Error logging vendor operation:', error);
+    }
+  } catch (error) {
+    console.error('Error in logVendorOperation:', error);
+  }
+};
+
+// Helper function to sanitize objects for JSON storage
+const sanitizeForJson = (obj: any): Record<string, any> => {
+  if (obj === null || obj === undefined) return {};
+  
+  if (typeof obj !== 'object') return { value: obj };
+  
+  const sanitized: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip problematic fields that can't be serialized to JSON
+    if (key === 'location_geo' || value === undefined) continue;
+    
+    if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeForJson(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
+};
+
+export const createBulkVendorUpdate = async (
+  vendorIds: string[],
+  updates: Partial<Record<string, any>>,
+  performedBy: string
+) => {
+  try {
+    const sanitizedUpdates = sanitizeForJson(updates);
+    
+    const { error } = await supabase
+      .from('vendors')
+      .update(sanitizedUpdates)
+      .in('id', vendorIds);
+
+    if (error) throw error;
+
+    await logVendorOperation('bulk_update', vendorIds, performedBy, sanitizedUpdates);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error in bulk vendor update:', error);
+    return { success: false, error };
+  }
+};
+
+export const getVendorAnalytics = async (vendorId: string, dateRange: { start: Date; end: Date }) => {
+  try {
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .gte('created_at', dateRange.start.toISOString())
+      .lte('created_at', dateRange.end.toISOString());
+
+    const { data: analytics } = await supabase
+      .from('analytics')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .gte('date', dateRange.start.toISOString().split('T')[0])
+      .lte('date', dateRange.end.toISOString().split('T')[0]);
+
+    return {
+      orders: orders || [],
+      analytics: analytics || [],
+      summary: {
+        totalOrders: orders?.length || 0,
+        totalRevenue: orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching vendor analytics:', error);
+    return { orders: [], analytics: [], summary: { totalOrders: 0, totalRevenue: 0 } };
+  }
+};

@@ -30,7 +30,7 @@ const ClientOrder = () => {
           .single();
 
         if (!vendor) {
-          // Fallback: try to find by name or create demo vendor
+          // Fallback: try to find by business_name or create demo vendor
           const { data: fallbackVendor } = await supabase
             .from('vendors')
             .select('*')
@@ -44,12 +44,13 @@ const ClientOrder = () => {
             const { data: newVendor, error: createError } = await supabase
               .from('vendors')
               .insert({
-                name: 'Demo Restaurant',
+                business_name: 'Demo Restaurant',
+                name: 'Demo Restaurant', // Keep both for compatibility
                 slug: 'demo-restaurant',
                 description: 'Experience ICUPA\'s AI-powered ordering system',
                 location: 'Valletta, Malta',
-                business_name: 'Demo Restaurant',
-                active: true
+                active: true,
+                is_active: true
               })
               .select()
               .single();
@@ -178,6 +179,7 @@ const ClientOrder = () => {
             <MaltaAIWaiterChat
               vendor={vendor}
               onClose={() => setShowAIChat(false)}
+              guestSessionId="anonymous-guest"
             />
           )}
         </div>

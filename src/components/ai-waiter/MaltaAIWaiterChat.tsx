@@ -3,20 +3,24 @@ import { useState } from 'react';
 import { useMaltaAIChat } from '@/hooks/useMaltaAIChat';
 import MaltaAIChatContainer from './MaltaAIChatContainer';
 
+interface Vendor {
+  id: string;
+  name: string;
+  location?: string;
+}
+
 interface MaltaAIWaiterChatProps {
+  vendor: Vendor;
   onClose: () => void;
-  onAddToCart: (item: any) => void;
-  vendorSlug: string;
-  guestSessionId: string;
-  vendorLocation?: string;
+  onAddToCart?: (item: any) => void;
+  guestSessionId?: string;
 }
 
 const MaltaAIWaiterChat = ({ 
+  vendor,
   onClose, 
   onAddToCart, 
-  vendorSlug, 
-  guestSessionId,
-  vendorLocation 
+  guestSessionId 
 }: MaltaAIWaiterChatProps) => {
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'mt' | 'it'>('en');
 
@@ -30,16 +34,16 @@ const MaltaAIWaiterChat = ({
     sendMessage,
     handleSuggestionAdded
   } = useMaltaAIChat({
-    vendorSlug,
-    guestSessionId,
-    vendorLocation,
+    vendorSlug: vendor.name.toLowerCase().replace(/\s+/g, '-'),
+    guestSessionId: guestSessionId || 'anonymous',
+    vendorLocation: vendor.location,
     selectedLanguage
   });
 
   return (
     <MaltaAIChatContainer
       onClose={onClose}
-      onAddToCart={onAddToCart}
+      onAddToCart={onAddToCart || (() => {})}
       messages={messages}
       input={input}
       setInput={setInput}

@@ -23,39 +23,49 @@ export const useDemoDataSeeding = () => {
 
       const demoVendors = [
         {
-          name: 'The Harbour Bistro',
+          business_name: 'The Harbour Bistro', // Fixed: using business_name
+          name: 'The Harbour Bistro', // Keep both for compatibility
           slug: 'harbour-bistro',
           description: 'Fresh seafood and Mediterranean cuisine with stunning harbor views',
           location: 'Valletta Waterfront',
-          active: true
+          active: true,
+          is_active: true
         },
         {
+          business_name: 'Malta Street Kitchen',
           name: 'Malta Street Kitchen',
           slug: 'malta-street-kitchen',
           description: 'Traditional Maltese dishes with a modern twist',
           location: 'St. Julian\'s',
-          active: true
+          active: true,
+          is_active: true
         },
         {
+          business_name: 'Gozo Garden Café',
           name: 'Gozo Garden Café',
           slug: 'gozo-garden-cafe',
           description: 'Farm-to-table dining experience with local ingredients',
           location: 'Victoria, Gozo',
-          active: true
+          active: true,
+          is_active: true
         },
         {
+          business_name: 'Mdina Medieval Tavern',
           name: 'Mdina Medieval Tavern',
           slug: 'mdina-medieval-tavern',
           description: 'Historic dining in the silent city with traditional recipes',
           location: 'Mdina',
-          active: true
+          active: true,
+          is_active: true
         },
         {
+          business_name: 'Sliema Sunset Bar',
           name: 'Sliema Sunset Bar',
           slug: 'sliema-sunset-bar',
           description: 'Cocktails and light bites with panoramic sea views',
           location: 'Sliema',
-          active: true
+          active: true,
+          is_active: true
         }
       ];
 
