@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface SystemHealth {
   status: 'healthy' | 'warning' | 'critical';
@@ -184,6 +183,28 @@ const SystemMonitoringDashboard = () => {
     }));
   };
 
+  const handleExportData = () => {
+    if (!metrics) return;
+    
+    const exportData = {
+      timeRange,
+      metrics,
+      exportedAt: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${vendorId}-${timeRange}.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    toast.success('Analytics data exported successfully');
+  };
+
   const handleResolveAlert = async (alertId: string) => {
     try {
       await supabase
@@ -249,7 +270,7 @@ const SystemMonitoringDashboard = () => {
           
           <Button
             variant="outline"
-            onClick={() => toast.info('Export feature coming soon!')}
+            onClick={() => toast('Export feature coming soon!')}
             className="flex items-center space-x-2"
           >
             <Download className="h-4 w-4" />

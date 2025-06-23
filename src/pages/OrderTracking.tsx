@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,7 @@ import {
   Star
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface OrderStatus {
   id: string;
@@ -294,7 +293,7 @@ const OrderTracking = () => {
               
               <Button
                 variant="outline"
-                onClick={() => toast.info('Chat feature coming soon!')}
+                onClick={() => toast('Chat feature coming soon!')}
                 className="flex-1 flex items-center justify-center space-x-2"
               >
                 <MessageCircle className="h-4 w-4" />
