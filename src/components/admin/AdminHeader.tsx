@@ -1,35 +1,60 @@
 
 import React from 'react';
-import { Shield, Users, Database } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { Button } from '@/components/ui/button';
+import { LogOut, Shield, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AdminHeader = () => {
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   return (
-    <div className="bg-white shadow-sm border-b">
+    <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-blue-600" />
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">ICUPA Malta Admin</h1>
-                <p className="text-sm text-gray-500">Anonymous Access Mode</p>
-              </div>
+              <h1 className="text-xl font-bold text-gray-900">ICUPA Admin</h1>
+            </div>
+            <div className="hidden md:block">
+              <span className="text-sm text-gray-500">Malta Hospitality Platform</span>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Users className="h-4 w-4" />
-              <span>Full Access</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Database className="h-4 w-4" />
-              <span>Connected</span>
-            </div>
+            {user && (
+              <>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User className="h-4 w-4" />
+                  <span>{user.email}</span>
+                  {profile && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                      {profile.role}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign Out</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 
