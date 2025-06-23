@@ -6,15 +6,17 @@ import { useSession } from '@/providers/ConsolidatedSessionProvider';
 import MaltaAIWaiterChat from './MaltaAIWaiterChat';
 
 interface SafeAIWaiterChatProps {
-  vendorId?: string;
+  vendorSlug: string;
   menuItems?: any[];
   onClose?: () => void;
+  onAddToCart: (item: any) => void;
 }
 
 const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({ 
-  vendorId, 
+  vendorSlug, 
   menuItems, 
-  onClose 
+  onClose,
+  onAddToCart 
 }) => {
   const { session } = useSession();
   const aiService = useAIService({
@@ -27,7 +29,6 @@ const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({
     <AIErrorBoundary
       onError={(error, errorInfo) => {
         console.error('AI Waiter Error:', error, errorInfo);
-        // Could send to monitoring service
       }}
       fallback={
         <div className="p-6 text-center">
@@ -47,11 +48,11 @@ const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({
       }
     >
       <MaltaAIWaiterChat
-        vendorId={vendorId}
-        menuItems={menuItems}
-        onClose={onClose}
-        guestSessionId={session?.sessionToken}
-        aiService={aiService}
+        onClose={onClose || (() => {})}
+        onAddToCart={onAddToCart}
+        vendorSlug={vendorSlug}
+        guestSessionId={session?.sessionToken || ''}
+        vendorLocation="Malta"
       />
     </AIErrorBoundary>
   );

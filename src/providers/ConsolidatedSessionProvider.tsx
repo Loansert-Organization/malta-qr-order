@@ -92,7 +92,7 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
           vendorId: vendorId || existingSession.vendor_id,
           createdAt: existingSession.created_at,
           lastActivity: new Date().toISOString(),
-          metadata: existingSession.metadata || {}
+          metadata: (existingSession.metadata as Record<string, any>) || {}
         };
       } else {
         // Create new session in database
@@ -120,7 +120,7 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
           vendorId: vendorId,
           createdAt: new Date().toISOString(),
           lastActivity: new Date().toISOString(),
-          metadata: newSession?.metadata || { fallback: true }
+          metadata: (newSession?.metadata as Record<string, any>) || { fallback: true }
         };
       }
 
