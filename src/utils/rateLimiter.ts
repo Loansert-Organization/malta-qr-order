@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 
 interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -15,6 +15,11 @@ interface RateLimitResult {
 }
 
 export class RateLimiter {
+  private supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   async checkRateLimit(
     userId: string | null,
     config: RateLimitConfig
@@ -22,18 +27,18 @@ export class RateLimiter {
     const now = new Date();
     const windowStart = new Date(now.getTime() - config.windowMs);
     
-    // Use IP or anonymous identifier as fallback if no user ID
+    // Use IP as fallback if no user ID
     const identifier = userId || 'anonymous';
 
     try {
       // Get current rate limit record
-      const { data: existingLimit } = await supabase
+      const { data: existingLimit } = await this.supabase
         .from('rate_limits')
         .select('*')
         .eq('user_id', identifier)
         .eq('endpoint', config.endpoint)
         .gte('window_start', windowStart.toISOString())
-        .maybeSingle();
+        .single();
 
       if (existingLimit) {
         // Check if blocked
@@ -51,7 +56,7 @@ export class RateLimiter {
           const blockUntil = new Date(now.getTime() + config.windowMs);
           
           // Update to block user
-          await supabase
+          await this.supabase
             .from('rate_limits')
             .update({
               blocked_until: blockUntil.toISOString(),
@@ -68,7 +73,7 @@ export class RateLimiter {
         }
 
         // Increment counter
-        await supabase
+        await this.supabase
           .from('rate_limits')
           .update({
             requests_count: existingLimit.requests_count + 1,
@@ -79,11 +84,11 @@ export class RateLimiter {
         return {
           allowed: true,
           remaining: config.max - (existingLimit.requests_count + 1),
-          resetTime: new Date(new Date(existingLimit.window_start).getTime() + config.windowMs)
+          resetTime: new Date(existingLimit.window_start.getTime() + config.windowMs)
         };
       } else {
         // Create new rate limit record
-        await supabase
+        await this.supabase
           .from('rate_limits')
           .insert({
             user_id: identifier,
@@ -112,7 +117,7 @@ export class RateLimiter {
 
   private async logError(type: string, error: any) {
     try {
-      await supabase
+      await this.supabase
         .from('error_logs')
         .insert({
           error_type: type,
@@ -136,13 +141,36 @@ export const RATE_LIMIT_CONFIGS = {
   ADMIN_ACTIONS: { windowMs: 60000, max: 50, endpoint: 'admin_actions' }, // 50 req/min
 } as const;
 
-// Helper function for checking rate limits in components
-export async function checkRateLimit(
-  userId: string | null,
-  config: RateLimitConfig
-): Promise<RateLimitResult> {
-  const rateLimiter = new RateLimiter();
-  return rateLimiter.checkRateLimit(userId, config);
+// Middleware wrapper for Next.js API routes
+export function withRateLimit(config: RateLimitConfig) {
+  return function rateLimitMiddleware(handler: any) {
+    return async function(req: any, res: any) {
+      const rateLimiter = new RateLimiter();
+      
+      // Extract user ID from request (adjust based on your auth setup)
+      const userId = req.user?.id || req.headers['x-user-id'] || null;
+      
+      const result = await rateLimiter.checkRateLimit(userId, config);
+      
+      // Set rate limit headers
+      res.setHeader('X-RateLimit-Limit', config.max);
+      res.setHeader('X-RateLimit-Remaining', result.remaining);
+      res.setHeader('X-RateLimit-Reset', Math.ceil(result.resetTime.getTime() / 1000));
+      
+      if (!result.allowed) {
+        if (result.retryAfter) {
+          res.setHeader('Retry-After', result.retryAfter);
+        }
+        return res.status(429).json({
+          error: 'Too Many Requests',
+          message: 'Rate limit exceeded',
+          retryAfter: result.retryAfter
+        });
+      }
+      
+      return handler(req, res);
+    };
+  };
 }
 
 // Edge function rate limiter for Supabase
@@ -158,8 +186,9 @@ export async function checkEdgeRateLimit(
   
   if (authHeader?.startsWith('Bearer ')) {
     try {
-      // For now, we'll use anonymous - JWT decoding would require additional setup
-      userId = 'authenticated_user';
+      // Decode JWT to get user ID (implement based on your auth setup)
+      const token = authHeader.slice(7);
+      // userId = decodeJWT(token).sub; // Implement JWT decoding
     } catch (error) {
       console.error('JWT decode error:', error);
     }
