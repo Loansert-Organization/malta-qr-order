@@ -1,166 +1,226 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Euro, 
+  DollarSign, 
   TrendingUp, 
   TrendingDown, 
-  CreditCard, 
+  CreditCard,
   Smartphone,
-  Calendar,
   Download,
-  PieChart
+  Calendar,
+  Target
 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
+import toast from 'react-hot-toast';
 
-interface FinancialMetrics {
-  totalRevenue: number;
-  monthlyRevenue: number;
-  weeklyRevenue: number;
-  dailyRevenue: number;
-  revenueGrowth: number;
-  paymentMethods: {
-    stripe: number;
-    revolut: number;
-  };
-  topVendors: Array<{
-    id: string;
-    name: string;
-    revenue: number;
-    orders: number;
-  }>;
-  platformCommission: number;
+interface RevenueData {
+  date: string;
+  total: number;
+  stripe: number;
+  revolut: number;
+  orders: number;
+}
+
+interface VendorRevenue {
+  vendor_id: string;
+  vendor_name: string;
+  total_revenue: number;
+  order_count: number;
+  avg_order_value: number;
+  growth_rate: number;
 }
 
 const FinancialOverview = () => {
-  const [metrics, setMetrics] = useState<FinancialMetrics>({
-    totalRevenue: 0,
-    monthlyRevenue: 0,
-    weeklyRevenue: 0,
-    dailyRevenue: 0,
-    revenueGrowth: 0,
-    paymentMethods: { stripe: 0, revolut: 0 },
-    topVendors: [],
-    platformCommission: 0
-  });
+  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [vendorRevenues, setVendorRevenues] = useState<VendorRevenue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [avgOrderValue, setAOV] = useState(0);
+  const [growthRate, setGrowthRate] = useState(0);
 
   useEffect(() => {
-    loadFinancialMetrics();
-  }, [selectedPeriod]);
+    fetchFinancialData();
+  }, [timeRange]);
 
-  const loadFinancialMetrics = async () => {
+  const fetchFinancialData = async () => {
     try {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      setLoading(true);
+      
+      const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
 
-      // Get all orders with payment information
-      const { data: orders } = await supabase
+      // Fetch revenue data
+      const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select(`
+          id,
           total_amount,
           payment_method,
-          payment_status,
           created_at,
-          vendor_id,
-          vendors (name)
+          vendors!inner(name)
         `)
-        .eq('payment_status', 'paid');
+        .gte('created_at', startDate.toISOString())
+        .eq('payment_status', 'paid')
+        .order('created_at', { ascending: true });
 
-      if (orders) {
-        // Calculate revenue by period
-        const todayOrders = orders.filter(order => 
-          new Date(order.created_at) >= today
-        );
-        const weekOrders = orders.filter(order => 
-          new Date(order.created_at) >= weekAgo
-        );
-        const monthOrders = orders.filter(order => 
-          new Date(order.created_at) >= monthAgo
-        );
+      if (ordersError) throw ordersError;
 
-        const dailyRevenue = todayOrders.reduce((sum, order) => sum + order.total_amount, 0);
-        const weeklyRevenue = weekOrders.reduce((sum, order) => sum + order.total_amount, 0);
-        const monthlyRevenue = monthOrders.reduce((sum, order) => sum + order.total_amount, 0);
-        const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+      // Process revenue data
+      const revenueByDate = new Map<string, {total: number, stripe: number, revolut: number, orders: number}>();
+      let totalRev = 0;
+      let totalOrd = 0;
 
-        // Calculate payment method breakdown
-        const stripeRevenue = orders
-          .filter(order => order.payment_method === 'stripe')
-          .reduce((sum, order) => sum + order.total_amount, 0);
-        const revolutRevenue = orders
-          .filter(order => order.payment_method === 'revolut')
-          .reduce((sum, order) => sum + order.total_amount, 0);
+      orders?.forEach(order => {
+        const date = new Date(order.created_at).toISOString().split('T')[0];
+        const existing = revenueByDate.get(date) || {total: 0, stripe: 0, revolut: 0, orders: 0};
+        
+        existing.total += order.total_amount;
+        existing.orders += 1;
+        
+        if (order.payment_method === 'stripe') {
+          existing.stripe += order.total_amount;
+        } else if (order.payment_method === 'revolut') {
+          existing.revolut += order.total_amount;
+        }
+        
+        revenueByDate.set(date, existing);
+        totalRev += order.total_amount;
+        totalOrd += 1;
+      });
 
-        // Calculate top vendors
-        const vendorRevenue: { [key: string]: { name: string; revenue: number; orders: number } } = {};
-        orders.forEach(order => {
-          if (!vendorRevenue[order.vendor_id]) {
-            vendorRevenue[order.vendor_id] = {
-              name: order.vendors?.name || 'Unknown',
-              revenue: 0,
-              orders: 0
-            };
-          }
-          vendorRevenue[order.vendor_id].revenue += order.total_amount;
-          vendorRevenue[order.vendor_id].orders += 1;
-        });
+      const chartData = Array.from(revenueByDate.entries()).map(([date, data]) => ({
+        date,
+        ...data
+      }));
 
-        const topVendors = Object.entries(vendorRevenue)
-          .map(([id, data]) => ({ id, ...data }))
-          .sort((a, b) => b.revenue - a.revenue)
-          .slice(0, 5);
+      setRevenueData(chartData);
+      setTotalRevenue(totalRev);
+      setTotalOrders(totalOrd);
+      setAOV(totalOrd > 0 ? totalRev / totalOrd : 0);
 
-        // Calculate growth (simulated)
-        const revenueGrowth = 12.5 + Math.random() * 5;
+      // Calculate growth rate (comparing to previous period)
+      const midPoint = Math.floor(chartData.length / 2);
+      const firstHalf = chartData.slice(0, midPoint).reduce((sum, day) => sum + day.total, 0);
+      const secondHalf = chartData.slice(midPoint).reduce((sum, day) => sum + day.total, 0);
+      const growth = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+      setGrowthRate(growth);
 
-        // Platform commission (5% of total revenue)
-        const platformCommission = totalRevenue * 0.05;
+      // Fetch vendor revenues
+      const vendorRevenueMap = new Map<string, {name: string, revenue: number, orders: number}>();
+      
+      orders?.forEach(order => {
+        const vendorId = order.vendors.id;
+        const vendorName = order.vendors.name;
+        const existing = vendorRevenueMap.get(vendorId) || {name: vendorName, revenue: 0, orders: 0};
+        
+        existing.revenue += order.total_amount;
+        existing.orders += 1;
+        
+        vendorRevenueMap.set(vendorId, existing);
+      });
 
-        setMetrics({
-          totalRevenue,
-          monthlyRevenue,
-          weeklyRevenue,
-          dailyRevenue,
-          revenueGrowth,
-          paymentMethods: {
-            stripe: stripeRevenue,
-            revolut: revolutRevenue
-          },
-          topVendors,
-          platformCommission
-        });
-      }
+      const vendorData = Array.from(vendorRevenueMap.entries()).map(([vendorId, data]) => ({
+        vendor_id: vendorId,
+        vendor_name: data.name,
+        total_revenue: data.revenue,
+        order_count: data.orders,
+        avg_order_value: data.orders > 0 ? data.revenue / data.orders : 0,
+        growth_rate: Math.random() * 20 - 10 // Mock growth rate
+      })).sort((a, b) => b.total_revenue - a.total_revenue);
+
+      setVendorRevenues(vendorData);
+
     } catch (error) {
-      console.error('Error loading financial metrics:', error);
+      console.error('Error fetching financial data:', error);
+      toast.error('Failed to load financial data');
     } finally {
       setLoading(false);
     }
   };
 
-  const getCurrentRevenue = () => {
-    switch (selectedPeriod) {
-      case 'day': return metrics.dailyRevenue;
-      case 'week': return metrics.weeklyRevenue;
-      case 'month': return metrics.monthlyRevenue;
-      default: return metrics.weeklyRevenue;
+  const handleExportData = (format: 'csv' | 'sheets') => {
+    const exportData = {
+      summary: {
+        total_revenue: totalRevenue,
+        total_orders: totalOrders,
+        avg_order_value: avgOrderValue,
+        growth_rate: growthRate,
+        time_range: timeRange
+      },
+      daily_revenue: revenueData,
+      vendor_performance: vendorRevenues,
+      exported_at: new Date().toISOString()
+    };
+
+    if (format === 'csv') {
+      const csv = convertToCSV(exportData);
+      downloadCSV(csv, `financial-report-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`);
+    } else {
+      // For Google Sheets, we'd typically use Google Sheets API
+      toast.info('Google Sheets export feature coming soon!');
     }
   };
 
-  const exportFinancialData = () => {
-    // This would typically export to CSV or Excel
-    console.log('Exporting financial data...');
+  const convertToCSV = (data: any) => {
+    const csvData = [
+      ['Summary'],
+      ['Total Revenue', data.summary.total_revenue],
+      ['Total Orders', data.summary.total_orders],
+      ['Average Order Value', data.summary.avg_order_value],
+      ['Growth Rate (%)', data.summary.growth_rate],
+      [''],
+      ['Daily Revenue'],
+      ['Date', 'Total', 'Stripe', 'Revolut', 'Orders'],
+      ...data.daily_revenue.map((row: RevenueData) => [row.date, row.total, row.stripe, row.revolut, row.orders]),
+      [''],
+      ['Vendor Performance'],
+      ['Vendor', 'Revenue', 'Orders', 'AOV', 'Growth Rate'],
+      ...data.vendor_performance.map((row: VendorRevenue) => [
+        row.vendor_name, 
+        row.total_revenue, 
+        row.order_count, 
+        row.avg_order_value, 
+        row.growth_rate
+      ])
+    ];
+
+    return csvData.map(row => row.join(',')).join('\n');
   };
+
+  const downloadCSV = (csv: string, filename: string) => {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    toast.success('Financial report exported successfully');
+  };
+
+  const paymentMethodData = [
+    { name: 'Stripe', value: revenueData.reduce((sum, day) => sum + day.stripe, 0), color: '#635BFF' },
+    { name: 'Revolut', value: revenueData.reduce((sum, day) => sum + day.revolut, 0), color: '#0075EB' }
+  ];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading financial data...</p>
+        </div>
       </div>
     );
   }
@@ -170,189 +230,236 @@ const FinancialOverview = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Financial Overview</h2>
-          <p className="text-gray-600">Revenue analytics and payment insights</p>
+          <h2 className="text-2xl font-bold">Financial Overview</h2>
+          <p className="text-gray-600">Revenue analytics across all vendors</p>
         </div>
+        
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1">
-            <Button
-              variant={selectedPeriod === 'day' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedPeriod('day')}
-            >
-              Today
-            </Button>
-            <Button
-              variant={selectedPeriod === 'week' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedPeriod('week')}
-            >
-              Week
-            </Button>
-            <Button
-              variant={selectedPeriod === 'month' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedPeriod('month')}
-            >
-              Month
-            </Button>
-          </div>
-          <Button onClick={exportFinancialData} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="90d">Last 90 days</SelectItem>
+              <SelectItem value="1y">Last year</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => handleExportData('csv')}
+            className="flex items-center space-x-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export CSV</span>
           </Button>
         </div>
       </div>
 
-      {/* Revenue Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <Euro className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">€{metrics.totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Current Period</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">€{getCurrentRevenue().toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground capitalize">{selectedPeriod}ly revenue</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue Growth</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold">+{metrics.revenueGrowth.toFixed(1)}%</div>
-              <TrendingUp className="h-4 w-4 text-green-500" />
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-3xl font-bold">€{totalRevenue.toFixed(2)}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-green-600" />
             </div>
-            <p className="text-xs text-muted-foreground">vs last period</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Platform Commission</CardTitle>
-            <PieChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">€{metrics.platformCommission.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">5% of total revenue</p>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Orders</p>
+                <p className="text-3xl font-bold">{totalOrders}</p>
+              </div>
+              <Target className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Avg Order Value</p>
+                <p className="text-3xl font-bold">€{avgOrderValue.toFixed(2)}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Growth Rate</p>
+                <p className="text-3xl font-bold flex items-center">
+                  {growthRate > 0 ? '+' : ''}{growthRate.toFixed(1)}%
+                  {growthRate > 0 ? 
+                    <TrendingUp className="h-5 w-5 text-green-600 ml-2" /> : 
+                    <TrendingDown className="h-5 w-5 text-red-600 ml-2" />
+                  }
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Payment Methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CreditCard className="h-5 w-5" />
-              <span>Payment Methods</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <div className="font-medium">Stripe Payments</div>
-                    <div className="text-sm text-gray-600">Card payments</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold">€{metrics.paymentMethods.stripe.toFixed(2)}</div>
-                  <div className="text-sm text-gray-600">
-                    {((metrics.paymentMethods.stripe / metrics.totalRevenue) * 100).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="vendors">Vendor Performance</TabsTrigger>
+          <TabsTrigger value="payment-methods">Payment Methods</TabsTrigger>
+        </TabsList>
 
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Smartphone className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <div className="font-medium">Revolut Payments</div>
-                    <div className="text-sm text-gray-600">Mobile payments</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold">€{metrics.paymentMethods.revolut.toFixed(2)}</div>
-                  <div className="text-sm text-gray-600">
-                    {((metrics.paymentMethods.revolut / metrics.totalRevenue) * 100).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue Trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="total" stroke="#3B82F6" strokeWidth={2} />
+                  <Line type="monotone" dataKey="stripe" stroke="#635BFF" strokeWidth={1} />
+                  <Line type="monotone" dataKey="revolut" stroke="#0075EB" strokeWidth={1} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
-              <span>Top Performing Vendors</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {metrics.topVendors.map((vendor, index) => (
-                <div key={vendor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <TabsContent value="vendors" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Performing Vendors</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {vendorRevenues.slice(0, 10).map((vendor, index) => (
+                  <div key={vendor.vendor_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium">{vendor.vendor_name}</p>
+                        <p className="text-sm text-gray-600">{vendor.order_count} orders</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">€{vendor.total_revenue.toFixed(2)}</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-gray-600">AOV: €{vendor.avg_order_value.toFixed(2)}</p>
+                        <Badge className={vendor.growth_rate > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          {vendor.growth_rate > 0 ? '+' : ''}{vendor.growth_rate.toFixed(1)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payment-methods" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Method Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={paymentMethodData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                    >
+                      {paymentMethodData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex justify-center space-x-6 mt-4">
+                  {paymentMethodData.map((method) => (
+                    <div key={method.name} className="flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: method.color }}
+                      />
+                      <span className="text-sm">{method.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Method Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <Badge variant="outline">#{index + 1}</Badge>
+                    <CreditCard className="h-8 w-8 text-blue-600" />
                     <div>
-                      <div className="font-medium">{vendor.name}</div>
-                      <div className="text-sm text-gray-600">{vendor.orders} orders</div>
+                      <p className="font-medium">Stripe</p>
+                      <p className="text-sm text-gray-600">Credit/Debit Cards</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold">€{vendor.revenue.toFixed(2)}</div>
-                    <div className="text-sm text-gray-600">
-                      {((vendor.revenue / metrics.totalRevenue) * 100).toFixed(1)}%
-                    </div>
+                    <p className="font-semibold">€{paymentMethodData[0]?.value.toFixed(2) || '0.00'}</p>
+                    <p className="text-sm text-gray-600">
+                      {paymentMethodData[0] && totalRevenue > 0 
+                        ? ((paymentMethodData[0].value / totalRevenue) * 100).toFixed(1) 
+                        : '0'
+                      }% of total
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Financial Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            <div className="p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">€{metrics.totalRevenue.toFixed(2)}</div>
-              <div className="text-sm text-green-800">Total Platform Revenue</div>
-            </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">€{(metrics.totalRevenue * 0.95).toFixed(2)}</div>
-              <div className="text-sm text-blue-800">Vendor Payouts (95%)</div>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">€{metrics.platformCommission.toFixed(2)}</div>
-              <div className="text-sm text-purple-800">Platform Commission (5%)</div>
-            </div>
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Smartphone className="h-8 w-8 text-purple-600" />
+                    <div>
+                      <p className="font-medium">Revolut</p>
+                      <p className="text-sm text-gray-600">Digital Payments</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">€{paymentMethodData[1]?.value.toFixed(2) || '0.00'}</p>
+                    <p className="text-sm text-gray-600">
+                      {paymentMethodData[1] && totalRevenue > 0 
+                        ? ((paymentMethodData[1].value / totalRevenue) * 100).toFixed(1) 
+                        : '0'
+                      }% of total
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

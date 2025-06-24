@@ -1,146 +1,140 @@
+interface AIError {
+  id: string;
+  timestamp: string;
+  component: string;
+  error: string;
+  context?: any;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  resolved: boolean;
+}
 
-import { supabase } from '@/integrations/supabase/client';
-import { logSystemEvent } from '@/utils/systemLogs';
+class AIMonitor {
+  private errors: AIError[] = [];
+  private maxErrors = 100;
 
-const SUPABASE_EDGE_BASE = "https://nireplgrlwhwppjtfxbb.supabase.co/functions/v1";
+  logError(component: string, error: Error, context?: any) {
+    const aiError: AIError = {
+      id: `ai-error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      component,
+      error: error.message,
+      context,
+      severity: this.determineSeverity(error),
+      resolved: false
+    };
 
-type EventType = "error" | "codeGenerated" | "taskComplete" | "uiLoaded" | "manualReview";
-
-const ENDPOINTS: Record<EventType, string> = {
-  error: "ai-error-fix",
-  codeGenerated: "ai-code-evaluator", 
-  taskComplete: "ai-task-review",
-  uiLoaded: "ai-ux-recommendation",
-  manualReview: "ai-error-handler"
-};
-
-export async function aiMonitor(
-  eventType: EventType,
-  payload: Record<string, any> = {}
-): Promise<any> {
-  const endpoint = ENDPOINTS[eventType];
-  if (!endpoint) {
-    console.warn(`[aiMonitor] Unknown event: ${eventType}`);
-    return;
-  }
-
-  try {
-    console.log(`🤖 AI Monitor: Triggering ${eventType} → ${endpoint}`);
+    this.errors.unshift(aiError);
     
-    const response = await supabase.functions.invoke(endpoint, {
-      body: {
-        timestamp: new Date().toISOString(),
-        eventType,
-        ...payload
-      }
-    });
-
-    if (response.error) {
-      console.error(`[aiMonitor] Error calling ${endpoint}:`, response.error);
-      return null;
+    // Keep only the most recent errors
+    if (this.errors.length > this.maxErrors) {
+      this.errors = this.errors.slice(0, this.maxErrors);
     }
 
-    console.log(`✅ AI Function (${eventType}) → ${endpoint}:`, response.data);
+    // Log to console in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[AI Monitor] ${component}:`, error, context);
+    }
+
+    // In production, you might want to send to an external service
+    this.reportToService(aiError);
+  }
+
+  private determineSeverity(error: Error): AIError['severity'] {
+    const message = error.message.toLowerCase();
     
-    // Log to system_logs instead of ai_waiter_logs
-    await logSystemEvent({
-      log_type: 'info',
-      component: 'ai_monitor',
-      message: `AI function ${endpoint} triggered for ${eventType}`,
-      metadata: {
-        endpoint,
-        payload,
-        result: response.data,
-        timestamp: new Date().toISOString()
-      }
-    });
+    if (message.includes('network') || message.includes('fetch')) {
+      return 'medium';
+    }
     
-    return response.data;
-  } catch (err) {
-    console.error(`[aiMonitor] Failed to call ${endpoint}:`, err);
+    if (message.includes('ai') || message.includes('openai') || message.includes('gpt')) {
+      return 'high';
+    }
     
-    // Log error to system_logs
-    await logSystemEvent({
-      log_type: 'error',
-      component: 'ai_monitor',
-      message: `Failed to call AI function ${endpoint}: ${err}`,
-      metadata: {
-        endpoint,
-        payload,
-        error: String(err),
-        timestamp: new Date().toISOString()
-      }
-    });
+    if (message.includes('payment') || message.includes('stripe')) {
+      return 'critical';
+    }
     
-    return null;
+    return 'low';
+  }
+
+  private async reportToService(error: AIError) {
+    try {
+      // In a real implementation, you'd send to your monitoring service
+      // For now, we'll just store it locally
+      const existingErrors = JSON.parse(localStorage.getItem('ai-errors') || '[]');
+      existingErrors.unshift(error);
+      localStorage.setItem('ai-errors', JSON.stringify(existingErrors.slice(0, 50)));
+    } catch (e) {
+      console.warn('Failed to store AI error:', e);
+    }
+  }
+
+  getErrors(): AIError[] {
+    return [...this.errors];
+  }
+
+  getErrorsByComponent(component: string): AIError[] {
+    return this.errors.filter(error => error.component === component);
+  }
+
+  markResolved(errorId: string) {
+    const error = this.errors.find(e => e.id === errorId);
+    if (error) {
+      error.resolved = true;
+    }
+  }
+
+  clearErrors() {
+    this.errors = [];
+    localStorage.removeItem('ai-errors');
+  }
+
+  getStats() {
+    const total = this.errors.length;
+    const resolved = this.errors.filter(e => e.resolved).length;
+    const bySeverity = this.errors.reduce((acc, error) => {
+      acc[error.severity] = (acc[error.severity] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      total,
+      resolved,
+      unresolved: total - resolved,
+      bySeverity
+    };
   }
 }
 
-// Global error handler setup
-export function setupGlobalAIErrorHandling() {
-  window.onerror = (msg, src, lineno, colno, error) => {
-    aiMonitor("error", {
-      message: msg,
-      source: src,
-      line: lineno,
-      column: colno,
-      stack: error?.stack || "N/A"
+// Global instance
+export const aiMonitor = new AIMonitor();
+
+// Convenience function for components
+export const logAIError = (component: string, error: Error, context?: any) => {
+  aiMonitor.logError(component, error, context);
+};
+
+// React error boundary helper
+export const handleComponentError = (error: Error, errorInfo: any, componentName: string) => {
+  logAIError(componentName, error, { errorInfo });
+};
+
+// Add global error handling setup function
+export const setupGlobalAIErrorHandling = () => {
+  // Set up global error handlers
+  window.addEventListener('error', (event) => {
+    logAIError('Global', new Error(event.message), {
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno
     });
-  };
+  });
 
   window.addEventListener('unhandledrejection', (event) => {
-    aiMonitor("error", {
-      message: "Unhandled Promise Rejection",
-      source: "Promise",
-      stack: event.reason?.stack || event.reason || "N/A"
+    logAIError('Promise', new Error(event.reason), {
+      type: 'unhandledrejection'
     });
   });
-}
 
-// Automated QA flow
-export async function runQAFlow(task: string, implementation: string) {
-  console.log('🧪 Starting AI QA Flow...');
-  
-  // Step 1: Review the task
-  const reviewResult = await aiMonitor("taskComplete", {
-    task,
-    implementation
-  });
-  
-  if (!reviewResult) {
-    console.error('❌ Task review failed');
-    return false;
-  }
-  
-  // Step 2: Check if review indicates issues
-  const reviewText = reviewResult.review || '';
-  const hasIssues = ['incomplete', 'error', 'fail', 'bug', 'missing', 'should improve', 'fix']
-    .some(word => reviewText.toLowerCase().includes(word));
-  
-  if (!hasIssues) {
-    console.log('✅ QA Passed - No issues found');
-    return true;
-  }
-  
-  console.log('⚠️ QA Found Issues - Triggering Auto-Fix...');
-  
-  // Step 3: Trigger error fix
-  const fixResult = await aiMonitor("error", {
-    message: `QA Review found issues: ${reviewText}`,
-    task,
-    implementation,
-    source: "QA Review"
-  });
-  
-  if (fixResult) {
-    console.log('🔧 Auto-fix suggestions received:', fixResult);
-    
-    // Step 4: Re-evaluate after suggestions
-    await aiMonitor("codeGenerated", {
-      code: implementation,
-      context: `Post-fix evaluation for task: ${task}`
-    });
-  }
-  
-  return false;
-}
+  console.log('AI error monitoring initialized');
+};
