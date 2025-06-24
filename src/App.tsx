@@ -11,6 +11,9 @@ import VendorDashboard from "./pages/VendorDashboard";
 import VendorOnboarding from "./pages/VendorOnboarding";
 import AdminPanel from "./pages/AdminPanel";
 import ProductionAudit from "./pages/ProductionAudit";
+import OrderTracking from "./pages/OrderTracking";
+import OrderRating from "./pages/OrderRating";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +29,9 @@ const App = () => (
           
           {/* Client App Routes */}
           <Route path="/order/:vendorSlug" element={<ClientOrder />} />
+          <Route path="/order/tracking/:orderId" element={<OrderTracking />} />
+          <Route path="/rate-order/:orderId" element={<OrderRating />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
           
           {/* Vendor App Routes */}
           <Route path="/vendor" element={<VendorDashboard />} />

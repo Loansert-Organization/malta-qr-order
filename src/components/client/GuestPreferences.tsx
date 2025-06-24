@@ -76,7 +76,9 @@ const GuestPreferences: React.FC<GuestPreferencesProps> = ({ sessionId, vendorId
         setPreferences({
           dietary_restrictions: data.dietary_restrictions || [],
           favorite_categories: data.favorite_categories || [],
-          ai_memory: data.ai_memory || {}
+          ai_memory: (data.ai_memory && typeof data.ai_memory === 'object' && !Array.isArray(data.ai_memory)) 
+            ? data.ai_memory as Record<string, any> 
+            : {}
         });
       }
     } catch (error) {
@@ -129,6 +131,15 @@ const GuestPreferences: React.FC<GuestPreferencesProps> = ({ sessionId, vendorId
         ? prev.favorite_categories.filter(c => c !== category)
         : [...prev.favorite_categories, category]
     }));
+  };
+
+  const formatAIMemoryValue = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return value.toString();
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) return value.join(', ');
+    if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+    return String(value);
   };
 
   if (loading) {
@@ -212,7 +223,7 @@ const GuestPreferences: React.FC<GuestPreferencesProps> = ({ sessionId, vendorId
               Object.entries(preferences.ai_memory).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium">{key}</span>
-                  <Badge variant="secondary">{String(value)}</Badge>
+                  <Badge variant="secondary">{formatAIMemoryValue(value)}</Badge>
                 </div>
               ))
             ) : (

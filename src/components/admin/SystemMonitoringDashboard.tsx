@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -184,11 +185,10 @@ const SystemMonitoringDashboard = () => {
   };
 
   const handleExportData = () => {
-    if (!metrics) return;
-    
     const exportData = {
-      timeRange,
-      metrics,
+      systemHealth,
+      alerts,
+      performanceData,
       exportedAt: new Date().toISOString()
     };
 
@@ -196,13 +196,13 @@ const SystemMonitoringDashboard = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `analytics-${vendorId}-${timeRange}.json`;
+    a.download = `system-monitoring-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
 
-    toast.success('Analytics data exported successfully');
+    toast.success('System monitoring data exported successfully');
   };
 
   const handleResolveAlert = async (alertId: string) => {
@@ -270,7 +270,7 @@ const SystemMonitoringDashboard = () => {
           
           <Button
             variant="outline"
-            onClick={() => toast('Export feature coming soon!')}
+            onClick={handleExportData}
             className="flex items-center space-x-2"
           >
             <Download className="h-4 w-4" />
