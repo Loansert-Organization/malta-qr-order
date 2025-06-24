@@ -66,7 +66,8 @@ const FinancialOverview = () => {
           total_amount,
           payment_method,
           created_at,
-          vendors!inner(name)
+          vendor_id,
+          vendors!inner(id, name)
         `)
         .gte('created_at', startDate.toISOString())
         .eq('payment_status', 'paid')
@@ -118,7 +119,7 @@ const FinancialOverview = () => {
       const vendorRevenueMap = new Map<string, {name: string, revenue: number, orders: number}>();
       
       orders?.forEach(order => {
-        const vendorId = order.vendors.id;
+        const vendorId = order.vendor_id;
         const vendorName = order.vendors.name;
         const existing = vendorRevenueMap.get(vendorId) || {name: vendorName, revenue: 0, orders: 0};
         
@@ -166,7 +167,7 @@ const FinancialOverview = () => {
       downloadCSV(csv, `financial-report-${timeRange}-${new Date().toISOString().split('T')[0]}.csv`);
     } else {
       // For Google Sheets, we'd typically use Google Sheets API
-      toast.info('Google Sheets export feature coming soon!');
+      toast('Google Sheets export feature coming soon!');
     }
   };
 

@@ -78,7 +78,8 @@ const MenuQATool = () => {
 
   const fetchMenuItems = async () => {
     try {
-      const { data, error } = await supabase
+      // First get menu items with vendor information
+      const { data: menuItemsData, error: menuItemsError } = await supabase
         .from('menu_items')
         .select(`
           id,
@@ -87,19 +88,45 @@ const MenuQATool = () => {
           description,
           image_url,
           category,
-          allergens,
-          vendor_id,
-          vendors!inner(name)
+          allergens
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (menuItemsError) throw menuItemsError;
 
-      const itemsWithIssues = (data || []).map(item => ({
-        ...item,
-        vendor_name: item.vendors.name,
-        issues: analyzeItem(item)
-      }));
+      // Then get vendor information separately
+      const { data: menusData, error: menusError } = await supabase
+        .from('menus')
+        .select(`
+          id,
+          vendor_id,
+          vendors!inner(id, name)
+        `);
+
+      if (menusError) throw menusError;
+
+      // Create a map of menu_id to vendor info
+      const menuToVendorMap = new Map();
+      menusData?.forEach(menu => {
+        menuToVendorMap.set(menu.id, {
+          vendor_id: menu.vendor_id,
+          vendor_name: menu.vendors.name
+        });
+      });
+
+      const itemsWithIssues = (menuItemsData || []).map(item => {
+        const vendorInfo = menuToVendorMap.get(item.menu_id) || { 
+          vendor_id: 'unknown', 
+          vendor_name: 'Unknown Vendor' 
+        };
+        
+        return {
+          ...item,
+          vendor_id: vendorInfo.vendor_id,
+          vendor_name: vendorInfo.vendor_name,
+          issues: analyzeItem(item)
+        };
+      });
 
       setMenuItems(itemsWithIssues);
     } catch (error) {

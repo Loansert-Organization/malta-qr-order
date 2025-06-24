@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -107,9 +106,32 @@ const MenuBuilderAIWizard: React.FC<MenuBuilderAIWizardProps> = ({
     try {
       setProcessing(true);
       
+      // First, get or create the menu for this vendor
+      let { data: menu, error: menuError } = await supabase
+        .from('menus')
+        .select('id')
+        .eq('vendor_id', vendorId)
+        .single();
+
+      if (menuError || !menu) {
+        // Create a new menu if one doesn't exist
+        const { data: newMenu, error: createMenuError } = await supabase
+          .from('menus')
+          .insert({
+            vendor_id: vendorId,
+            name: 'Main Menu',
+            active: true
+          })
+          .select('id')
+          .single();
+
+        if (createMenuError) throw createMenuError;
+        menu = newMenu;
+      }
+
       // Create menu items in database
       const menuItems = selectedItems.map(item => ({
-        vendor_id: vendorId,
+        menu_id: menu.id,
         name: item.name,
         price: item.price,
         category: item.category,
