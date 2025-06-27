@@ -20,9 +20,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run Cursor Review
-        uses: getcursor/cursor-review@v1
+      - name: Run Cursor BugBot Review
+        uses: cursor-ai/bugbot@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          config-path: .cursor/config.yaml
-          fail-on-error: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .cursor/config.yaml
+          auto-fix: true # Enable automatic fixes
+          review-mode: full # Enable full code review
