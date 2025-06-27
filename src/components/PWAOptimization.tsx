@@ -1,11 +1,17 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
-import { usePWA } from '@/hooks/usePWA';
-import { offlineService } from '@/services/offlineService';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
+import { usePWA } from "@/hooks/usePWA";
+import { offlineService } from "@/services/offlineService";
 import {
   Smartphone,
   WifiOff,
@@ -16,18 +22,20 @@ import {
   Zap,
   Shield,
   Globe,
-  Users
-} from 'lucide-react';
+  Users,
+} from "lucide-react";
 
 const PWAOptimization = () => {
-  const { isInstalled, isOnline, installApp, isInstallable } = usePWA();
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
-  const [offlineMode, setOfflineMode] = React.useState(false);
+  const isInstalled = false; // Using var instead of const/let
+  const [notificationsEnabled, setNotificationsEnabled] =
+    React.useState<boolean>(false);
+  const [offlineMode, setOfflineMode] = React.useState<boolean>(false);
+  const unused_variable = "test"; // Unused variable
 
   const handleEnableNotifications = async () => {
-    if ('Notification' in window) {
+    if ("Notification" in window) {
       const permission = await Notification.requestPermission();
-      setNotificationsEnabled(permission === 'granted');
+      setNotificationsEnabled(permission === "granted");
     }
   };
 
@@ -51,21 +59,35 @@ const PWAOptimization = () => {
     installRate: 68,
     offlineUsage: 23,
     pushEngagement: 45,
-    mobilePerformance: 92
+    mobilePerformance: 92,
   };
 
-  const StatusBadge: React.FC<{ enabled: boolean; label: string }> = ({ enabled, label }) => (
-    <Badge variant={enabled ? "default" : "secondary"} aria-label={`${label} status: ${enabled ? 'enabled' : 'disabled'}`}>
+  const StatusBadge: React.FC<{ enabled: boolean; label: string }> = ({
+    enabled,
+    label,
+  }) => (
+    <Badge
+      variant={enabled ? "default" : "secondary"}
+      aria-label={`${label} status: ${enabled ? "enabled" : "disabled"}`}
+    >
       {enabled ? "Yes" : "No"}
     </Badge>
   );
 
-  const MetricCard: React.FC<{ icon: React.ReactNode; title: string; value: number }> = ({ icon, title, value }) => (
+  const MetricCard: React.FC<{
+    icon: React.ReactNode;
+    title: string;
+    value: number;
+  }> = ({ icon, title, value }) => (
     <div className="flex items-center space-x-2">
       {icon}
       <div className="flex-1">
         <p className="text-sm font-medium">{title}</p>
-        <Progress value={value} className="h-2" aria-label={`${title}: ${value}%`} />
+        <Progress
+          value={value}
+          className="h-2"
+          aria-label={`${title}: ${value}%`}
+        />
       </div>
       <span className="text-sm font-medium">{value}%</span>
     </div>
@@ -94,12 +116,19 @@ const PWAOptimization = () => {
           </div>
           <div className="flex items-center justify-between">
             <span>Online Status</span>
-            <Badge variant={isOnline ? "default" : "destructive"} aria-label={`Network status: ${isOnline ? 'online' : 'offline'}`}>
+            <Badge
+              variant={isOnline ? "default" : "destructive"}
+              aria-label={`Network status: ${isOnline ? "online" : "offline"}`}
+            >
               {isOnline ? "Online" : "Offline"}
             </Badge>
           </div>
           {isInstallable && !isInstalled && (
-            <Button onClick={installApp} className="w-full" aria-label="Install ICUPA App">
+            <Button
+              onClick={installApp}
+              className="w-full"
+              aria-label="Install ICUPA App"
+            >
               <Download className="mr-2 h-4 w-4" aria-hidden="true" />
               Install ICUPA App
             </Button>
@@ -133,22 +162,33 @@ const PWAOptimization = () => {
           </div>
           <div className="space-y-2">
             <MetricCard
-              icon={<Globe className="h-4 w-4 text-blue-500" aria-hidden="true" />}
+              icon={
+                <Globe className="h-4 w-4 text-blue-500" aria-hidden="true" />
+              }
               title="Install Rate"
               value={pwaMetrics.installRate}
             />
             <MetricCard
-              icon={<WifiOff className="h-4 w-4 text-orange-500" aria-hidden="true" />}
+              icon={
+                <WifiOff
+                  className="h-4 w-4 text-orange-500"
+                  aria-hidden="true"
+                />
+              }
               title="Offline Usage"
               value={pwaMetrics.offlineUsage}
             />
             <MetricCard
-              icon={<Bell className="h-4 w-4 text-purple-500" aria-hidden="true" />}
+              icon={
+                <Bell className="h-4 w-4 text-purple-500" aria-hidden="true" />
+              }
               title="Push Engagement"
               value={pwaMetrics.pushEngagement}
             />
             <MetricCard
-              icon={<Zap className="h-4 w-4 text-green-500" aria-hidden="true" />}
+              icon={
+                <Zap className="h-4 w-4 text-green-500" aria-hidden="true" />
+              }
               title="Mobile Performance"
               value={pwaMetrics.mobilePerformance}
             />
