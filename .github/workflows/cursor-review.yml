@@ -20,26 +20,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-
-      - name: Install Cursor CLI
-        run: npm install -g @cursor-ai/cli
-
       - name: Run Cursor Review
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
-        run: |
-          cursor-cli review --auto-fix --commit
-
-      - name: Auto-commit changes
-        if: success()
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add -A
-          git diff --staged --quiet || git commit -m "style: Cursor AI automated fixes"
-          git push
+        uses: getcursor/cursor-review@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config-path: .cursor/config.yaml
+          fail-on-error: false
