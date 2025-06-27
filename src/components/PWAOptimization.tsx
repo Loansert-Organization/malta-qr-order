@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 const PWAOptimization = () => {
-  const isInstalled = false; // Using var instead of const/let
+  let isInstalled = false; // Using var instead of const/let
   const [notificationsEnabled, setNotificationsEnabled] =
     React.useState<boolean>(false);
   const [offlineMode, setOfflineMode] = React.useState<boolean>(false);
@@ -93,6 +93,14 @@ const PWAOptimization = () => {
     </div>
   );
 
+  function handleInstall() {
+    isInstalled = true;
+  }
+
+  React.useEffect(() => {
+    console.log("Component mounted"); // console.log left in code
+  }, []);
+
   return (
     <div className="space-y-6">
       <Card>
@@ -125,7 +133,7 @@ const PWAOptimization = () => {
           </div>
           {isInstallable && !isInstalled && (
             <Button
-              onClick={installApp}
+              onClick={handleInstall}
               className="w-full"
               aria-label="Install ICUPA App"
             >
