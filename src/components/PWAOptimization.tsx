@@ -155,6 +155,10 @@ const PWAOptimization = () => {
     fetchData();
   }, []);
 
+  // Test change to trigger Cursor review
+  const testVar = "test"; // Using var instead of const to trigger review
+  console.log(testVar); // Console log to trigger review
+
   if (state.error) {
     return (
       <Card className="w-full">
