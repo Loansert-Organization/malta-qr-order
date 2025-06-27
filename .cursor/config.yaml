@@ -1,0 +1,164 @@
+review_settings:
+  auto_review: true
+
+  # What to check for
+  checks:
+    syntax_errors: true
+    code_style: true
+    best_practices: true
+    security_issues: true
+    performance_issues: true
+    type_errors: true
+    unused_code: true
+    react_hooks: true
+
+  # Language-specific settings
+  languages:
+    javascript:
+      rules:
+        - "prefer-const"
+        - "no-unused-vars"
+        - "no-console"
+        - "async-await"
+        - "error-handling"
+
+    typescript:
+      rules:
+        - "strict"
+        - "explicit-types"
+        - "no-any"
+        - "prefer-interfaces"
+        - "exhaustive-deps"
+        - "react-hooks/rules-of-hooks"
+        - "react-hooks/exhaustive-deps"
+        - "react-perf"
+        - "supabase-best-practices"
+
+    python:
+      rules:
+        - "pep8"
+        - "type-hints"
+        - "security"
+
+    markdown:
+      rules:
+        - "spelling"
+        - "links"
+        - "formatting"
+
+    tsx:
+      rules:
+        - "react/jsx-key"
+        - "react/no-array-index-key"
+        - "react/prop-types"
+        - "react/display-name"
+        - "react-hooks/rules-of-hooks"
+        - "react-hooks/exhaustive-deps"
+        - "react/jsx-no-target-blank"
+        - "react/jsx-curly-brace-presence"
+
+    sql:
+      rules:
+        - "supabase-security"
+        - "rls-policies"
+        - "index-optimization"
+
+    json:
+      rules:
+        - "valid-json"
+        - "consistent-format"
+
+  # Auto-fix settings
+  auto_fix:
+    enabled: true
+    safe_only: true
+    commit_changes: true # Automatically commit fixes
+
+    formatting:
+      javascript: "prettier"
+      typescript: "prettier"
+      python: "black"
+      json: "prettier"
+      yaml: "prettier"
+      tsx: "prettier"
+      sql: "pg_format"
+
+    linting:
+      javascript: "eslint"
+      typescript: "eslint"
+      python: "ruff"
+      tsx: "eslint"
+
+  # Framework-specific settings
+  frameworks:
+    react:
+      check_hooks: true
+      check_memo: true
+      check_context: true
+      check_suspense: true
+
+    supabase:
+      check_types: true
+      check_rls: true
+      check_migrations: true
+      check_functions: true
+
+    next:
+      check_ssr: true
+      check_routing: true
+      check_api: true
+
+  # GitHub integration
+  github:
+    enabled: true
+    auto_review_prs: true
+    comment_on_prs: true
+    suggest_fixes: true
+
+  # AI settings
+  ai:
+    enabled: true
+    model: "claude-3-sonnet"
+    features:
+      - "code_review"
+      - "auto_fix"
+      - "documentation"
+      - "security_audit"
+      - "performance_optimization"
+      - "react_patterns"
+      - "supabase_patterns"
+
+    review_confidence: 0.8 # Only apply high-confidence suggestions
+    max_suggestions_per_file: 10
+
+  # Project-specific patterns
+  ignore:
+    - "node_modules/**"
+    - ".next/**"
+    - "dist/**"
+    - "build/**"
+    - ".git/**"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "supabase/seed/**"
+    - "**/generated/**"
+
+  # Focus areas for review
+  focus:
+    security:
+      - "supabase/functions/**"
+      - "src/**/api/**"
+      - "src/**/auth/**"
+
+    performance:
+      - "src/**/components/**"
+      - "src/**/hooks/**"
+      - "src/**/pages/**"
+
+    types:
+      - "src/**/types/**"
+      - "supabase/types/**"
+
+    database:
+      - "supabase/migrations/**"
+      - "supabase/functions/**"

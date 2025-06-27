@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Get staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(js|ts|jsx|tsx)$' || true)
+
+if [ -n "$STAGED_FILES" ]; then
+  echo "🔍 Running Cursor AI review on staged files..."
+  
+  # Review each staged file
+  for FILE in $STAGED_FILES; do
+    echo "Reviewing $FILE..."
+    cursor-ai review "$FILE" --format json --fix || true
+    
+    # Stage the changes made by Cursor AI
+    git add "$FILE"
+  done
+fi 
