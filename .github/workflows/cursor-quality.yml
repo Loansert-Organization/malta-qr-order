@@ -15,8 +15,12 @@ jobs:
         with:
           node-version: '20'
       - name: Install Cursor CLI
-        run: npm install -g cursor-cli@latest
+        run: npm install -g @trycursor/cli@latest
       - name: Run Cursor robot
+        run: cursor review --openai-key ${ secrets.OPENAI_API_KEY }
+      - name: Commit Cursor fixes
         run: |
-          cursor-cli review \
-            --openai-key ${{ secrets.OPENAI_API_KEY }}
+          git config user.name "Cursor Bot"
+          git config user.email "cursor-bot@example.com"
+          git diff --quiet || (git commit -am "chore(cursor): auto-fixes" && git push)
+ 
