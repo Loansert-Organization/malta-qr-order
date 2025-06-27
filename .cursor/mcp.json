@@ -29,11 +29,27 @@
     "autoFix": true,
     "autoCommit": true,
     "autoPush": true,
-    "requireApproval": false
+    "requireApproval": false,
+    "commitFormat": {
+      "prefix": "🤖 [Cursor]",
+      "messageTemplate": "${prefix}: ${description}\n\nAutomated improvements by Cursor AI:\n${changes}",
+      "includeStats": true,
+      "addReviewUrl": true
+    }
   },
   "notifications": {
-    "onError": true,
-    "onSuccess": true,
-    "onFix": true
+    "onReview": true,
+    "onFix": true,
+    "onError": true
+  },
+  "logging": {
+    "level": "info",
+    "file": ".cursor/cursor.log",
+    "includeReviews": true
+  },
+  "review": {
+    "outputFormat": "detailed",
+    "generateReport": true,
+    "reportPath": ".cursor/reviews"
   }
 }
