@@ -9,45 +9,13 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Cursor review
+        uses: trycursor/action-docker@v1
         with:
-          node-version: '20'
-
-      # ➊ global install attempt (not fatal if it fails)
-      - name: Try global install
-        run: |
-          npm install -g @trycursor/cli@latest || true
-          npm install -g cursor-cli@latest    || true
-
-      # ➋ run review, falling back through every alias
-      - name: Run Cursor review (fallback chain)
-        shell: bash
-        env:
-          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          set -e
-
-          # helper: run review with a given command name
-          run_review () {
-            echo "👉 Trying command: $1"
-            $1 --version || return 1
-            $1 review --openai-key "$OPENAI_KEY"
-            echo "✅ Success with $1"
-            exit 0
-          }
-
-          # 1. global 'cursor'
-          run_review cursor       || \
-          # 2. global 'cursor-cli'
-          run_review cursor-cli   || \
-          # 3. npx package alias
-          run_review "npx --yes @trycursor/cli cursor"     || \
-          # 4. legacy npx package
-          run_review "npx --yes cursor-cli cursor-cli"     || \
-          { echo "❌ All installation methods failed"; exit 1; }
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Commit Cursor fixes
         run: |
