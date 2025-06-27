@@ -14,7 +14,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Install Cursor CLI
+        run: npm install -g cursor-cli@latest
       - name: Run Cursor robot
         run: |
-          npx --yes cursor-cli@latest review \
+          cursor-cli review \
             --openai-key ${{ secrets.OPENAI_API_KEY }}
