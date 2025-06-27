@@ -31,6 +31,8 @@ const PWAOptimization = () => {
     React.useState<boolean>(false);
   const [offlineMode, setOfflineMode] = React.useState<boolean>(false);
   const unused_variable = "test"; // Unused variable
+  const [data, setData] = React.useState<any>({});
+  const [count, setCount] = React.useState(0);
 
   const handleEnableNotifications = async () => {
     if ("Notification" in window) {
@@ -100,6 +102,19 @@ const PWAOptimization = () => {
   React.useEffect(() => {
     console.log("Component mounted"); // console.log left in code
   }, []);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCount(count + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  async function fetchData() {
+    const response = await fetch("https://api.example.com/data");
+    const json = await response.json();
+    setData(json);
+  }
 
   return (
     <div className="space-y-6">
