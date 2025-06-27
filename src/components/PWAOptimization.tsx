@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -12,50 +12,84 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { usePWA } from "@/hooks/usePWA";
 import { offlineService } from "@/services/offlineService";
+import { AIErrorBoundary } from "@/components/ErrorBoundaries/AIErrorBoundary";
 import {
   Smartphone,
   WifiOff,
   Bell,
   Download,
   CheckCircle,
-  AlertCircle,
+  AlertTriangle,
   Zap,
   Shield,
   Globe,
   Users,
 } from "lucide-react";
 
+interface PWAMetrics {
+  installRate: number;
+  offlineUsage: number;
+  pushEngagement: number;
+  mobilePerformance: number;
+}
+
+interface PWAState {
+  notificationsEnabled: boolean;
+  offlineMode: boolean;
+  data: Record<string, unknown>;
+  error: Error | null;
+  isLoading: boolean;
+}
+
 const PWAOptimization = () => {
-  let isInstalled = false; // Using var instead of const/let
-  const [notificationsEnabled, setNotificationsEnabled] =
-    React.useState<boolean>(false);
-  const [offlineMode, setOfflineMode] = React.useState<boolean>(false);
-  const unused_variable = "test"; // Unused variable
-  const [data, setData] = React.useState<any>({});
-  const [count, setCount] = React.useState(0);
+  const { isInstalled, isInstallable, isOnline, installApp } = usePWA();
+  const [state, setState] = useState<PWAState>({
+    notificationsEnabled: false,
+    offlineMode: false,
+    data: {},
+    error: null,
+    isLoading: false,
+  });
 
   const handleEnableNotifications = async () => {
-    if ("Notification" in window) {
-      const permission = await Notification.requestPermission();
-      setNotificationsEnabled(permission === "granted");
+    try {
+      if ("Notification" in window) {
+        const permission = await Notification.requestPermission();
+        setState((prev) => ({
+          ...prev,
+          notificationsEnabled: permission === "granted",
+        }));
+      }
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        error: error as Error,
+      }));
     }
   };
 
   const handleOfflineModeToggle = async () => {
-    if (!offlineMode) {
-      await offlineService.init();
-      setOfflineMode(true);
-    } else {
-      setOfflineMode(false);
+    try {
+      if (!state.offlineMode) {
+        await offlineService.init();
+        setState((prev) => ({
+          ...prev,
+          offlineMode: true,
+        }));
+      } else {
+        setState((prev) => ({
+          ...prev,
+          offlineMode: false,
+        }));
+      }
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        error: error as Error,
+        offlineMode: false,
+      }));
     }
   };
-
-  interface PWAMetrics {
-    installRate: number;
-    offlineUsage: number;
-    pushEngagement: number;
-    mobilePerformance: number;
-  }
 
   const pwaMetrics: PWAMetrics = {
     installRate: 68,
@@ -95,130 +129,164 @@ const PWAOptimization = () => {
     </div>
   );
 
-  function handleInstall() {
-    isInstalled = true;
-  }
+  const fetchData = async (): Promise<void> => {
+    try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+      const response = await fetch("https://api.example.com/data");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const json = await response.json();
+      setState((prev) => ({
+        ...prev,
+        data: json,
+        isLoading: false,
+      }));
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        error: error as Error,
+        isLoading: false,
+      }));
+    }
+  };
 
-  React.useEffect(() => {
-    console.log("Component mounted"); // console.log left in code
+  useEffect(() => {
+    fetchData();
   }, []);
 
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCount(count + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  async function fetchData() {
-    const response = await fetch("https://api.example.com/data");
-    const json = await response.json();
-    setData(json);
+  if (state.error) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <AlertTriangle className="mr-2 h-5 w-5 text-red-500" />
+            Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-red-600">{state.error.message}</p>
+          <Button
+            onClick={() => fetchData()}
+            className="mt-4"
+            variant="outline"
+            size="sm"
+          >
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Smartphone className="mr-2 h-5 w-5" aria-hidden="true" />
-            PWA Status
-          </CardTitle>
-          <CardDescription>
-            Progressive Web App installation and features status
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span>App Installed</span>
-            <StatusBadge enabled={isInstalled} label="App installation" />
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Installable</span>
-            <StatusBadge enabled={isInstallable} label="App installability" />
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Online Status</span>
-            <Badge
-              variant={isOnline ? "default" : "destructive"}
-              aria-label={`Network status: ${isOnline ? "online" : "offline"}`}
-            >
-              {isOnline ? "Online" : "Offline"}
-            </Badge>
-          </div>
-          {isInstallable && !isInstalled && (
-            <Button
-              onClick={handleInstall}
-              className="w-full"
-              aria-label="Install ICUPA App"
-            >
-              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-              Install ICUPA App
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <WifiOff className="mr-2 h-5 w-5" aria-hidden="true" />
-            Offline Capabilities
-          </CardTitle>
-          <CardDescription>
-            Manage offline mode and data synchronization
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="font-medium">Offline Mode</div>
-              <div className="text-sm text-muted-foreground">
-                Enable offline functionality
-              </div>
+    <AIErrorBoundary>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Smartphone className="mr-2 h-5 w-5" aria-hidden="true" />
+              PWA Status
+            </CardTitle>
+            <CardDescription>
+              Progressive Web App installation and features status
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span>App Installed</span>
+              <StatusBadge enabled={isInstalled} label="App installation" />
             </div>
-            <Switch
-              checked={offlineMode}
-              onCheckedChange={handleOfflineModeToggle}
-              aria-label="Toggle offline mode"
-            />
-          </div>
-          <div className="space-y-2">
-            <MetricCard
-              icon={
-                <Globe className="h-4 w-4 text-blue-500" aria-hidden="true" />
-              }
-              title="Install Rate"
-              value={pwaMetrics.installRate}
-            />
-            <MetricCard
-              icon={
-                <WifiOff
-                  className="h-4 w-4 text-orange-500"
-                  aria-hidden="true"
-                />
-              }
-              title="Offline Usage"
-              value={pwaMetrics.offlineUsage}
-            />
-            <MetricCard
-              icon={
-                <Bell className="h-4 w-4 text-purple-500" aria-hidden="true" />
-              }
-              title="Push Engagement"
-              value={pwaMetrics.pushEngagement}
-            />
-            <MetricCard
-              icon={
-                <Zap className="h-4 w-4 text-green-500" aria-hidden="true" />
-              }
-              title="Mobile Performance"
-              value={pwaMetrics.mobilePerformance}
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex items-center justify-between">
+              <span>Installable</span>
+              <StatusBadge enabled={isInstallable} label="App installability" />
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Online Status</span>
+              <Badge
+                variant={isOnline ? "default" : "destructive"}
+                aria-label={`Network status: ${isOnline ? "online" : "offline"}`}
+              >
+                {isOnline ? "Online" : "Offline"}
+              </Badge>
+            </div>
+            {isInstallable && !isInstalled && (
+              <Button
+                onClick={installApp}
+                className="w-full"
+                aria-label="Install ICUPA App"
+              >
+                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                Install ICUPA App
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <WifiOff className="mr-2 h-5 w-5" aria-hidden="true" />
+              Offline Capabilities
+            </CardTitle>
+            <CardDescription>
+              Manage offline mode and data synchronization
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <div className="font-medium">Offline Mode</div>
+                <div className="text-sm text-muted-foreground">
+                  Enable offline functionality
+                </div>
+              </div>
+              <Switch
+                checked={state.offlineMode}
+                onCheckedChange={handleOfflineModeToggle}
+                aria-label="Toggle offline mode"
+              />
+            </div>
+            <div className="space-y-2">
+              <MetricCard
+                icon={
+                  <Globe className="h-4 w-4 text-blue-500" aria-hidden="true" />
+                }
+                title="Install Rate"
+                value={pwaMetrics.installRate}
+              />
+              <MetricCard
+                icon={
+                  <WifiOff
+                    className="h-4 w-4 text-orange-500"
+                    aria-hidden="true"
+                  />
+                }
+                title="Offline Usage"
+                value={pwaMetrics.offlineUsage}
+              />
+              <MetricCard
+                icon={
+                  <Bell
+                    className="h-4 w-4 text-purple-500"
+                    aria-hidden="true"
+                  />
+                }
+                title="Push Engagement"
+                value={pwaMetrics.pushEngagement}
+              />
+              <MetricCard
+                icon={
+                  <Zap className="h-4 w-4 text-green-500" aria-hidden="true" />
+                }
+                title="Mobile Performance"
+                value={pwaMetrics.mobilePerformance}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AIErrorBoundary>
   );
 };
 
