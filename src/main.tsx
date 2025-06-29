@@ -17,11 +17,7 @@ try {
 
   const root = ReactDOM.createRoot(rootElement);
   
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+  root.render(<App />);
 } catch (error) {
   console.error('Failed to initialize React application:', error);
   
