@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AuditResult {
@@ -77,39 +76,43 @@ class ProductionAuditService {
     const timestamp = new Date().toISOString();
     const auditId = `audit_${Date.now()}`;
 
-    // Mock audit data for now
-    const issues: AuditIssue[] = [
-      {
-        id: 'frontend_1',
-        location: 'Components',
-        description: 'Missing error boundaries',
-        severity: 'medium',
-        status: 'needs_fixing',
-        proposedFix: 'Add React error boundaries to main components'
-      },
-      {
-        id: 'backend_1',
-        location: 'API',
-        description: 'Database connection stable',
-        severity: 'low',
-        status: 'ready',
-        proposedFix: 'No action needed'
-      }
+    // --- REAL AUDIT LOGIC ---
+    const allChecks: { category: string; check: Promise<AuditResult> }[] = [
+      { category: 'database', check: this.auditDatabase() },
+      { category: 'security', check: this.auditSecurity() },
+      { category: 'performance', check: this.auditPerformance() },
+      { category: 'dataIntegrity', check: this.auditDataIntegrity() },
     ];
 
+    const results = await Promise.all(allChecks.map(c => c.check));
+
+    const allIssues: AuditIssue[] = results.flatMap((r, i) => 
+        r.issues.map((issueDesc, issueIdx) => ({
+            id: `${allChecks[i].category}_${issueIdx}`,
+            location: r.category,
+            description: issueDesc,
+            severity: r.status === 'fail' ? 'critical' : r.status === 'warning' ? 'medium' : 'low',
+            status: r.status === 'fail' ? 'broken' : r.status === 'warning' ? 'needs_fixing' : 'ready',
+            proposedFix: r.recommendations[issueIdx] || 'Review manually'
+        }))
+    );
+
     const categories = {
-      frontend: issues.filter(i => i.id.startsWith('frontend')),
-      backend: issues.filter(i => i.id.startsWith('backend')),
-      aiIntegration: [],
-      errorHandling: [],
-      deployment: []
+      database: allIssues.filter(i => i.id.startsWith('database')),
+      security: allIssues.filter(i => i.id.startsWith('security')),
+      performance: allIssues.filter(i => i.id.startsWith('performance')),
+      dataIntegrity: allIssues.filter(i => i.id.startsWith('dataIntegrity')),
+      // Add other categories if new checks are added
     };
 
-    const totalIssues = issues.length;
-    const criticalIssues = issues.filter(i => i.severity === 'critical').length;
-    const readyItems = issues.filter(i => i.status === 'ready').length;
-    const brokenItems = issues.filter(i => i.status === 'broken').length;
-    const productionReadinessScore = Math.max(0, 100 - (criticalIssues * 30) - (brokenItems * 20));
+    const totalIssues = allIssues.length;
+    const criticalIssues = allIssues.filter(i => i.severity === 'critical').length;
+    const readyItems = allIssues.filter(i => i.status === 'ready').length;
+    const brokenItems = allIssues.filter(i => i.status === 'broken').length;
+    
+    // A more realistic score based on weighted issue severity
+    const scoreFromIssues = (criticalIssues * 20) + (brokenItems * 10) + allIssues.filter(i => i.status === 'needs_fixing').length * 5;
+    const productionReadinessScore = Math.max(0, 100 - scoreFromIssues);
 
     return {
       id: auditId,
@@ -119,9 +122,9 @@ class ProductionAuditService {
         totalIssues,
         criticalIssues,
         readyItems,
-        brokenItems
+        brokenItems,
       },
-      categories
+      categories,
     };
   }
 

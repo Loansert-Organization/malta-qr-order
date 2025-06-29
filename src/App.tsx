@@ -13,7 +13,7 @@ import PageTransition from '@/components/PageTransition';
 // Lazy load all route components
 const Index = lazy(() => import("./pages/Index"));
 const ClientHome = lazy(() => import("./pages/ClientHome"));
-const ClientOrder = lazy(() => import("./pages/ClientOrder"));
+// const ClientOrder = lazy(() => import("./pages/ClientOrder")); // DEPRECATED
 const MenuPage = lazy(() => import("./pages/MenuPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const ConfirmPage = lazy(() => import("./pages/ConfirmPage"));
@@ -82,7 +82,7 @@ const RoutesWithAnimation = () => {
         <Route path="/order" element={<PageTransition><CheckoutPage /></PageTransition>} />
         <Route path="/confirm/:orderId" element={<PageTransition><ConfirmPage /></PageTransition>} />
         <Route path="/confirmed/:orderId" element={<PageTransition><ConfirmPage /></PageTransition>} />
-        <Route path="/order/:vendorSlug" element={<PageTransition><ClientOrder /></PageTransition>} />
+        {/* <Route path="/order/:vendorSlug" element={<PageTransition><ClientOrder /></PageTransition>} /> */} {/* DEPRECATED */}
         <Route path="/order/tracking/:orderId" element={<PageTransition><OrderTracking /></PageTransition>} />
         <Route path="/rate-order/:orderId" element={<PageTransition><OrderRating /></PageTransition>} />
         <Route path="/payment-success" element={<PageTransition><PaymentSuccess /></PageTransition>} />

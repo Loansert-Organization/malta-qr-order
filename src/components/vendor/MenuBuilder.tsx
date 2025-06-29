@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,9 +64,9 @@ const MenuBuilder: React.FC<MenuBuilderProps> = ({
   const fetchMenuItems = async () => {
     try {
       const { data, error } = await supabase
-        .from('menu_items')
+        .from('menus')
         .select('*')
-        .eq('menu_id', menuId)
+        .eq('bar_id', vendorId)
         .order('category', { ascending: true });
 
       if (error) throw error;
@@ -89,7 +88,7 @@ const MenuBuilder: React.FC<MenuBuilderProps> = ({
       if (item.id) {
         // Update existing item
         const { error } = await supabase
-          .from('menu_items')
+          .from('menus')
           .update({
             name: item.name,
             description: item.description,
@@ -106,9 +105,9 @@ const MenuBuilder: React.FC<MenuBuilderProps> = ({
       } else {
         // Create new item
         const { error } = await supabase
-          .from('menu_items')
+          .from('menus')
           .insert({
-            menu_id: menuId,
+            bar_id: vendorId,
             name: item.name,
             description: item.description,
             price: item.price,
@@ -142,7 +141,7 @@ const MenuBuilder: React.FC<MenuBuilderProps> = ({
   const handleDeleteItem = async (itemId: string) => {
     try {
       const { error } = await supabase
-        .from('menu_items')
+        .from('menus')
         .delete()
         .eq('id', itemId);
 
@@ -172,7 +171,7 @@ const MenuBuilder: React.FC<MenuBuilderProps> = ({
       });
 
       const { data, error } = await supabase.functions.invoke('extract-menu-items', {
-        body: { vendorId, menuId }
+        body: { barId: vendorId }
       });
 
       if (error) throw error;

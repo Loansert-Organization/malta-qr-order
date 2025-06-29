@@ -334,33 +334,36 @@ const OrderTracking = () => {
         </Card>
 
         {/* Status History */}
-        {order.status_history.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {order.status_history.map((status, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      {getStatusIcon(status.status)}
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Timeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {order.status_history.sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime()).map((status, index) => (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                       <CheckCircle className="h-2 w-2 text-white"/>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium capitalize">{status.status}</p>
-                      <p className="text-sm text-gray-600">
-                        {new Date(status.changed_at).toLocaleString()}
-                      </p>
-                      {status.notes && (
-                        <p className="text-sm text-gray-500">{status.notes}</p>
-                      )}
-                    </div>
+                    {index < order.status_history.length - 1 && (
+                      <div className="w-px h-12 bg-gray-200"></div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  <div className="flex-1 pt-px">
+                    <p className="font-medium capitalize">{status.status}</p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(status.changed_at).toLocaleString()}
+                    </p>
+                    {status.notes && (
+                      <p className="text-xs text-gray-400 mt-1">{status.notes}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Action Buttons */}
         {order.status === 'completed' && (
