@@ -59,49 +59,109 @@ const VendorApprovalSystem = () => {
 
   useEffect(() => {
     fetchApplications();
+
+    // Set up real-time subscription for vendor applications
+    const applicationsChannel = supabase
+      .channel('vendor-applications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'vendor_applications'
+        },
+        () => {
+          // Refresh applications when changes occur
+          fetchApplications();
+        }
+      )
+      .subscribe();
+
+    // Set up real-time subscription for verification checklists
+    const checklistChannel = supabase
+      .channel('verification-checklists')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'verification_checklist'
+        },
+        () => {
+          // Refresh applications to get updated checklist data
+          fetchApplications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(applicationsChannel);
+      supabase.removeChannel(checklistChannel);
+    };
   }, []);
 
   const fetchApplications = async () => {
     try {
       setLoading(true);
 
-      // For demo purposes, create mock data since the tables might not have the exact structure
-      const mockApplications: VendorApplication[] = [
-        {
-          id: '1',
-          business_name: 'Demo Restaurant',
-          business_email: 'demo@restaurant.com',
-          business_phone: '+356 1234 5678',
-          location: 'Valletta, Malta',
-          business_type: 'Restaurant',
-          description: 'A traditional Maltese restaurant serving authentic local cuisine.',
-          website_url: 'https://demo-restaurant.com',
-          owner_name: 'John Doe',
-          owner_email: 'john@restaurant.com',
-          owner_phone: '+356 9876 5432',
-          status: 'pending',
-          applied_at: new Date().toISOString(),
-          documents: [
-            {
-              type: 'Business License',
-              file_url: '/documents/license.pdf',
-              uploaded_at: new Date().toISOString()
-            }
-          ],
-          verification_checklist: {
-            business_license: false,
-            food_safety_cert: false,
-            insurance_docs: false,
-            bank_details: false,
-            identity_verified: false
-          }
-        }
-      ];
+      // Fetch real applications from database
+      const { data: applicationsData, error: applicationsError } = await supabase
+        .from('vendor_applications')
+        .select(`
+          *,
+          vendor_documents (
+            id,
+            type,
+            file_url,
+            uploaded_at
+          ),
+          verification_checklist (
+            business_license,
+            food_safety_cert,
+            insurance_docs,
+            bank_details,
+            identity_verified
+          )
+        `)
+        .order('applied_at', { ascending: false });
 
-      setApplications(mockApplications);
+      if (applicationsError) throw applicationsError;
+
+      // Transform data to match component interface
+      const vendorApplications: VendorApplication[] = (applicationsData || []).map(app => ({
+        id: app.id,
+        business_name: app.business_name,
+        business_email: app.business_email,
+        business_phone: app.business_phone,
+        location: app.location,
+        business_type: app.business_type,
+        description: app.description,
+        website_url: app.website_url,
+        instagram_handle: app.instagram_handle,
+        owner_name: app.owner_name,
+        owner_email: app.owner_email,
+        owner_phone: app.owner_phone,
+        status: app.status as VendorApplication['status'],
+        applied_at: app.applied_at || app.created_at,
+        reviewed_at: app.reviewed_at,
+        reviewer_notes: app.reviewer_notes,
+        documents: app.vendor_documents || [],
+        verification_checklist: app.verification_checklist?.[0] || {
+          business_license: false,
+          food_safety_cert: false,
+          insurance_docs: false,
+          bank_details: false,
+          identity_verified: false
+        }
+      }));
+
+      setApplications(vendorApplications);
     } catch (error) {
       console.error('Error fetching applications:', error);
       toast.error('Failed to load vendor applications');
+      
+      // Fallback to empty array on error
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -111,7 +171,19 @@ const VendorApprovalSystem = () => {
     try {
       setProcessing(true);
 
-      // Mock the status update for demo
+      // Update in database
+      const { error } = await supabase
+        .from('vendor_applications')
+        .update({
+          status,
+          reviewed_at: new Date().toISOString(),
+          reviewer_notes: notes || reviewNotes || null
+        })
+        .eq('id', applicationId);
+
+      if (error) throw error;
+
+      // Update local state
       setApplications(prev => prev.map(app => 
         app.id === applicationId 
           ? { ...app, status: status as any, reviewed_at: new Date().toISOString(), reviewer_notes: notes || reviewNotes }
@@ -125,9 +197,9 @@ const VendorApprovalSystem = () => {
       toast.success(`Application ${status} successfully`);
       setSelectedApplication(null);
       setReviewNotes('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating application:', error);
-      toast.error('Failed to update application');
+      toast.error(error.message || 'Failed to update application');
     } finally {
       setProcessing(false);
     }
@@ -166,7 +238,34 @@ const VendorApprovalSystem = () => {
 
   const updateVerificationItem = async (applicationId: string, item: string, checked: boolean) => {
     try {
-      // Update local state for demo
+      // First check if a verification checklist exists
+      const { data: existing } = await supabase
+        .from('verification_checklist')
+        .select('id')
+        .eq('application_id', applicationId)
+        .single();
+
+      if (existing) {
+        // Update existing checklist
+        const { error } = await supabase
+          .from('verification_checklist')
+          .update({ [item]: checked })
+          .eq('application_id', applicationId);
+
+        if (error) throw error;
+      } else {
+        // Create new checklist
+        const { error } = await supabase
+          .from('verification_checklist')
+          .insert({
+            application_id: applicationId,
+            [item]: checked
+          });
+
+        if (error) throw error;
+      }
+
+      // Update local state
       setApplications(prev => prev.map(app => 
         app.id === applicationId 
           ? {
@@ -188,9 +287,11 @@ const VendorApprovalSystem = () => {
           }
         } : null);
       }
-    } catch (error) {
+
+      toast.success('Verification updated');
+    } catch (error: any) {
       console.error('Error updating verification:', error);
-      toast.error('Failed to update verification');
+      toast.error(error.message || 'Failed to update verification');
     }
   };
 

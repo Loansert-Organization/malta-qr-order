@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,8 @@ import { Separator } from '@/components/ui/separator';
 import { CreditCard, Smartphone, ShoppingCart, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import RevolutPaymentButton from './RevolutPaymentButton';
+import StripePaymentForm from './StripePaymentForm';
 
 interface CartItem {
   id: string;
@@ -32,6 +33,8 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'revolut'>('stripe');
+  const [order, setOrder] = useState<any>(null);
+  const [paymentStarted, setPaymentStarted] = useState(false);
   const { toast } = useToast();
 
   const getTotalPrice = () => {
@@ -42,72 +45,146 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
     return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const handlePayment = async () => {
+  const createOrder = async () => {
     if (cartItems.length === 0) {
       toast({
         title: "Empty Cart",
         description: "Please add items to your cart before ordering.",
         variant: "destructive"
       });
-      return;
+      return null;
     }
 
     setLoading(true);
     try {
+      // Get vendor details for payment
+      const { data: vendor } = await supabase
+        .from('vendors')
+        .select('name, business_name, revolut_payment_link')
+        .eq('id', vendorId)
+        .single();
+
       // Create order in database
-      const { data: order, error: orderError } = await supabase
+      const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           vendor_id: vendorId,
           guest_session_id: guestSessionId,
           total_amount: getTotalPrice(),
-          items: cartItems,
-          table_number: tableNumber,
+          table_identifier: tableNumber,
           status: 'pending',
-          payment_method: paymentMethod
+          payment_method: paymentMethod,
+          payment_status: 'pending',
+          agreed_to_terms: true,
+          whatsapp_consent: false
         })
         .select()
         .single();
 
-      if (orderError || !order) {
+      if (orderError || !newOrder) {
         throw new Error('Failed to create order');
       }
 
-      if (paymentMethod === 'stripe') {
-        // Process Stripe payment
-        const { data, error } = await supabase.functions.invoke('create-stripe-payment', {
-          body: {
-            amount: Math.round(getTotalPrice() * 100), // Convert to cents
-            currency: 'eur',
-            order_id: order.id,
-            customer_email: 'guest@icupa.mt'
-          }
-        });
+      // Create order items
+      const orderItems = cartItems.map(item => ({
+        order_id: newOrder.id,
+        menu_item_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity
+      }));
 
-        if (error) throw error;
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
 
-        // Redirect to Stripe Checkout
-        window.open(data.url, '_blank');
-      } else {
-        // Handle Revolut payment
-        toast({
-          title: "Revolut Payment",
-          description: "Revolut payment integration coming soon!",
-        });
-      }
+      if (itemsError) throw itemsError;
 
-      onPaymentSuccess(order.id);
+      setOrder({ ...newOrder, vendor });
+      return newOrder;
     } catch (error) {
-      console.error('Payment error:', error);
+      console.error('Order creation error:', error);
       toast({
-        title: "Payment Failed",
-        description: "There was an error processing your payment. Please try again.",
+        title: "Order Failed",
+        description: "Failed to create order. Please try again.",
         variant: "destructive"
       });
+      return null;
     } finally {
       setLoading(false);
     }
   };
+
+  const handlePayment = async () => {
+    const newOrder = await createOrder();
+    if (!newOrder) return;
+
+    setPaymentStarted(true);
+  };
+
+  const handlePaymentInitiated = () => {
+    // Payment has been initiated, show status
+    toast({
+      title: "Payment Initiated",
+      description: "Please complete your payment to confirm the order.",
+    });
+  };
+
+  const handleStripeSuccess = () => {
+    onPaymentSuccess(order.id);
+  };
+
+  if (paymentStarted && order) {
+    return (
+      <div className="space-y-6">
+        {/* Order Created Confirmation */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Order #{order.id.slice(-8)}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              Your order has been created. Please complete payment to confirm.
+            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Total Amount:</span>
+                <span className="font-bold">€{getTotalPrice().toFixed(2)}</span>
+              </div>
+              {tableNumber && (
+                <div className="flex justify-between">
+                  <span>Table:</span>
+                  <span>{tableNumber}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Component based on method */}
+        {paymentMethod === 'stripe' ? (
+          <StripePaymentForm
+            amount={getTotalPrice()}
+            currency="eur"
+            orderId={order.id}
+            customerEmail={order.customer_email || 'guest@icupa.mt'}
+            onSuccess={handleStripeSuccess}
+          />
+        ) : (
+          <RevolutPaymentButton
+            orderId={order.id}
+            amount={getTotalPrice()}
+            vendorRevolutLink={order.vendor?.revolut_payment_link}
+            vendorName={order.vendor?.business_name || order.vendor?.name || 'Vendor'}
+            orderReference={order.id.slice(-8)}
+            customerName={order.customer_name}
+            customerPhone={order.customer_phone}
+            onPaymentInitiated={handlePaymentInitiated}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -173,7 +250,7 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
 
           <div 
             className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-              paymentMethod === 'revolut' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+              paymentMethod === 'revolut' ? 'border-purple-500 bg-purple-50' : 'border-gray-200'
             }`}
             onClick={() => setPaymentMethod('revolut')}
           >
@@ -186,7 +263,7 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
                 </div>
               </div>
               {paymentMethod === 'revolut' && (
-                <Check className="h-5 w-5 text-blue-600" />
+                <Check className="h-5 w-5 text-purple-600" />
               )}
             </div>
           </div>
@@ -203,7 +280,7 @@ const PaymentFlow: React.FC<PaymentFlowProps> = ({
         {loading ? (
           "Processing..."
         ) : (
-          `Pay €${getTotalPrice().toFixed(2)} - Place Order`
+          `Continue to Payment - €${getTotalPrice().toFixed(2)}`
         )}
       </Button>
     </div>

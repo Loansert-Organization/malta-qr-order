@@ -1,144 +1,154 @@
+import React from 'react';
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { MessageCircle, Shield } from 'lucide-react';
+/* COMMENTED OUT - WhatsApp integration disabled for anonymous auth
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Phone } from 'lucide-react';
+*/
 
 interface WhatsAppConsentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConsent: (phoneNumber: string, consent: boolean) => void;
-  defaultPhone?: string;
+  onConfirm: (phone: string, consent: boolean) => void;
 }
 
 const WhatsAppConsentModal: React.FC<WhatsAppConsentModalProps> = ({
   isOpen,
   onClose,
-  onConsent,
-  defaultPhone = ''
+  onConfirm
 }) => {
-  const [phoneNumber, setPhoneNumber] = useState(defaultPhone);
-  const [hasConsent, setHasConsent] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-
-  const handleSubmit = () => {
-    if (hasConsent && phoneNumber && agreedToTerms) {
-      onConsent(phoneNumber, true);
-    } else {
-      onConsent('', false);
+  // ANONYMOUS AUTH - WhatsApp disabled, auto-skip this modal
+  React.useEffect(() => {
+    if (isOpen) {
+      onConfirm('', false); // Skip with no phone and no consent
+      onClose();
     }
-    onClose();
-    // Reset form
-    setPhoneNumber('');
-    setHasConsent(false);
-    setAgreedToTerms(false);
+  }, [isOpen, onClose, onConfirm]);
+
+  return null; // Don't render anything
+
+  /* COMMENTED OUT - Original WhatsApp implementation
+  const [phone, setPhone] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+
+  const validatePhone = (value: string) => {
+    // Basic phone validation - adjust regex as needed
+    const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+    if (!phoneRegex.test(value)) {
+      setPhoneError('Please enter a valid phone number');
+      return false;
+    }
+    setPhoneError('');
+    return true;
   };
 
-  const handleSkip = () => {
-    onConsent('', false);
-    onClose();
+  const handleConfirm = () => {
+    if (phone && validatePhone(phone)) {
+      onConfirm(phone, consent);
+    }
   };
+
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <MessageCircle className="h-5 w-5 text-green-600" />
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5 text-green-600" />
             <span>WhatsApp Order Updates</span>
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-6">
-          {/* Benefits */}
-          <div className="p-4 bg-green-50 rounded-lg">
+          </CardTitle>
+          <CardDescription>
+            Get real-time updates about your order status
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="bg-green-50 p-4 rounded-lg">
             <h4 className="font-medium text-green-900 mb-2">Get instant updates via WhatsApp:</h4>
             <ul className="text-sm text-green-800 space-y-1">
-              <li>✓ Order confirmation</li>
-              <li>✓ Preparation status updates</li>
-              <li>✓ Ready for pickup notification</li>
-              <li>✓ No need to keep checking back</li>
+              <li>• Order confirmation</li>
+              <li>• Preparation status</li>
+              <li>• Ready for pickup notification</li>
             </ul>
           </div>
 
-          {/* Consent Checkbox */}
-          <div className="flex items-start space-x-3">
-            <Checkbox
-              id="whatsapp-consent"
-              checked={hasConsent}
-              onCheckedChange={(checked) => setHasConsent(checked as boolean)}
-            />
-            <Label htmlFor="whatsapp-consent" className="text-sm cursor-pointer">
-              Yes, I'd like to receive order updates via WhatsApp
-            </Label>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="whatsapp-consent"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="whatsapp-consent" className="text-sm cursor-pointer">
+                Yes, I'd like to receive order updates via WhatsApp
+              </Label>
+            </div>
           </div>
 
-          {/* Phone Number Input */}
-          {hasConsent && (
+          {consent && (
             <div className="space-y-2">
               <Label htmlFor="phone">WhatsApp Phone Number</Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+356 1234 5678"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (phoneError) validatePhone(e.target.value);
+                }}
+                placeholder="+356 XXXX XXXX"
+                className={phoneError ? 'border-red-500' : ''}
               />
-              <p className="text-xs text-gray-600">
-                Include country code (e.g., +356 for Malta)
+              {phoneError && (
+                <p className="text-sm text-red-500">{phoneError}</p>
+              )}
+              <p className="text-xs text-gray-500">
+                We'll only use this for order updates
               </p>
             </div>
           )}
 
-          {/* Privacy Notice */}
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <Shield className="h-4 w-4 text-gray-600 mt-0.5" />
-              <div className="text-xs text-gray-700">
-                <p className="font-medium mb-1">Privacy Notice:</p>
-                <p>
-                  Your phone number will only be used for order updates. 
-                  We won't share it with third parties or use it for marketing. 
-                  You can opt out at any time by replying "STOP".
-                </p>
-              </div>
-            </div>
+          <div className="text-xs text-gray-500 border-t pt-4">
+            <p className="mb-2">Privacy Notice:</p>
+            <ul className="space-y-1">
+              <li>• Your number will only be used for this order</li>
+              <li>• You can opt out at any time</li>
+              <li>• Standard messaging rates may apply</li>
+            </ul>
           </div>
 
-          {/* Terms Agreement */}
-          {hasConsent && (
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="terms-consent"
-                checked={agreedToTerms}
-                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-              />
-              <Label htmlFor="terms-consent" className="text-sm cursor-pointer">
-                I agree to receive WhatsApp messages and have read the privacy notice
-              </Label>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex space-x-3">
-            <Button variant="outline" onClick={handleSkip} className="flex-1">
-              Skip for now
-            </Button>
+          <div className="flex gap-3">
             <Button
-              onClick={handleSubmit}
-              disabled={hasConsent && (!phoneNumber || !agreedToTerms)}
+              onClick={handleConfirm}
+              disabled={consent && (!phone || !!phoneError)}
               className="flex-1"
             >
-              {hasConsent ? 'Enable Updates' : 'Continue'}
+              {consent ? 'Continue with WhatsApp Updates' : 'Continue without Updates'}
+            </Button>
+            <Button
+              onClick={onClose}
+              variant="outline"
+            >
+              Cancel
             </Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+          {consent && (
+            <p className="text-xs text-center text-gray-500">
+              By continuing, you agree to receive WhatsApp messages and have read the privacy notice
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
+  */
 };
 
 export default WhatsAppConsentModal;

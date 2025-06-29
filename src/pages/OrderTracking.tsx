@@ -188,7 +188,7 @@ const OrderTracking = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Not Found</h2>
           <p className="text-gray-600 mb-4">Unable to find your order.</p>
-          <Button onClick={() => navigate('/')}>Back to Home</Button>
+          <Button onClick={() => navigate('/home')}>Back to Home</Button>
         </div>
       </div>
     );
@@ -203,7 +203,7 @@ const OrderTracking = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/home')}
               className="flex items-center space-x-2"
             >
               <ArrowLeft className="h-4 w-4" />

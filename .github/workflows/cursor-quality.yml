@@ -6,9 +6,14 @@ on:
       - main
       - lovable/**
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -16,6 +21,8 @@ jobs:
         uses: trycursor/action-docker@v1
         with:
           openai-key: ${{ secrets.OPENAI_API_KEY }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       - name: Commit Cursor fixes
         run: |

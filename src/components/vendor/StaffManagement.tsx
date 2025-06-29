@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,87 +61,70 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ vendorId }) => {
 
   useEffect(() => {
     fetchStaff();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel(`vendor-staff-${vendorId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'staff_members',
+          filter: `vendor_id=eq.${vendorId}`
+        },
+        (payload) => {
+          console.log('Staff change:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            const newMember = payload.new as any;
+            setStaff(prev => [transformStaffMember(newMember), ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedMember = payload.new as any;
+            setStaff(prev => prev.map(member => 
+              member.id === updatedMember.id ? transformStaffMember(updatedMember) : member
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            const deletedMember = payload.old as any;
+            setStaff(prev => prev.filter(member => member.id !== deletedMember.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [vendorId]);
 
   const fetchStaff = async () => {
     try {
       setLoading(true);
       
-      // For demo purposes, create mock staff data
-      const mockStaff: StaffMember[] = [
-        {
-          id: '1',
-          name: 'John Smith',
-          email: 'john@restaurant.com',
-          phone: '+356 9876 5432',
-          role: 'manager',
-          status: 'active',
-          hire_date: '2023-01-15',
-          last_login: '2024-01-20T10:30:00Z',
-          permissions: ['orders', 'staff', 'menu', 'analytics'],
-          shift_schedule: {
-            monday: { start: '08:00', end: '16:00' },
-            tuesday: { start: '08:00', end: '16:00' },
-            wednesday: { start: '08:00', end: '16:00' },
-            thursday: { start: '08:00', end: '16:00' },
-            friday: { start: '08:00', end: '16:00' }
-          }
-        },
-        {
-          id: '2',
-          name: 'Maria Rodriguez',
-          email: 'maria@restaurant.com',
-          phone: '+356 9876 5433',
-          role: 'waiter',
-          status: 'active',
-          hire_date: '2023-03-10',
-          last_login: '2024-01-20T09:15:00Z',
-          permissions: ['orders'],
-          shift_schedule: {
-            monday: { start: '16:00', end: '00:00' },
-            tuesday: { start: '16:00', end: '00:00' },
-            wednesday: { start: '16:00', end: '00:00' },
-            friday: { start: '16:00', end: '00:00' },
-            saturday: { start: '16:00', end: '00:00' }
-          }
-        },
-        {
-          id: '3',
-          name: 'Giuseppe Chefs',
-          email: 'giuseppe@restaurant.com',
-          role: 'chef',
-          status: 'active',
-          hire_date: '2022-11-01',
-          last_login: '2024-01-19T14:22:00Z',
-          permissions: ['menu'],
-          shift_schedule: {
-            tuesday: { start: '10:00', end: '22:00' },
-            wednesday: { start: '10:00', end: '22:00' },
-            thursday: { start: '10:00', end: '22:00' },
-            friday: { start: '10:00', end: '22:00' },
-            saturday: { start: '10:00', end: '22:00' },
-            sunday: { start: '10:00', end: '22:00' }
-          }
-        },
-        {
-          id: '4',
-          name: 'Anna Cashier',
-          email: 'anna@restaurant.com',
-          role: 'cashier',
-          status: 'pending',
-          hire_date: '2024-01-15',
-          permissions: ['orders'],
-          shift_schedule: {
-            monday: { start: '12:00', end: '20:00' },
-            wednesday: { start: '12:00', end: '20:00' },
-            friday: { start: '12:00', end: '20:00' },
-            saturday: { start: '12:00', end: '20:00' },
-            sunday: { start: '12:00', end: '20:00' }
-          }
-        }
-      ];
+      // Fetch real staff data from database
+      const { data, error } = await supabase
+        .from('staff_members')
+        .select('*')
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false });
 
-      setStaff(mockStaff);
+      if (error) throw error;
+
+      // Transform database data to match component interface
+      const staffMembers: StaffMember[] = (data || []).map(member => ({
+        id: member.id,
+        name: member.name,
+        email: member.email,
+        phone: member.phone,
+        role: member.role as StaffMember['role'],
+        status: member.status as StaffMember['status'],
+        hire_date: member.hire_date,
+        last_login: member.last_login,
+        permissions: member.permissions || [],
+        shift_schedule: member.shift_schedule || undefined
+      }));
+
+      setStaff(staffMembers);
     } catch (error) {
       console.error('Error fetching staff:', error);
       toast.error('Failed to load staff members');
@@ -158,43 +140,86 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ vendorId }) => {
         return;
       }
 
+      // Insert into database
+      const { data, error } = await supabase
+        .from('staff_members')
+        .insert({
+          vendor_id: vendorId,
+          name: newStaff.name,
+          email: newStaff.email,
+          phone: newStaff.phone || null,
+          role: newStaff.role,
+          status: 'pending',
+          permissions: newStaff.role === 'manager' ? ['orders', 'staff', 'menu', 'analytics'] : ['orders']
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to local state
       const staffMember: StaffMember = {
-        id: Date.now().toString(),
-        ...newStaff,
-        status: 'pending',
-        hire_date: new Date().toISOString().split('T')[0],
-        permissions: newStaff.role === 'manager' ? ['orders', 'staff', 'menu', 'analytics'] : ['orders']
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        role: data.role as StaffMember['role'],
+        status: data.status as StaffMember['status'],
+        hire_date: data.hire_date,
+        last_login: data.last_login,
+        permissions: data.permissions || [],
+        shift_schedule: data.shift_schedule
       };
 
-      setStaff(prev => [...prev, staffMember]);
+      setStaff(prev => [staffMember, ...prev]);
       setNewStaff({ name: '', email: '', phone: '', role: 'waiter' });
       setShowAddModal(false);
       toast.success('Staff member added successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding staff member:', error);
-      toast.error('Failed to add staff member');
+      toast.error(error.message || 'Failed to add staff member');
     }
   };
 
   const handleUpdateStaffStatus = async (staffId: string, status: StaffMember['status']) => {
     try {
+      // Update in database
+      const { error } = await supabase
+        .from('staff_members')
+        .update({ status })
+        .eq('id', staffId)
+        .eq('vendor_id', vendorId);
+
+      if (error) throw error;
+
+      // Update local state
       setStaff(prev => prev.map(member => 
         member.id === staffId ? { ...member, status } : member
       ));
       toast.success(`Staff member ${status === 'active' ? 'activated' : 'deactivated'}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating staff status:', error);
-      toast.error('Failed to update staff status');
+      toast.error(error.message || 'Failed to update staff status');
     }
   };
 
   const handleDeleteStaff = async (staffId: string) => {
     try {
+      // Delete from database
+      const { error } = await supabase
+        .from('staff_members')
+        .delete()
+        .eq('id', staffId)
+        .eq('vendor_id', vendorId);
+
+      if (error) throw error;
+
+      // Update local state
       setStaff(prev => prev.filter(member => member.id !== staffId));
       toast.success('Staff member removed');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting staff member:', error);
-      toast.error('Failed to remove staff member');
+      toast.error(error.message || 'Failed to remove staff member');
     }
   };
 
@@ -232,6 +257,20 @@ const StaffManagement: React.FC<StaffManagementProps> = ({ vendorId }) => {
     const activeDays = Object.keys(schedule).length;
     return `${activeDays} days/week`;
   };
+
+  // Helper function to transform database data
+  const transformStaffMember = (dbMember: any): StaffMember => ({
+    id: dbMember.id,
+    name: dbMember.name,
+    email: dbMember.email,
+    phone: dbMember.phone,
+    role: dbMember.role as StaffMember['role'],
+    status: dbMember.status as StaffMember['status'],
+    hire_date: dbMember.hire_date,
+    last_login: dbMember.last_login,
+    permissions: dbMember.permissions || [],
+    shift_schedule: dbMember.shift_schedule
+  });
 
   if (loading) {
     return (

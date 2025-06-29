@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import React from 'react';
 
@@ -335,13 +334,22 @@ export class NotificationService {
   }
 
   private async sendWebPush(subscription: any, notification: any): Promise<void> {
+    // Check if VAPID keys are configured
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = import.meta.env.VAPID_PRIVATE_KEY;
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.warn('Web Push notifications disabled: VAPID keys not configured');
+      return;
+    }
+
     // Implement web push using web-push library
     const webpush = require('web-push');
     
     webpush.setVapidDetails(
       'mailto:admin@icupa.mt',
-      process.env.VAPID_PUBLIC_KEY!,
-      process.env.VAPID_PRIVATE_KEY!
+      vapidPublicKey,
+      vapidPrivateKey
     );
 
     const payload = JSON.stringify({

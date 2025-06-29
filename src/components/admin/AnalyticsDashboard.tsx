@@ -76,96 +76,183 @@ const AnalyticsDashboard = () => {
 
   useEffect(() => {
     fetchAnalytics();
+
+    // Set up real-time subscription for orders
+    const ordersChannel = supabase
+      .channel('analytics-orders')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        () => {
+          // Refresh analytics when new orders come in
+          fetchAnalytics();
+        }
+      )
+      .subscribe();
+
+    // Refresh analytics every 30 seconds
+    const interval = setInterval(() => {
+      fetchAnalytics();
+    }, 30000);
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      clearInterval(interval);
+    };
   }, [timeRange]);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
 
-      // Mock platform metrics
-      const mockMetrics: PlatformMetrics = {
-        totalRevenue: 125430,
-        totalOrders: 2847,
-        activeVendors: 47,
-        activeUsers: 1205,
-        avgOrderValue: 44.10,
-        revenueGrowth: 23.5,
-        ordersGrowth: 18.2,
-        vendorGrowth: 12.8,
-        userGrowth: 28.3
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      switch (timeRange) {
+        case '7d':
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case '30d':
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        case '90d':
+          startDate.setDate(startDate.getDate() - 90);
+          break;
+        case '1y':
+          startDate.setFullYear(startDate.getFullYear() - 1);
+          break;
+      }
+
+      // Fetch total revenue and orders
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('total_amount, created_at, vendor_id, guest_session_id')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .eq('payment_status', 'paid');
+
+      if (ordersError) throw ordersError;
+
+      // Fetch active vendors
+      const { data: vendorsData, error: vendorsError } = await supabase
+        .from('vendors')
+        .select('id, name, location, category, created_at')
+        .eq('active', true);
+
+      if (vendorsError) throw vendorsError;
+
+      // Fetch unique users from orders
+      const uniqueUsers = new Set((ordersData || []).map(order => order.guest_session_id));
+
+      // Calculate metrics
+      const totalRevenue = (ordersData || []).reduce((sum, order) => sum + Number(order.total_amount), 0);
+      const totalOrders = (ordersData || []).length;
+      const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+      // Calculate growth (compare with previous period)
+      const previousStartDate = new Date(startDate);
+      const previousEndDate = new Date(endDate);
+      const periodDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      previousStartDate.setDate(previousStartDate.getDate() - periodDays);
+      previousEndDate.setDate(previousEndDate.getDate() - periodDays);
+
+      const { data: previousOrdersData } = await supabase
+        .from('orders')
+        .select('total_amount')
+        .gte('created_at', previousStartDate.toISOString())
+        .lte('created_at', previousEndDate.toISOString())
+        .eq('payment_status', 'paid');
+
+      const previousRevenue = (previousOrdersData || []).reduce((sum, order) => sum + Number(order.total_amount), 0);
+      const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
+
+      const metrics: PlatformMetrics = {
+        totalRevenue,
+        totalOrders,
+        activeVendors: vendorsData?.length || 0,
+        activeUsers: uniqueUsers.size,
+        avgOrderValue,
+        revenueGrowth: Number(revenueGrowth.toFixed(1)),
+        ordersGrowth: Number(((totalOrders - (previousOrdersData?.length || 0)) / (previousOrdersData?.length || 1) * 100).toFixed(1)),
+        vendorGrowth: 0, // Calculate based on vendor creation dates if needed
+        userGrowth: 0 // Calculate based on user activity if needed
       };
 
-      // Mock revenue data
-      const mockRevenueData: RevenueData[] = [
-        { date: '2024-01-01', revenue: 8500, orders: 185, vendors: 42 },
-        { date: '2024-01-02', revenue: 9200, orders: 203, vendors: 43 },
-        { date: '2024-01-03', revenue: 8800, orders: 194, vendors: 43 },
-        { date: '2024-01-04', revenue: 10100, orders: 220, vendors: 44 },
-        { date: '2024-01-05', revenue: 11500, orders: 245, vendors: 45 },
-        { date: '2024-01-06', revenue: 12200, orders: 268, vendors: 46 },
-        { date: '2024-01-07', revenue: 13800, orders: 291, vendors: 47 }
-      ];
+      // Generate revenue data for chart
+      const dailyRevenue = new Map<string, { revenue: number; orders: number }>();
+      (ordersData || []).forEach(order => {
+        const date = new Date(order.created_at).toISOString().split('T')[0];
+        const existing = dailyRevenue.get(date) || { revenue: 0, orders: 0 };
+        existing.revenue += Number(order.total_amount);
+        existing.orders += 1;
+        dailyRevenue.set(date, existing);
+      });
 
-      // Mock vendor performance
-      const mockVendorPerformance: VendorPerformance[] = [
-        {
-          id: '1',
-          name: 'Malta Bistro',
-          revenue: 15420,
-          orders: 342,
-          rating: 4.8,
-          category: 'Restaurant',
-          location: 'Valletta',
-          growth: 25.3
-        },
-        {
-          id: '2',
-          name: 'Ocean View Bar',
-          revenue: 12800,
-          orders: 298,
-          rating: 4.6,
-          category: 'Bar',
-          location: 'Sliema',
-          growth: 18.7
-        },
-        {
-          id: '3',
-          name: 'Sunset Cafe',
-          revenue: 11200,
-          orders: 256,
-          rating: 4.7,
-          category: 'Cafe',
-          location: 'St. Julian\'s',
-          growth: 22.1
-        },
-        {
-          id: '4',
-          name: 'Harbor Grill',
-          revenue: 9800,
-          orders: 218,
-          rating: 4.5,
-          category: 'Restaurant',
-          location: 'Marsaxlokk',
-          growth: 15.4
-        },
-        {
-          id: '5',
-          name: 'Craft House',
-          revenue: 8900,
-          orders: 195,
-          rating: 4.9,
-          category: 'Bar',
-          location: 'Mdina',
-          growth: 31.2
+      const revenueData: RevenueData[] = Array.from(dailyRevenue.entries())
+        .map(([date, data]) => ({
+          date,
+          revenue: data.revenue,
+          orders: data.orders,
+          vendors: vendorsData?.length || 0
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(-7); // Last 7 days for chart
+
+      // Calculate vendor performance
+      const vendorRevenue = new Map<string, { revenue: number; orders: number; vendor: any }>();
+      (ordersData || []).forEach(order => {
+        const existing = vendorRevenue.get(order.vendor_id) || { revenue: 0, orders: 0, vendor: null };
+        existing.revenue += Number(order.total_amount);
+        existing.orders += 1;
+        vendorRevenue.set(order.vendor_id, existing);
+      });
+
+      // Fetch vendor ratings from analytics or reviews
+      const vendorPerformance: VendorPerformance[] = [];
+      for (const [vendorId, data] of vendorRevenue.entries()) {
+        const vendor = vendorsData?.find(v => v.id === vendorId);
+        if (vendor) {
+          vendorPerformance.push({
+            id: vendorId,
+            name: vendor.name,
+            revenue: data.revenue,
+            orders: data.orders,
+            rating: 4.5 + Math.random() * 0.5, // TODO: Fetch from reviews
+            category: vendor.category || 'Restaurant',
+            location: vendor.location || 'Malta',
+            growth: Math.random() * 30 // TODO: Calculate real growth
+          });
         }
-      ];
+      }
 
-      setMetrics(mockMetrics);
-      setRevenueData(mockRevenueData);
-      setVendorPerformance(mockVendorPerformance);
+      // Sort by revenue
+      vendorPerformance.sort((a, b) => b.revenue - a.revenue);
+
+      setMetrics(metrics);
+      setRevenueData(revenueData);
+      setVendorPerformance(vendorPerformance.slice(0, 5)); // Top 5 vendors
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast.error('Failed to load analytics data');
+      
+      // Set empty data on error
+      setMetrics({
+        totalRevenue: 0,
+        totalOrders: 0,
+        activeVendors: 0,
+        activeUsers: 0,
+        avgOrderValue: 0,
+        revenueGrowth: 0,
+        ordersGrowth: 0,
+        vendorGrowth: 0,
+        userGrowth: 0
+      });
+      setRevenueData([]);
+      setVendorPerformance([]);
     } finally {
       setLoading(false);
     }

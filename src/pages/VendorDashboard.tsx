@@ -1,180 +1,318 @@
-
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShoppingBag, DollarSign, Clock, TrendingUp, Menu, Receipt, Home, ShoppingCart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import EmptyState from '@/components/ui/EmptyState';
 
-// Import vendor components
-import MenuBuilder from '@/components/vendor/MenuBuilder';
-import OrderManagement from '@/components/vendor/OrderManagement';
-import QRGenerator from '@/components/vendor/QRGenerator';
-import AIAnalytics from '@/components/vendor/AIAnalytics';
-
-interface Vendor {
-  id: string;
-  name: string;
-  slug: string;
-  location: string;
-  active: boolean;
-  created_at: string;
+interface VendorStats {
+  todayOrders: number;
+  todaySales: number;
+  pendingOrders: number;
+  popularItem: string;
 }
 
 const VendorDashboard = () => {
-  const [vendor, setVendor] = useState<Vendor | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const [barId, setBarId] = useState<string | null>(null);
+  const [barName, setBarName] = useState<string>('');
+  const [stats, setStats] = useState<VendorStats>({
+    todayOrders: 0,
+    todaySales: 0,
+    pendingOrders: 0,
+    popularItem: 'Loading...'
+  });
+  const [loading, setLoading] = useState(true);
 
-  const fetchVendorData = async () => {
+  useEffect(() => {
+    initializeVendorSession();
+  }, []);
+
+  useEffect(() => {
+    if (barId) {
+      fetchVendorStats();
+      // Set up real-time subscription for orders
+      const subscription = supabase
+        .channel('vendor-orders')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `bar_id=eq.${barId}`
+          },
+          () => {
+            fetchVendorStats();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [barId]);
+
+  const initializeVendorSession = async () => {
+    // Check if we have a stored bar_id in localStorage
+    let storedBarId = localStorage.getItem('vendorBarId');
+    
+    if (!storedBarId) {
+      // For demo purposes, get the first bar from Malta
+      try {
+        const { data: bars, error } = await supabase
+          .from('bars')
+          .select('id, name')
+          .eq('country', 'Malta')
+          .limit(1)
+          .single();
+
+        if (error) throw error;
+
+        if (bars) {
+          storedBarId = bars.id;
+          localStorage.setItem('vendorBarId', storedBarId);
+          setBarName(bars.name);
+        }
+      } catch (error) {
+        console.error('Error fetching demo bar:', error);
+        toast({
+          title: "Error",
+          description: "Failed to initialize vendor session",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Fetch bar name for stored ID
+      try {
+        const { data: bar, error } = await supabase
+          .from('bars')
+          .select('name')
+          .eq('id', storedBarId)
+          .single();
+
+        if (error) throw error;
+        if (bar) setBarName(bar.name);
+      } catch (error) {
+        console.error('Error fetching bar name:', error);
+      }
+    }
+
+    setBarId(storedBarId);
+  };
+
+  const fetchVendorStats = async () => {
+    if (!barId) return;
+
     try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('=== VENDOR DASHBOARD DEBUG ===');
-      console.log('Starting vendor data fetch...');
-      
-      // Fetch the Ta Kris vendor directly
-      console.log('Fetching vendor with slug: ta-kris');
-      const { data: vendorData, error: vendorError } = await supabase
-        .from('vendors')
-        .select('id, name, slug, location, active, created_at')
-        .eq('slug', 'ta-kris')
-        .maybeSingle();
+      // Get today's date range
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-      console.log('Vendor query result:', { vendorData, vendorError });
+      // Fetch today's orders
+      const { data: todayOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('bar_id', barId)
+        .gte('created_at', today.toISOString())
+        .lt('created_at', tomorrow.toISOString());
 
-      if (vendorError) {
-        console.error('Vendor fetch error:', vendorError);
-        throw new Error(`Failed to fetch vendor: ${vendorError.message}`);
-      }
+      if (ordersError) throw ordersError;
 
-      if (!vendorData) {
-        console.log('No vendor found with slug ta-kris');
-        
-        // Let's check what vendors actually exist
-        const { data: allVendors, error: allVendorsError } = await supabase
-          .from('vendors')
-          .select('slug, name')
-          .limit(10);
-        
-        console.log('Available vendors:', { allVendors, allVendorsError });
-        
-        setError('Vendor "ta-kris" not found. Available vendors: ' + 
-                 (allVendors?.map(v => v.slug).join(', ') || 'None'));
-        return;
-      }
+      // Calculate stats
+      const totalOrders = todayOrders?.length || 0;
+      const pendingOrders = todayOrders?.filter(order => order.payment_status === 'pending').length || 0;
+      const confirmedOrders = todayOrders?.filter(order => order.payment_status === 'confirmed') || [];
+      const totalSales = confirmedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
 
-      console.log('Successfully fetched vendor:', vendorData);
-      setVendor(vendorData);
-      
-    } catch (error: any) {
-      console.error('=== VENDOR FETCH ERROR ===');
-      console.error('Error type:', typeof error);
-      console.error('Error message:', error?.message);
-      console.error('Full error:', error);
-      
-      const errorMessage = error?.message || 'Unknown error occurred';
-      setError(`Failed to load vendor data: ${errorMessage}`);
-      
+      // Calculate most popular item
+      const itemCounts: { [key: string]: number } = {};
+      todayOrders?.forEach(order => {
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach((item: any) => {
+            if (item.name) {
+              itemCounts[item.name] = (itemCounts[item.name] || 0) + item.quantity;
+            }
+          });
+        }
+      });
+
+      const popularItem = Object.entries(itemCounts).length > 0
+        ? Object.entries(itemCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0]
+        : 'No orders yet';
+
+      setStats({
+        todayOrders: totalOrders,
+        todaySales: totalSales,
+        pendingOrders: pendingOrders,
+        popularItem: popularItem
+      });
+
+    } catch (error) {
+      console.error('Error fetching vendor stats:', error);
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to load dashboard stats",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
-      console.log('=== VENDOR DASHBOARD DEBUG END ===');
     }
   };
 
-  useEffect(() => {
-    console.log('VendorDashboard component mounted, starting data fetch...');
-    fetchVendorData();
-  }, []);
+  const StatCard = ({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) => (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className={`h-4 w-4 ${color}`} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading vendor dashboard...</p>
-          <p className="mt-2 text-sm text-gray-500">Connecting to database...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !vendor) {
+  if (!loading && stats.todayOrders === 0 && stats.todaySales === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-2xl">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            {error ? 'Database Error' : 'Vendor Not Found'}
-          </h2>
-          <div className="bg-red-50 p-4 rounded-lg mb-4">
-            <p className="text-red-800 text-sm font-mono whitespace-pre-wrap">
-              {error || 'Unable to load vendor information.'}
-            </p>
-          </div>
-          <div className="space-x-4">
-            <button 
-              onClick={fetchVendorData}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Retry Connection
-            </button>
-            <button 
-              onClick={() => window.location.href = '/'}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              Go Home
-            </button>
-          </div>
-        </div>
-      </div>
+      <EmptyState
+        icon={ShoppingCart}
+        title="No orders yet"
+        description="Once customers start ordering, you'll see real-time stats here."
+        actionText="View Menu"
+        onAction={() => navigate('/vendor/menu')}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{vendor.name}</h1>
-            <p className="text-gray-600 mt-1">Vendor Dashboard - Full Access Mode</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Location: {vendor.location}</p>
-            <p className="text-sm text-gray-500">Status: {vendor.active ? 'Active' : 'Inactive'}</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/')}
+              >
+                <Home className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">Welcome back!</h1>
+                <p className="text-gray-600">{barName || 'Your Bar'}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/vendor/settings')}
+            >
+              Settings
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="menu" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="menu">Menu Builder</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="qr">QR Codes</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
+      <div className="container mx-auto px-4 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Today's Orders"
+            value={stats.todayOrders}
+            icon={ShoppingBag}
+            color="text-blue-600"
+          />
+          <StatCard
+            title="Total Sales (Today)"
+            value={`€${stats.todaySales.toFixed(2)}`}
+            icon={DollarSign}
+            color="text-green-600"
+          />
+          <StatCard
+            title="Pending Orders"
+            value={stats.pendingOrders}
+            icon={Clock}
+            color="text-orange-600"
+          />
+          <StatCard
+            title="Popular Item"
+            value={stats.popularItem}
+            icon={TrendingUp}
+            color="text-purple-600"
+          />
+        </div>
 
-          <TabsContent value="menu">
-            <MenuBuilder vendorId={vendor.id} menuId="default" />
-          </TabsContent>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/vendor/orders')}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                View Orders
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Manage incoming orders, confirm payments, and track order status
+              </p>
+              <Button className="mt-4" variant="default">
+                Go to Orders
+              </Button>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="orders">
-            <OrderManagement />
-          </TabsContent>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/vendor/menu')}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Menu className="h-5 w-5" />
+                Manage Menu
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Add new items, update prices, and manage availability
+              </p>
+              <Button className="mt-4" variant="default">
+                Go to Menu
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
-          <TabsContent value="qr">
-            <QRGenerator />
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <AIAnalytics vendorId={vendor.id} />
-          </TabsContent>
-        </Tabs>
+        {/* Quick Actions */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-4">
+            <Button variant="outline" onClick={() => navigate('/vendor/payments')}>
+              View Payments
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/vendor/analytics')}>
+              Analytics
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/vendor/qr-generator')}>
+              Generate QR Code
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
