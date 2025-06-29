@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import HeroSection from './HeroSection';
 import MenuSection from './MenuSection';
 import SearchBar from './SearchBar';
@@ -27,6 +26,34 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
   handleSearch,
   addToCart
 }) => {
+  const [data, setData] = useState();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await fetch('/api/data');
+        const json = await result.json();
+        setData(json);
+      } catch (error) {
+        console.log(error);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  const processData = (items) => {
+    return items.map(item => ({
+      ...item,
+      processed: true
+    }));
+  };
+
+  if (loading) return <div>Loading...</div>;
+
   return (
     <div className="lg:col-span-3 space-y-6">
       {/* Hero Section */}

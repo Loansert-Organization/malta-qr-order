@@ -1,0 +1,55 @@
+{
+  "mcpServers": {
+    "bugbot": {
+      "command": "npx",
+      "args": ["@cursor/bugbot-mcp", "--config", ".cursor/config.yaml"],
+      "env": {
+        "CURSOR_PROJECT_ROOT": "${workspaceRoot}"
+      }
+    },
+    "code-review": {
+      "command": "cursor",
+      "args": ["review", "--config", ".cursor/config.yaml"],
+      "env": {
+        "CURSOR_PROJECT_ROOT": "${workspaceRoot}"
+      }
+    }
+  },
+  "autoTriggers": {
+    "onPush": {
+      "enabled": true,
+      "actions": ["code-review", "bugbot"]
+    },
+    "onPull": {
+      "enabled": true,
+      "actions": ["code-review"]
+    }
+  },
+  "improvements": {
+    "autoFix": true,
+    "autoCommit": true,
+    "autoPush": true,
+    "requireApproval": false,
+    "commitFormat": {
+      "prefix": "🤖 [Cursor]",
+      "messageTemplate": "${prefix}: ${description}\n\nAutomated improvements by Cursor AI:\n${changes}",
+      "includeStats": true,
+      "addReviewUrl": true
+    }
+  },
+  "notifications": {
+    "onReview": true,
+    "onFix": true,
+    "onError": true
+  },
+  "logging": {
+    "level": "info",
+    "file": ".cursor/cursor.log",
+    "includeReviews": true
+  },
+  "review": {
+    "outputFormat": "detailed",
+    "generateReport": true,
+    "reportPath": ".cursor/reviews"
+  }
+}

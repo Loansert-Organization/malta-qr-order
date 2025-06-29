@@ -1,0 +1,29 @@
+name: Cursor Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Cursor BugBot Review
+        uses: cursor-ai/bugbot@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: .cursor/config.yaml
+          auto-fix: true # Enable automatic fixes
+          review-mode: full # Enable full code review
