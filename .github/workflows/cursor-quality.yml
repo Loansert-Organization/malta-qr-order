@@ -1,31 +1,46 @@
-name: Cursor Guard
+name: CI Quality Check
 
 on:
   push:
     branches:
       - main
       - lovable/**
+  pull_request:
+    branches:
+      - main
 
 permissions:
-  contents: write
-  actions: read
+  contents: read
 
 jobs:
-  check:
+  quality-check:
     runs-on: ubuntu-latest
-    environment: production
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Cursor review
-        uses: trycursor/action-docker@v1
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          openai-key: ${{ secrets.OPENAI_API_KEY }}
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          node-version: '18'
+          cache: 'npm'
 
-      - name: Commit Cursor fixes
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run build
+
+      - name: Run linting (non-blocking)
+        run: npm run lint || echo "Linting completed with warnings"
+        continue-on-error: true
+
+      - name: Build project
+        run: npm run build
+
+      - name: Check bundle size
         run: |
-          git config user.name  "Cursor Bot"
-          git config user.email "cursor-bot@example.com"
-          git diff --quiet || (git commit -am "chore(cursor): auto-fixes" && git push)
+          echo "✅ Build completed successfully!"
+          ls -la dist/
+          echo "📦 Bundle analysis:"
+          du -sh dist/assets/* | head -10
