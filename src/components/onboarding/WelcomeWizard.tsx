@@ -56,11 +56,11 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete, onSkip }) => 
     },
     {
       id: 'discover',
-      title: 'Discover Nearby Places 📍',
-      description: 'Find bars and restaurants near you with our interactive map. We\'ll show you ratings, distance, and special offers',
+      title: 'Browse Menu Categories 📋',
+      description: 'Browse our organized menu categories with photos, ratings, and prices. Filter by dietary preferences and food types',
       icon: <MapPin className="h-12 w-12 text-green-500" />,
       animation: 'pulse',
-      actionText: 'Explore Map',
+      actionText: 'Browse Menu',
       highlightColor: 'bg-green-500'
     },
     {
