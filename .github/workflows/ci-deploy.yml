@@ -69,8 +69,20 @@ jobs:
       - name: Build Vite site
         run: npm run build
 
+      - name: Check deployment secrets
+        id: check-secrets
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          if [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ]; then
+            echo "has-secrets=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-secrets=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy to Production (Cloudflare Pages)
-        if: ${{ secrets.CF_API_TOKEN != '' && secrets.CF_ACCOUNT_ID != '' }}
+        if: steps.check-secrets.outputs.has-secrets == 'true'
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
@@ -80,14 +92,14 @@ jobs:
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Deploy fallback info
-        if: ${{ secrets.CF_API_TOKEN == '' || secrets.CF_ACCOUNT_ID == '' }}
+        if: steps.check-secrets.outputs.has-secrets == 'false'
         run: |
           echo "📦 Build completed successfully!"
           echo "ℹ️ Cloudflare secrets not configured, skipping deployment"
           echo "📁 Built files ready in ./dist/"
 
       - name: Post-deploy health check
-        if: ${{ secrets.CF_API_TOKEN != '' && secrets.CF_ACCOUNT_ID != '' }}
+        if: steps.check-secrets.outputs.has-secrets == 'true'
         run: |
           echo "🔍 Running health checks..."
           # Wait a moment for deployment to propagate
