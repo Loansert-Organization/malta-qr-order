@@ -13,6 +13,7 @@ import SmartSuggestionCard from '@/components/client/SmartSuggestionCard';
 import { useAIUpsell } from '@/hooks/useAIUpsell';
 import WaiterPromptChip from '@/components/ai-waiter/WaiterPromptChip';
 import WaiterChatDrawer from '@/components/ai-waiter/WaiterChatDrawer';
+import { MenuItemSkeleton, SearchLoading, CartUpdateAnimation } from '@/components/ui/modern-loading';
 
 interface MenuItem {
   id: string;
@@ -48,6 +49,8 @@ const MenuPage = () => {
   const [loading, setLoading] = useState(true);
   const { suggestions } = useAIUpsell(barId, cart, false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showCartAnimation, setShowCartAnimation] = useState(false);
+  const [cartAnimationMessage, setCartAnimationMessage] = useState('');
 
   useEffect(() => {
     if (barId) {
@@ -95,6 +98,7 @@ const MenuPage = () => {
 
   const fetchMenuItems = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('menus')
         .select('*')
@@ -154,6 +158,11 @@ const MenuPage = () => {
         return [...prevCart, { ...item, quantity: 1 }];
       }
     });
+
+    // Show cart animation
+    setCartAnimationMessage(`Added ${item.name} to cart!`);
+    setShowCartAnimation(true);
+    setTimeout(() => setShowCartAnimation(false), 2000);
 
     toast({
       title: "Added to cart",
@@ -326,6 +335,13 @@ const MenuPage = () => {
 
       <WaiterPromptChip onOpen={() => setChatOpen(true)} />
       <WaiterChatDrawer barId={barId} open={chatOpen} onClose={() => setChatOpen(false)} />
+
+      {/* Cart Update Animation */}
+      <CartUpdateAnimation 
+        isVisible={showCartAnimation} 
+        message={cartAnimationMessage}
+        type="success"
+      />
     </div>
   );
 };

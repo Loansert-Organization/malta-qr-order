@@ -1,10 +1,10 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, ShoppingCart, TrendingUp, Settings, Database, Building2 } from 'lucide-react';
+import { Users, ShoppingCart, TrendingUp, Settings, Database } from 'lucide-react';
 import AdminOrderTracking from '@/components/admin/AdminOrderTracking';
 import DatabaseInitializer from '@/components/admin/DatabaseInitializer';
-import BulkDataManager from '@/components/admin/BulkDataManager';
 
 const AdminDashboard = () => {
   return (
@@ -23,23 +23,13 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="bulk-data" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="bulk-data">Bulk Data</TabsTrigger>
-            <TabsTrigger value="database">Database Setup</TabsTrigger>
+        <Tabs defaultValue="orders" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="orders">Order Tracking</TabsTrigger>
             <TabsTrigger value="vendors">Vendor Management</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">System Settings</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="bulk-data" className="mt-6">
-            <BulkDataManager />
-          </TabsContent>
-
-          <TabsContent value="database" className="mt-6">
-            <DatabaseInitializer />
-          </TabsContent>
 
           <TabsContent value="orders" className="mt-6">
             <AdminOrderTracking />
