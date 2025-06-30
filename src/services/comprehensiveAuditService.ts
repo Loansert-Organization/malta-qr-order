@@ -333,7 +333,7 @@ class ComprehensiveAuditService {
 
   private async auditPerformance(): Promise<AuditCategory> {
     const issues: AuditIssue[] = [];
-    let score = 85; // Starting with good performance
+    const score = 85; // Starting with good performance
 
     // Check for performance bottlenecks
     issues.push({
@@ -373,7 +373,7 @@ class ComprehensiveAuditService {
 
   private async auditAIIntegration(): Promise<AuditCategory> {
     const issues: AuditIssue[] = [];
-    let score = 70; // AI features are partially implemented
+    const score = 70; // AI features are partially implemented
 
     issues.push({
       id: 'ai_waiter_completion',
@@ -412,7 +412,7 @@ class ComprehensiveAuditService {
 
   private async auditUserExperience(): Promise<AuditCategory> {
     const issues: AuditIssue[] = [];
-    let score = 80;
+    const score = 80;
 
     issues.push({
       id: 'mobile_optimization',
@@ -451,7 +451,7 @@ class ComprehensiveAuditService {
 
   private async auditDeployment(): Promise<AuditCategory> {
     const issues: AuditIssue[] = [];
-    let score = 75;
+    const score = 75;
 
     issues.push({
       id: 'deployment_pipeline',

@@ -1,168 +1,329 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { 
+  AIWaiterLog, 
+  AIResponse, 
+  MenuItem, 
+  ErrorHandler,
+  APIResponse 
+} from '@/types/api';
 
-interface Message {
+interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
   content: string;
-  suggestions?: any[];
-  layoutHints?: any;
-  language?: string;
+  type: 'user' | 'ai' | 'system';
+  timestamp: string;
+  processing_time?: number;
+  suggestions?: AISuggestion[];
 }
 
-interface UseMaltaAIChatProps {
-  vendorSlug: string;
+interface AISuggestion {
+  type: string;
+  item_id?: string;
+  title: string;
+  description: string;
+  price?: number;
+}
+
+interface ChatState {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  isConnected: boolean;
+  error: string | null;
+  sessionId: string | null;
+}
+
+interface UseMaltaAIChatOptions {
+  vendorId: string;
   guestSessionId: string;
-  vendorLocation?: string;
-  selectedLanguage: 'en' | 'mt' | 'it';
+  onMessageSent?: (message: string) => void;
+  onMessageReceived?: (response: string) => void;
+  onError?: ErrorHandler;
+  autoConnect?: boolean;
+}
+
+interface UseMaltaAIChatReturn {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  isConnected: boolean;
+  error: string | null;
+  sendMessage: (message: string) => Promise<void>;
+  clearChat: () => void;
+  reconnect: () => Promise<void>;
+  refreshHistory: () => Promise<void>;
 }
 
 export const useMaltaAIChat = ({
-  vendorSlug,
+  vendorId,
   guestSessionId,
-  vendorLocation,
-  selectedLanguage
-}: UseMaltaAIChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [nearbyBars, setNearbyBars] = useState<any[]>([]);
-  const [locationContext, setLocationContext] = useState<any>(null);
+  onMessageSent,
+  onMessageReceived,
+  onError,
+  autoConnect = true
+}: UseMaltaAIChatOptions): UseMaltaAIChatReturn => {
+  
+  const [state, setState] = useState<ChatState>({
+    messages: [],
+    isLoading: false,
+    isConnected: false,
+    error: null,
+    sessionId: null
+  });
 
-  const initializeChat = () => {
-    const welcomeMessages = {
-      en: "Bonġu! I'm Kai, your AI waiter powered by advanced AI models. I can help you discover authentic Maltese cuisine, suggest dishes based on your preferences, the weather, and even nearby popular spots. What sounds good to you today?",
-      mt: "Bonġu! Jien Kai, il-kellner AI tiegħek. Nista' ngħinek issib l-ikel Malti awtentiku, nissuġġerixxi platti skont il-preferenzi tiegħek, u anke postijiet popolari fil-qrib. X'jogħġbok illum?",
-      it: "Bongiorno! Sono Kai, il tuo cameriere AI. Posso aiutarti a scoprire la cucina maltese autentica, suggerire piatti basati sulle tue preferenze e anche posti popolari nelle vicinanze. Cosa ti va oggi?"
-    };
+  // Memoized error handler to prevent unnecessary re-renders
+  const handleError = useCallback((error: Error, context: string = 'chat') => {
+    console.error(`AI Chat Error [${context}]:`, error);
+    setState(prev => ({ 
+      ...prev, 
+      error: error.message, 
+      isLoading: false 
+    }));
+    
+    if (onError) {
+      onError(error);
+    }
+  }, [onError]);
 
-    setMessages([{
-      id: '1',
-      role: 'assistant',
-      content: welcomeMessages[selectedLanguage],
-      language: selectedLanguage
-    }]);
-  };
-
-  const loadLocationContext = async () => {
-    if (!vendorLocation) return;
+  // Initialize chat session and load history
+  const initializeChat = useCallback(async (): Promise<void> => {
+    if (!vendorId || !guestSessionId) {
+      handleError(new Error('Missing required parameters: vendorId or guestSessionId'), 'init');
+      return;
+    }
 
     try {
-      const { data: bars } = await supabase
-        .from('bars')
-        .select('*')
-        .textSearch('address', vendorLocation)
-        .limit(5);
+      setState(prev => ({ 
+        ...prev, 
+        isLoading: true, 
+        error: null,
+        isConnected: false 
+      }));
 
-      if (bars) {
-        setNearbyBars(bars);
-        setLocationContext({
-          area: vendorLocation,
-          nearbyCount: bars.length,
-          avgRating: bars.reduce((acc, bar) => acc + (bar.rating || 0), 0) / bars.length
-        });
+      // Create or get session
+      const sessionId = `chat_${guestSessionId}_${vendorId}_${Date.now()}`;
+      
+      // Load recent conversation history
+      await loadChatHistory(sessionId);
+      
+      setState(prev => ({ 
+        ...prev, 
+        sessionId,
+        isConnected: true,
+        isLoading: false 
+      }));
+
+    } catch (error) {
+      handleError(
+        error instanceof Error ? error : new Error('Failed to initialize chat'),
+        'init'
+      );
+    }
+  }, [vendorId, guestSessionId, handleError]);
+
+  // Load chat history from database
+  const loadChatHistory = useCallback(async (sessionId: string): Promise<void> => {
+    try {
+      const { data: logs, error } = await supabase
+        .from('ai_waiter_logs')
+        .select('*')
+        .eq('guest_session_id', guestSessionId)
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: true })
+        .limit(50);
+
+      if (error) {
+        console.warn('Could not load chat history:', error);
+        return;
+      }
+
+      if (logs && logs.length > 0) {
+        const messages: ChatMessage[] = logs.map((log: AIWaiterLog) => ({
+          id: log.id,
+          content: log.content,
+          type: log.message_type === 'user_message' ? 'user' : 
+                log.message_type === 'ai_response' ? 'ai' : 'system',
+          timestamp: log.created_at,
+          processing_time: log.processing_metadata?.processing_time_ms,
+          suggestions: []
+        }));
+
+        setState(prev => ({ 
+          ...prev, 
+          messages 
+        }));
       }
     } catch (error) {
-      console.error('Error loading location context:', error);
+      console.warn('Failed to load chat history:', error);
+      // Don't throw - chat can work without history
     }
-  };
+  }, [guestSessionId, vendorId]);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  // Send message to AI
+  const sendMessage = useCallback(async (message: string): Promise<void> => {
+    if (!message.trim()) {
+      handleError(new Error('Message cannot be empty'), 'send');
+      return;
+    }
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      language: selectedLanguage
+    if (!state.sessionId) {
+      handleError(new Error('Chat session not initialized'), 'send');
+      return;
+    }
+
+    const messageId = `msg_${Date.now()}`;
+    const userMessage: ChatMessage = {
+      id: messageId,
+      content: message.trim(),
+      type: 'user',
+      timestamp: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = input;
-    setInput('');
-    setIsTyping(true);
-
     try {
-      const { data, error } = await supabase.functions.invoke('malta-ai-waiter', {
+      // Add user message immediately
+      setState(prev => ({ 
+        ...prev, 
+        messages: [...prev.messages, userMessage],
+        isLoading: true,
+        error: null
+      }));
+
+      // Trigger callback
+      if (onMessageSent) {
+        onMessageSent(message);
+      }
+
+      // Call AI waiter endpoint
+      const { data, error } = await supabase.functions.invoke('ai-waiter-chat', {
         body: {
-          message: currentInput,
-          vendorSlug: vendorSlug,
-          guestSessionId: guestSessionId,
-          language: selectedLanguage,
-          locationContext: {
-            vendorLocation,
-            nearbyBars: nearbyBars.slice(0, 3),
-            area: locationContext?.area
+          message: message.trim(),
+          vendor_id: vendorId,
+          guest_session_id: guestSessionId,
+          conversation_context: {
+            recent_messages: state.messages.slice(-5),
+            session_id: state.sessionId
           }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(`AI service error: ${error.message}`);
+      }
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.response,
-        suggestions: data.suggestions || [],
-        layoutHints: data.layoutHints || {},
-        language: selectedLanguage
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error calling Malta AI waiter:', error);
+      const aiResponse = data as AIResponse;
       
-      const errorMessages = {
-        en: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment, or feel free to browse our menu directly!",
-        mt: "Skużani, għandi problema biex naqbad issa. Jekk jogħġbok ipprova mill-ġdid wara ftit, jew ara l-menu direttament!",
-        it: "Mi dispiace, sto avendo problemi di connessione. Riprova tra un momento o sfoglia direttamente il nostro menu!"
+      if (!aiResponse.success) {
+        throw new Error(aiResponse.error || 'AI response indicated failure');
+      }
+
+      // Add AI response
+      const aiMessage: ChatMessage = {
+        id: `ai_${Date.now()}`,
+        content: aiResponse.response,
+        type: 'ai',
+        timestamp: new Date().toISOString(),
+        processing_time: aiResponse.processing_time_ms,
+        suggestions: aiResponse.suggestions || []
       };
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: errorMessages[selectedLanguage],
-        suggestions: [],
-        language: selectedLanguage
+      setState(prev => ({ 
+        ...prev, 
+        messages: [...prev.messages, aiMessage],
+        isLoading: false
+      }));
+
+      // Trigger callback
+      if (onMessageReceived) {
+        onMessageReceived(aiResponse.response);
+      }
+
+    } catch (error) {
+      // Remove the user message on error and add error message
+      setState(prev => ({ 
+        ...prev, 
+        messages: prev.messages.filter(msg => msg.id !== messageId),
+        isLoading: false
+      }));
+
+      handleError(
+        error instanceof Error ? error : new Error('Failed to send message'),
+        'send'
+      );
+
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: `error_${Date.now()}`,
+        content: 'Sorry, I encountered an error. Please try again.',
+        type: 'system',
+        timestamp: new Date().toISOString()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } finally {
-      setIsTyping(false);
+      setState(prev => ({ 
+        ...prev, 
+        messages: [...prev.messages, errorMessage]
+      }));
     }
-  };
+  }, [
+    state.sessionId, 
+    state.messages, 
+    vendorId, 
+    guestSessionId, 
+    onMessageSent, 
+    onMessageReceived, 
+    handleError
+  ]);
 
-  const handleSuggestionAdded = (itemName: string) => {
-    const confirmationMessages = {
-      en: `Excellent choice! I've added ${itemName} to your cart. The AI models worked together to suggest this perfect match for you. Anything else I can help you with?`,
-      mt: `Għażla eċċellenti! Żidt ${itemName} fil-cart tiegħek. Il-mudelli AI ħadmu flimkien biex jissuġġerixxu dan l-għażla perfetta għalik. Xi ħaġa oħra li nista' ngħinek biha?`,
-      it: `Scelta eccellente! Ho aggiunto ${itemName} al tuo carrello. I modelli AI hanno lavorato insieme per suggerirti questa combinazione perfetta. Posso aiutarti con qualcos'altro?`
-    };
+  // Clear chat history
+  const clearChat = useCallback((): void => {
+    setState(prev => ({ 
+      ...prev, 
+      messages: [],
+      error: null
+    }));
+  }, []);
 
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: confirmationMessages[selectedLanguage],
-      language: selectedLanguage
-    }]);
-  };
+  // Reconnect to chat service
+  const reconnect = useCallback(async (): Promise<void> => {
+    setState(prev => ({ 
+      ...prev, 
+      isConnected: false,
+      error: null
+    }));
+    
+    await initializeChat();
+  }, [initializeChat]);
 
+  // Refresh chat history
+  const refreshHistory = useCallback(async (): Promise<void> => {
+    if (state.sessionId) {
+      await loadChatHistory(state.sessionId);
+    }
+  }, [state.sessionId, loadChatHistory]);
+
+  // Auto-initialize on mount and when dependencies change
   useEffect(() => {
-    initializeChat();
-    loadLocationContext();
-  }, [selectedLanguage, vendorLocation]);
+    if (autoConnect && vendorId && guestSessionId) {
+      initializeChat();
+    }
+  }, [autoConnect, vendorId, guestSessionId, initializeChat]);
 
-  return {
-    messages,
-    input,
-    setInput,
-    isTyping,
-    nearbyBars,
-    locationContext,
+  // Memoized return value to prevent unnecessary re-renders
+  return useMemo((): UseMaltaAIChatReturn => ({
+    messages: state.messages,
+    isLoading: state.isLoading,
+    isConnected: state.isConnected,
+    error: state.error,
     sendMessage,
-    handleSuggestionAdded
-  };
+    clearChat,
+    reconnect,
+    refreshHistory
+  }), [
+    state.messages,
+    state.isLoading,
+    state.isConnected,
+    state.error,
+    sendMessage,
+    clearChat,
+    reconnect,
+    refreshHistory
+  ]);
 };
-
-export type { Message };

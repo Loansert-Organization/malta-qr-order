@@ -92,7 +92,7 @@ export class ContextProcessor {
     
     let cardStyle: 'vertical' | 'horizontal' = 'vertical';
     let highlight: 'popular' | 'price' = 'popular';
-    let animation: 'subtle' | 'none' = 'subtle';
+    const animation: 'subtle' | 'none' = 'subtle';
 
     // Malta-specific layout logic
     if (vendorLocation?.toLowerCase().includes('valletta')) {

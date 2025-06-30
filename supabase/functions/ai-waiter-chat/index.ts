@@ -1,217 +1,254 @@
-
+// ✨ Refactored by Cursor – Audit Phase 2: Security Headers & Rate Limiting
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { 
+  createSecureResponse, 
+  createErrorResponse, 
+  handleCORS, 
+  EdgeRateLimit,
+  validateRequestSize,
+  validateContentType,
+  sanitizeInput
+} from '../_shared/security.ts';
+import { openai } from '../_shared/openai.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-interface ChatRequest {
+interface AIWaiterRequest {
   message: string;
-  vendorId: string;
-  sessionId: string;
-  conversationHistory?: any[];
-  menuContext?: any[];
+  vendor_id: string;
+  guest_session_id: string;
+  conversation_context?: Record<string, unknown>;
+  user_preferences?: Record<string, unknown>;
+}
+
+interface AIWaiterResponse {
+  response: string;
+  suggestions?: Array<{
+    type: string;
+    item_id?: string;
+    title: string;
+    description: string;
+    price?: number;
+  }>;
+  processing_time_ms: number;
+  conversation_id: string;
+  success: boolean;
+  error?: string;
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  // Handle CORS preflight
+  const corsResponse = handleCORS(req);
+  if (corsResponse) return corsResponse;
 
   try {
-    console.log('🤖 AI Waiter Chat request received');
-    
-    const { message, vendorId, sessionId, conversationHistory = [], menuContext = [] }: ChatRequest = await req.json();
-    
-    console.log(`Processing message for vendor: ${vendorId}, session: ${sessionId}`);
-    
-    // Get vendor information
-    const { data: vendor } = await supabase
-      .from('vendors')
-      .select('business_name, description, category')
-      .eq('id', vendorId)
-      .single();
-
-    // Get menu items for context
-    const { data: menuItems } = await supabase
-      .from('menu_items')
-      .select('*')
-      .eq('menu_id', vendorId)
-      .eq('available', true);
-
-    // Prepare context for AI
-    const systemPrompt = createSystemPrompt(vendor, menuItems || []);
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...conversationHistory.slice(-10), // Keep last 10 messages for context
-      { role: 'user', content: message }
-    ];
-
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 500,
-        presence_penalty: 0.1,
-        frequency_penalty: 0.1
-      }),
-    });
-
-    if (!openaiResponse.ok) {
-      throw new Error(`OpenAI API error: ${openaiResponse.statusText}`);
+    // Security validations
+    if (!validateRequestSize(req, 50 * 1024)) { // 50KB max
+      return createErrorResponse('Request too large', 413);
     }
 
-    const aiData = await openaiResponse.json();
-    const aiMessage = aiData.choices[0].message.content;
+    if (!validateContentType(req, ['application/json'])) {
+      return createErrorResponse('Invalid content type', 415);
+    }
+
+    // Rate limiting: 10 requests per minute per client
+    const rateLimitResult = await EdgeRateLimit.check(req, {
+      maxRequests: 10,
+      windowMs: 60 * 1000 // 1 minute
+    });
+
+    if (!rateLimitResult.allowed) {
+      return createErrorResponse(
+        'Rate limit exceeded. Please try again later.',
+        429,
+        'RATE_LIMIT_EXCEEDED'
+      );
+    }
+
+    const startTime = Date.now();
+    let body: AIWaiterRequest;
+
+    try {
+      const rawBody = await req.json();
+      body = sanitizeInput(rawBody) as AIWaiterRequest;
+    } catch {
+      return createErrorResponse('Invalid JSON request body', 400);
+    }
+
+    // Validate required fields
+    if (!body.message || !body.vendor_id || !body.guest_session_id) {
+      return createErrorResponse(
+        'Missing required fields: message, vendor_id, guest_session_id',
+        400
+      );
+    }
+
+    // Validate message length
+    if (body.message.length > 1000) {
+      return createErrorResponse('Message too long (max 1000 characters)', 400);
+    }
+
+    console.log('🤖 AI Waiter Chat - Processing message:', {
+      vendor_id: body.vendor_id,
+      session_id: body.guest_session_id,
+      message_length: body.message.length
+    });
+
+    // Get vendor and menu context
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id, name, description, opening_hours')
+      .eq('id', body.vendor_id)
+      .single();
+
+    if (vendorError || !vendor) {
+      return createErrorResponse('Vendor not found', 404);
+    }
+
+    // Get menu items for context
+    const { data: menuItems, error: menuError } = await supabase
+      .from('menu_items')
+      .select(`
+        id, name, description, price, category, dietary_tags, available,
+        menus!inner(vendor_id)
+      `)
+      .eq('menus.vendor_id', body.vendor_id)
+      .eq('available', true)
+      .limit(50);
+
+    if (menuError) {
+      console.warn('Could not fetch menu items:', menuError);
+    }
+
+    // Build AI context
+    const systemPrompt = `You are Kai, the AI waiter for ${vendor.name}. You are helpful, friendly, and knowledgeable about the menu. 
+
+VENDOR INFO:
+- Name: ${vendor.name}
+- Description: ${vendor.description || 'A great restaurant in Malta'}
+
+AVAILABLE MENU ITEMS:
+${(menuItems || []).map(item => 
+  `- ${item.name} (€${item.price}) - ${item.description || 'No description'} [Category: ${item.category || 'General'}] ${item.dietary_tags?.length ? `[${item.dietary_tags.join(', ')}]` : ''}`
+).join('\n')}
+
+Guidelines:
+1. Be conversational and helpful
+2. Recommend menu items based on user preferences
+3. Provide accurate pricing information
+4. Ask clarifying questions when needed
+5. Keep responses concise but informative
+6. If asked about items not on the menu, politely explain they're not available
+7. Use emojis sparingly and appropriately
+8. Always be positive about the available options
+
+User's message: "${body.message}"`;
+
+    // Call OpenAI
+    let aiResponse: string;
+    let processingTime: number;
+
+    try {
+      const completion = await openai.chat([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: body.message }
+      ], {
+        model: 'gpt-4o',
+        temperature: 0.7,
+        max_tokens: 300
+      });
+
+      aiResponse = completion.text();
+      processingTime = Date.now() - startTime;
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      
+      // Fallback response
+      aiResponse = "I'm having trouble connecting to my knowledge base right now. However, I'd be happy to help you with your order! What type of food are you in the mood for today?";
+      processingTime = Date.now() - startTime;
+    }
+
+    // Generate conversation ID
+    const conversationId = crypto.randomUUID();
+
+    // Log the conversation to database
+    try {
+      await supabase.from('ai_waiter_logs').insert({
+        content: body.message,
+        message_type: 'user_message',
+        guest_session_id: body.guest_session_id,
+        vendor_id: body.vendor_id,
+        conversation_id: conversationId,
+        processing_metadata: {
+          model_used: 'gpt-4o',
+          processing_time_ms: processingTime,
+          message_length: body.message.length,
+          response_length: aiResponse.length,
+          timestamp: new Date().toISOString()
+        },
+        ai_model_used: 'gpt-4o'
+      });
+
+      await supabase.from('ai_waiter_logs').insert({
+        content: aiResponse,
+        message_type: 'ai_response',
+        guest_session_id: body.guest_session_id,
+        vendor_id: body.vendor_id,
+        conversation_id: conversationId,
+        processing_metadata: {
+          model_used: 'gpt-4o',
+          processing_time_ms: processingTime,
+          tokens_estimated: Math.ceil(aiResponse.length / 4),
+          timestamp: new Date().toISOString()
+        },
+        ai_model_used: 'gpt-4o'
+      });
+    } catch (logError) {
+      console.warn('Failed to log conversation:', logError);
+      // Continue execution even if logging fails
+    }
 
     // Extract menu item suggestions from the response
-    const suggestions = extractMenuSuggestions(aiMessage, menuItems || []);
+    const suggestions = (menuItems || [])
+      .filter(item => 
+        aiResponse.toLowerCase().includes(item.name.toLowerCase()) ||
+        (item.category && aiResponse.toLowerCase().includes(item.category.toLowerCase()))
+      )
+      .slice(0, 3)
+      .map(item => ({
+        type: 'menu_item',
+        item_id: item.id,
+        title: item.name,
+        description: item.description || `Delicious ${item.category || 'dish'}`,
+        price: item.price
+      }));
 
-    // Log the interaction
-    await supabase
-      .from('ai_waiter_logs')
-      .insert({
-        vendor_id: vendorId,
-        guest_session_id: sessionId,
-        message_type: 'chat',
-        content: message,
-        ai_model_used: 'gpt-4o-mini',
-        suggestions: suggestions,
-        processing_metadata: {
-          response_length: aiMessage.length,
-          menu_items_in_context: menuItems?.length || 0
-        }
-      });
+    const response: AIWaiterResponse = {
+      response: aiResponse,
+      suggestions,
+      processing_time_ms: processingTime,
+      conversation_id: conversationId,
+      success: true
+    };
 
-    // Update conversation in database
-    await supabase
-      .from('ai_conversations')
-      .upsert({
-        session_id: sessionId,
-        vendor_id: vendorId,
-        messages: [
-          ...conversationHistory.slice(-20), // Keep last 20 messages
-          { role: 'user', content: message, timestamp: new Date().toISOString() },
-          { role: 'assistant', content: aiMessage, timestamp: new Date().toISOString() }
-        ],
-        context_data: {
-          vendor_info: vendor,
-          menu_items_count: menuItems?.length || 0
-        }
-      });
-
-    console.log('✅ AI response generated successfully');
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        response: aiMessage,
-        suggestions: suggestions,
-        conversationId: sessionId,
-        metadata: {
-          model_used: 'gpt-4o-mini',
-          response_time: Date.now(),
-          suggestions_count: suggestions.length
-        }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return createSecureResponse(response, 200, {
+      'X-Processing-Time': `${processingTime}ms`,
+      'X-Suggestions-Count': suggestions.length.toString(),
+      'X-Rate-Limit-Remaining': rateLimitResult.remainingRequests.toString(),
+      'X-Rate-Limit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+    });
 
   } catch (error) {
-    console.error('❌ Error in ai-waiter-chat:', error);
+    console.error('❌ AI Waiter Chat error:', error);
     
-    return new Response(
-      JSON.stringify({
-        success: false,
-        response: "I'm sorry, I'm having trouble processing your request right now. Could you please try asking again?",
-        error: error.message,
-        fallback: true
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
+    return createErrorResponse(
+      'Internal server error. Please try again.',
+      500,
+      'INTERNAL_ERROR'
     );
   }
 });
-
-function createSystemPrompt(vendor: any, menuItems: any[]): string {
-  const businessName = vendor?.business_name || 'this restaurant';
-  const businessType = vendor?.category || 'restaurant';
-  
-  return `You are an expert AI waiter for ${businessName}, a ${businessType} in Malta. You are knowledgeable, friendly, and helpful.
-
-PERSONALITY:
-- Warm, welcoming, and professional
-- Knowledgeable about Maltese cuisine and culture
-- Enthusiastic about the menu and restaurant
-- Patient and attentive to customer needs
-- Use emojis occasionally to be friendly
-
-YOUR ROLE:
-- Help customers find the perfect meal based on their preferences
-- Provide detailed information about menu items
-- Make personalized recommendations
-- Answer questions about ingredients, allergens, and preparation
-- Suggest complementary items (drinks with meals, etc.)
-- Be aware of dietary restrictions and preferences
-
-MENU CONTEXT:
-${menuItems.length > 0 ? `Available menu items:
-${menuItems.map(item => `- ${item.name}: €${item.price} (${item.category}) ${item.description || ''}`).join('\n')}` : 'Menu items are being loaded...'}
-
-GUIDELINES:
-- Always be helpful and informative
-- If you don't know something specific, admit it honestly
-- Suggest items that match the customer's stated preferences
-- Mention prices when recommending items
-- Ask follow-up questions to better understand preferences
-- Keep responses concise but informative
-- Focus on the available menu items
-- If suggesting items, format them clearly with prices
-
-MALTESE CONTEXT:
-- Malta has a rich culinary tradition mixing Mediterranean influences
-- Local specialties include ftira, pastizzi, rabbit stew, and kinnie
-- The weather is generally warm, so fresh and light options are often popular
-- Many customers appreciate local and traditional options
-
-Remember: You're representing ${businessName} and should always maintain a positive, helpful attitude while providing excellent service.`;
-}
-
-function extractMenuSuggestions(aiResponse: string, menuItems: any[]): any[] {
-  const suggestions: any[] = [];
-  
-  // Look for menu item names mentioned in the AI response
-  menuItems.forEach(item => {
-    const itemNameLower = item.name.toLowerCase();
-    const responseLower = aiResponse.toLowerCase();
-    
-    if (responseLower.includes(itemNameLower)) {
-      suggestions.push({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        category: item.category,
-        description: item.description
-      });
-    }
-  });
-  
-  // Limit to 3 suggestions to avoid overwhelming the user
-  return suggestions.slice(0, 3);
-}

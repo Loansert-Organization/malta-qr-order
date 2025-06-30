@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vendor, MenuItem, CartItem } from './useOrderDemo/types';
 import { Json } from '@/integrations/supabase/types';
@@ -37,11 +36,21 @@ const transformMenuItem = (dbItem: any): MenuItem => {
   };
 };
 
-export const useOrderDemo = (vendorSlug: string) => {
-  const [vendor, setVendor] = useState<Vendor | null>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+interface OrderDemoState {
+  vendor: Vendor | Record<string, unknown> | null;
+  menuItems: MenuItem[] | Record<string, unknown>[];
+  loading: boolean;
+  error: string | null;
+}
+
+export const useOrderDemo = (vendorSlug?: string) => {
+  const [state, setState] = useState<OrderDemoState>({
+    vendor: null,
+    menuItems: [],
+    loading: true,
+    error: null
+  });
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [weatherData, setWeatherData] = useState<any>(null);
@@ -76,55 +85,64 @@ export const useOrderDemo = (vendorSlug: string) => {
     weather: 'pleasant'
   });
 
-  useEffect(() => {
-    if (vendorSlug) {
-      fetchVendorData();
+  const fetchVendorData = useCallback(async (): Promise<void> => {
+    if (!vendorSlug) {
+      setState(prev => ({ ...prev, loading: false, error: 'No vendor slug provided' }));
+      return;
+    }
+
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+
+      // Fetch vendor
+      const { data: vendor, error: vendorError } = await supabase
+        .from('vendors')
+        .select('*')
+        .eq('slug', vendorSlug)
+        .single();
+
+      if (vendorError) {
+        throw new Error(`Vendor not found: ${vendorError.message}`);
+      }
+
+      // Fetch menu items for vendor
+      const { data: menuItems, error: menuError } = await supabase
+        .from('menu_items')
+        .select(`
+          *,
+          menus!inner(vendor_id)
+        `)
+        .eq('menus.vendor_id', vendor.id);
+
+      if (menuError) {
+        console.warn('Menu items fetch error:', menuError);
+        // Don't throw - vendor might not have menu items yet
+      }
+
+      setState({
+        vendor,
+        menuItems: menuItems || [],
+        loading: false,
+        error: null
+      });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: errorMessage
+      }));
     }
   }, [vendorSlug]);
 
-  const fetchVendorData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch vendor data
-      const { data: vendorData, error: vendorError } = await supabase
-        .from('vendors')
-        .select(`
-          *,
-          menus (
-            *,
-            menu_items (*)
-          )
-        `)
-        .eq('slug', vendorSlug)
-        .eq('active', true)
-        .single();
+  useEffect(() => {
+    fetchVendorData();
+  }, [fetchVendorData]);
 
-      if (vendorError) throw vendorError;
-
-      if (vendorData) {
-        setVendor(vendorData);
-        const rawItems = vendorData.menus?.[0]?.menu_items || [];
-        // Transform the data to handle JSON types properly
-        const transformedItems = rawItems.map(transformMenuItem);
-        setMenuItems(transformedItems);
-        
-        // Update layout with actual data
-        setLayout(prev => ({
-          ...prev,
-          heroSection: {
-            ...prev.heroSection,
-            title: `Welcome to ${vendorData.name}!`,
-            subtitle: vendorData.description || "Discover amazing dishes crafted with love"
-          }
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching vendor data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refreshData = useCallback(() => {
+    fetchVendorData();
+  }, [fetchVendorData]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -179,10 +197,11 @@ export const useOrderDemo = (vendorSlug: string) => {
   };
 
   return {
-    vendor,
-    menuItems,
+    vendor: state.vendor,
+    menuItems: state.menuItems,
+    loading: state.loading,
+    error: state.error,
     cart,
-    loading,
     layoutLoading,
     searchQuery,
     layout,
@@ -196,6 +215,7 @@ export const useOrderDemo = (vendorSlug: string) => {
     updateQuantity,
     clearCart,
     getTotalPrice,
-    getTotalItems
+    getTotalItems,
+    refreshData
   };
 };

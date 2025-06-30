@@ -182,7 +182,7 @@ export async function checkEdgeRateLimit(
   
   // Extract user ID from request headers or JWT
   const authHeader = request.headers.get('Authorization');
-  let userId = null;
+  const userId = null;
   
   if (authHeader?.startsWith('Bearer ')) {
     try {
