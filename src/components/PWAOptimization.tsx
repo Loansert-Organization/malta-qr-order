@@ -13,17 +13,14 @@ import { Switch } from "@/components/ui/switch";
 import { usePWA } from "@/hooks/usePWA";
 import { offlineService } from "@/services/offlineService";
 import { AIErrorBoundary } from "@/components/ErrorBoundaries/AIErrorBoundary";
-import {
+import { 
   Smartphone,
   WifiOff,
   Bell,
   Download,
-  CheckCircle,
   AlertTriangle,
   Zap,
-  Shield,
   Globe,
-  Users,
 } from "lucide-react";
 
 interface PWAMetrics {

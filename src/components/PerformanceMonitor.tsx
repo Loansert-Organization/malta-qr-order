@@ -1,10 +1,10 @@
 
-import React, { useEffect } from 'react';
+
 import { usePerformance } from '@/hooks/usePerformance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 const PerformanceMonitor = () => {
   const { metrics, resourceTimings, isMonitoring } = usePerformance();

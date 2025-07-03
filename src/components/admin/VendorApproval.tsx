@@ -1,23 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, XCircle, Clock, MapPin, Phone, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface PendingVendor {
   id: string;
   name: string;
-  slug: string;
-  location: string;
-  description: string;
+  slug?: string;
+  location: string | null;
+  description: string | null;
   revolut_link?: string;
   stripe_link?: string;
-  active: boolean;
+  active: boolean | null;
   created_at: string;
+  business_name?: string;
+  category?: string | null;
+  contact_person?: string | null;
+  current_wait_time?: number | null;
+  website?: string | null;
 }
 
 const VendorApproval: React.FC = () => {
@@ -80,7 +84,7 @@ const VendorApproval: React.FC = () => {
     }
   };
 
-  const rejectVendor = async (vendorId: string) => {
+  const rejectVendor = async (_vendorId: string) => {
     setLoading(true);
     try {
       // For now, we'll just keep them as inactive

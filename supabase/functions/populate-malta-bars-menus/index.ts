@@ -143,11 +143,11 @@ serve(async (req) => {
         console.log(`Bar processed: ${barResult.name} (ID: ${barResult.id})`);
         barsCreated++;
 
-        // 2. Create or get menu for the bar
+        // 2. Create or get menu for the bar - using bar_id directly since no separate vendors table
         const { data: menuResult, error: menuError } = await supabaseClient
           .from('menus')
           .upsert({
-            vendor_id: barResult.id, // Using bar_id as vendor_id for now
+            vendor_id: barResult.id, // Using bar_id as vendor_id
             name: 'Main Menu',
             active: true,
             updated_at: new Date().toISOString()
