@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { ConsolidatedSessionProvider } from "@/providers/ConsolidatedSessionProvider";
-import { lazy, Suspense, useEffect } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import LoadingState from "@/components/LoadingState";
 import { supabase } from "@/integrations/supabase/client";
 import { AnimatePresence } from 'framer-motion';
