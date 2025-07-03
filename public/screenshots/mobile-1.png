@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="1136" viewBox="0 0 640 1136">
+  <rect width="640" height="1136" fill="#f8fafc"/>
+  <rect x="20" y="80" width="600" height="60" fill="#2563eb" rx="8"/>
+  <text x="320" y="120" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">ICUPA Malta</text>
+  <rect x="20" y="180" width="600" height="200" fill="#e2e8f0" rx="8"/>
+  <text x="320" y="290" font-family="Arial, sans-serif" font-size="18" fill="#475569" text-anchor="middle">AI-Powered QR Ordering</text>
+  <rect x="20" y="420" width="180" height="120" fill="#3b82f6" rx="8"/>
+  <rect x="230" y="420" width="180" height="120" fill="#10b981" rx="8"/>
+  <rect x="440" y="420" width="180" height="120" fill="#f59e0b" rx="8"/>
+  <text x="320" y="1000" font-family="Arial, sans-serif" font-size="16" fill="#64748b" text-anchor="middle">Mobile Screenshot</text>
+</svg>

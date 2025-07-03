@@ -1,10 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, ShoppingCart, TrendingUp, Settings, Database, Building2 } from 'lucide-react';
+import { Users, ShoppingCart, TrendingUp, Settings, Database, Building2, Image, Globe } from 'lucide-react';
 import AdminOrderTracking from '@/components/admin/AdminOrderTracking';
 import DatabaseInitializer from '@/components/admin/DatabaseInitializer';
 import BulkDataManager from '@/components/admin/BulkDataManager';
+import MenuImageGenerator from '@/components/admin/MenuImageGenerator';
+import GoogleMapsDataFetcher from '@/components/admin/GoogleMapsDataFetcher';
 
 const AdminDashboard = () => {
   return (
@@ -15,7 +17,7 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold">ICUPA Malta Admin</h1>
-              <p className="text-gray-600">System Administration Dashboard</p>
+              <p className="text-gray-600">System Administration & Data Tools</p>
             </div>
           </div>
         </div>
@@ -23,18 +25,22 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="bulk-data" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="bulk-data">Bulk Data</TabsTrigger>
+        <Tabs defaultValue="data-tools" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="data-tools">Data Tools</TabsTrigger>
             <TabsTrigger value="database">Database Setup</TabsTrigger>
             <TabsTrigger value="orders">Order Tracking</TabsTrigger>
-            <TabsTrigger value="vendors">Vendor Management</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">System Settings</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="bulk-data" className="mt-6">
-            <BulkDataManager />
+          <TabsContent value="data-tools" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <MenuImageGenerator />
+              <GoogleMapsDataFetcher />
+            </div>
+            <div className="mt-6">
+              <BulkDataManager />
+            </div>
           </TabsContent>
 
           <TabsContent value="database" className="mt-6">
@@ -43,42 +49,6 @@ const AdminDashboard = () => {
 
           <TabsContent value="orders" className="mt-6">
             <AdminOrderTracking />
-          </TabsContent>
-
-          <TabsContent value="vendors" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Vendor Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Vendor management interface coming soon</p>
-                  <p className="text-sm">Manage vendor onboarding, approval, and settings</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2" />
-                  Platform Analytics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Analytics dashboard coming soon</p>
-                  <p className="text-sm">Track platform performance, revenue, and growth metrics</p>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">

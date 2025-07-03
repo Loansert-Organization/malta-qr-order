@@ -1,6 +1,6 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { generateFoodImagePrompt } from '../_shared/imagePrompter.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -325,6 +325,8 @@ async function generateMissingImages(items: MenuItem[], barId: string, supabaseC
     if (!item.image_url) {
       try {
         // Generate image with DALL-E
+        const prompt = await generateFoodImagePrompt(Deno.env.get('OPENAI_API_KEY') ?? '', item.name, item.description)
+
         const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
           method: 'POST',
           headers: {
@@ -333,9 +335,10 @@ async function generateMissingImages(items: MenuItem[], barId: string, supabaseC
           },
           body: JSON.stringify({
             model: 'dall-e-3',
-            prompt: `Professional food photography of ${item.name}${item.description ? ': ' + item.description : ''}. High quality, restaurant style, appetizing presentation.`,
+            prompt,
             size: '1024x1024',
-            quality: 'standard',
+            quality: 'hd',
+            style: 'vivid',
             n: 1
           })
         })

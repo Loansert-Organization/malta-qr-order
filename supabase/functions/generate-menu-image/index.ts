@@ -20,7 +20,41 @@ Deno.serve(async (req) => {
       throw new Error('Menu item ID and name are required')
     }
 
-    // Generate image using DALL-E 3
+    // 1️⃣ Dynamically craft a richer DALL·E prompt via GPT
+    let finalPrompt = `Professional food photography of ${itemName}${itemDescription ? `: ${itemDescription}` : ''}. High-quality restaurant menu photo, appetizing presentation, natural lighting, shallow depth of field.`
+    try {
+      const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert food-photography prompt engineer for DALL·E. Produce vivid, camera-ready prompts describing professional restaurant dishes.'
+            },
+            {
+              role: 'user',
+              content: `Dish name: ${itemName}\nDescription: ${itemDescription ?? 'N/A'}\nGenerate a single, detailed DALL·E 3 prompt for a square menu photo.`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 150
+        })
+      })
+      if (chatRes.ok) {
+        const chatJson = await chatRes.json()
+        const candidate = chatJson.choices?.[0]?.message?.content?.trim()
+        if (candidate) finalPrompt = candidate
+      }
+    } catch (_) {
+      // If GPT call fails, fall back to the default prompt above
+    }
+
+    // Generate image using DALL-E 3 with improved parameters
     const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
@@ -29,11 +63,11 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'dall-e-3',
-        prompt: `Professional food photography of ${itemName}${itemDescription ? `: ${itemDescription}` : ''}. High-quality restaurant menu photo, appetizing presentation, natural lighting, shallow depth of field.`,
+        prompt: finalPrompt,
         n: 1,
         size: '1024x1024',
-        quality: 'standard',
-        style: 'natural'
+        quality: 'hd',
+        style: 'vivid'
       }),
     })
 

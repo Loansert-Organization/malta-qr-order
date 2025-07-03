@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Icon Generator</title>
+</head>
+<body>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        function createIcon(size) {
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Background
+            ctx.fillStyle = '#2563eb';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Border radius effect (simple corners)
+            const radius = size * 0.15;
+            ctx.clearRect(0, 0, size, radius);
+            ctx.clearRect(0, 0, radius, size);
+            ctx.clearRect(size - radius, 0, radius, size);
+            ctx.clearRect(0, size - radius, size, radius);
+            
+            // Re-fill with rounded corners
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, radius);
+            ctx.fill();
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('I', size / 2, size / 2 - size * 0.05);
+            
+            // Subtitle
+            ctx.font = `${size * 0.1}px Arial`;
+            ctx.fillStyle = '#93c5fd';
+            ctx.fillText('ICUPA', size / 2, size / 2 + size * 0.2);
+            
+            // Convert to blob and download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${size}x${size}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Generate all sizes
+        sizes.forEach((size, index) => {
+            setTimeout(() => createIcon(size), index * 500);
+        });
+    </script>
+</body>
+</html>

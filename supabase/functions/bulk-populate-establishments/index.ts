@@ -16,7 +16,72 @@ serve(async (req) => {
 
     let maltaCount = 0;
     let kigaliCount = 0;
+    let categoriesCount = 0;
     const errors: string[] = [];
+
+    // First, ensure menu categories exist
+    // Note: Need to get a vendor_id first since categories require vendor_id
+    const { data: vendors, error: vendorError } = await supabase
+      .from('vendors')
+      .select('id')
+      .limit(1);
+    
+    if (vendorError || !vendors || vendors.length === 0) {
+      console.log('No vendors found, skipping menu categories');
+    } else {
+      const vendorId = vendors[0].id;
+      const menuCategories = [
+        { name: 'All', vendor_id: vendorId, display_order: 0 },
+        { name: 'Starters', vendor_id: vendorId, display_order: 1 },
+        { name: 'Mains', vendor_id: vendorId, display_order: 2 },
+        { name: 'Drinks', vendor_id: vendorId, display_order: 3 },
+        { name: 'Desserts', vendor_id: vendorId, display_order: 4 },
+        { name: 'Vegan', vendor_id: vendorId, display_order: 5 },
+        { name: 'Trending', vendor_id: vendorId, display_order: 6 }
+      ];
+
+      for (const category of menuCategories) {
+        try {
+          const { error } = await supabase
+            .from('menu_categories')
+            .upsert(category, {
+              onConflict: 'vendor_id,name',
+              ignoreDuplicates: false
+            });
+
+          if (!error) {
+            categoriesCount++;
+          }
+        } catch (error) {
+          errors.push(`Category ${category.name}: ${error.message}`);
+        }
+      }
+      
+      console.log(`✅ Created/updated ${categoriesCount} menu categories`);
+    }
+
+    // Add country field to existing bars
+    console.log('🌍 Adding country information to bars...');
+    
+    // Update Malta bars
+    const { data: maltaUpdated, error: maltaError } = await supabase
+      .from('bars')
+      .update({ country: 'Malta' })
+      .ilike('address', '%Malta%')
+      .select('id');
+    
+    const maltaCount = maltaUpdated?.length || 0;
+    console.log(`Updated ${maltaCount} Malta bars`);
+    
+    // Update Rwanda bars
+    const { data: rwandaUpdated, error: rwandaError } = await supabase
+      .from('bars')
+      .update({ country: 'Rwanda' })
+      .or('address.ilike.%Rwanda%,address.ilike.%Kigali%')
+      .select('id');
+    
+    const rwandaCountUpdate = rwandaUpdated?.length || 0;
+    console.log(`Updated ${rwandaCountUpdate} Rwanda bars`);
 
     // Generate Malta establishments (200+)
     const maltaEstablishments = generateMaltaEstablishments();

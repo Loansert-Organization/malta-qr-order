@@ -1,239 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { createClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Search, 
-  ShoppingCart, 
-  Plus, 
-  Clock, 
-  Star, 
-  ChefHat,
-  Bell,
-  User,
-  Menu as MenuIcon,
-  Filter,
-  Heart,
-  Zap
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { ChefHat, Bell, User, Search, MapPin, Phone, Star, Users, ExternalLink, FileText } from 'lucide-react';
+import { BarPhotoCarousel } from '@/components/ui/bar-photo-carousel';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface MenuItem {
+const supabase = createClient(
+  'https://nireplgrlwhwppjtfxbb.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pcmVwbGdybHdod3BwanRmeGJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1MjYzMzMsImV4cCI6MjA2NjEwMjMzM30.nBdmNTrbS5CvEMV-2k-hkUbUA1NCsi4Xwt69kkrJnvs'
+);
+
+interface Bar {
   id: string;
   name: string;
-  description?: string;
-  price_local: number;
-  currency: string;
-  image_url?: string;
-  tags?: string[];
-  prep_time_minutes?: number;
-  category_name?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  icon?: string;
-  sort_order: number;
+  address: string;
+  contact_number?: string;
+  rating?: number;
+  review_count?: number;
+  website_url?: string;
+  google_place_id?: string;
+  has_menu?: boolean;
 }
 
 const ClientHome = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  // State
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCountry, setSelectedCountry] = useState<string>('Malta');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cartCount, setCartCount] = useState(0);
-  const [cartTotal, setCartTotal] = useState(0);
 
-  // Session management
-  const [sessionId] = useState(() => {
-    let session = localStorage.getItem('icupa_session_id');
-    if (!session) {
-      session = crypto.randomUUID();
-      localStorage.setItem('icupa_session_id', session);
-    }
-    return session;
-  });
-
-  // Table number from URL
-  const tableNumber = React.useMemo(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tableFromUrl = urlParams.get('table');
-    if (tableFromUrl) {
-      localStorage.setItem('icupa_table_number', tableFromUrl);
-      return tableFromUrl;
-    }
-    return localStorage.getItem('icupa_table_number');
-  }, []);
-
-  // Fetch data
   useEffect(() => {
-    fetchMenuData();
-    fetchCartSummary();
-  }, [selectedCategory]);
+    fetchBarsData();
+  }, [selectedCountry]);
 
-  const fetchMenuData = async () => {
+  const fetchBarsData = async () => {
     setLoading(true);
     try {
-      // Fetch categories
-      const { data: categoriesData } = await supabase
-        .from('menu_categories')
+      console.log('🔍 Fetching bars data...');
+      
+      const { data: barsData, error } = await supabase
+        .from('bars')
         .select('*')
-        .order('sort_order');
+        .order('rating', { ascending: false, nullsLast: true })
+        .order('name');
 
-      if (categoriesData) {
-        setCategories(categoriesData);
+      if (error) {
+        console.error('❌ Error fetching bars:', error);
+        setBars([]);
+      } else {
+        console.log('✅ Raw bars data:', barsData?.length);
+        
+        const filteredData = barsData?.filter(bar => {
+          if (selectedCountry === 'Malta') {
+            return bar.address?.includes('Malta');
+          } else if (selectedCountry === 'Rwanda') {
+            return bar.address?.includes('Rwanda') || bar.address?.includes('Kigali');
+          }
+          return true;
+        }) || [];
+
+        setBars(filteredData);
+        console.log(`📊 Loaded ${filteredData.length} bars for ${selectedCountry}`);
       }
-
-      // Fetch menu items
-      let query = supabase
-        .from('menu_items')
-        .select(`
-          *,
-          menu_categories(name)
-        `)
-        .eq('is_available', true);
-
-      if (selectedCategory !== 'all') {
-        query = query.eq('menu_categories.name', selectedCategory);
-      }
-
-      const { data: menuData } = await query.order('name');
-
-      if (menuData) {
-        const formattedItems = menuData.map(item => ({
-          ...item,
-          category_name: item.menu_categories?.name
-        }));
-        setMenuItems(formattedItems);
-      }
-
     } catch (error) {
-      console.error('Error fetching menu data:', error);
-      toast({
-        title: "Error loading menu",
-        description: "Please try refreshing the page",
-        variant: "destructive"
-      });
+      console.error('💥 Critical error:', error);
+      setBars([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCartSummary = async () => {
-    try {
-      const { data: cartData } = await supabase
-        .from('carts')
-        .select(`
-          cart_items(
-            qty,
-            menu_items(price_local)
-          )
-        `)
-        .eq('session_id', sessionId)
-        .eq('status', 'active')
-        .single();
-
-      if (cartData?.cart_items) {
-        const count = cartData.cart_items.reduce((sum: number, item: any) => sum + item.qty, 0);
-        const total = cartData.cart_items.reduce((sum: number, item: any) => 
-          sum + (item.qty * item.menu_items.price_local), 0);
-        setCartCount(count);
-        setCartTotal(total);
-      }
-    } catch (error) {
-      console.log('No cart found yet');
-    }
-  };
-
-  const addToCart = async (itemId: string) => {
-    try {
-      // Get or create cart
-      let { data: cart } = await supabase
-        .from('carts')
-        .select('id')
-        .eq('session_id', sessionId)
-        .eq('status', 'active')
-        .single();
-
-      if (!cart) {
-        const { data: newCart, error } = await supabase
-          .from('carts')
-          .insert({ session_id: sessionId, status: 'active' })
-          .select('id')
-          .single();
-        
-        if (error) throw error;
-        cart = newCart;
-      }
-
-      // Add item to cart
-      const { error } = await supabase
-        .from('cart_items')
-        .insert({
-          cart_id: cart.id,
-          item_id: itemId,
-          qty: 1
-        });
-
-      if (error) throw error;
-
-      await fetchCartSummary();
-      toast({
-        title: "Added to cart",
-        description: "Item added successfully",
-      });
-
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('rw-RW', {
-      style: 'currency',
-      currency: 'RWF',
-      minimumFractionDigits: 0
-    }).format(price);
-  };
-
-  const getTimeGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  };
-
-  const getCategoryIcon = (name: string) => {
-    const iconMap: Record<string, string> = {
-      'All': '🍽️',
-      'Starters': '🥗',
-      'Mains': '🍖',
-      'Drinks': '🍹',
-      'Desserts': '🍰',
-      'Vegan': '🌱',
-      'Trending': '🔥'
-    };
-    return iconMap[name] || '🍽️';
-  };
-
-  const filteredItems = menuItems.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredBars = bars.filter(bar =>
+    bar.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bar.address?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -248,49 +92,39 @@ const ClientHome = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">ICUPA</h1>
-                {tableNumber && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Table #{tableNumber}</p>
-                )}
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <span>{selectedCountry === 'Malta' ? '🇲🇹' : '🇷🇼'} {selectedCountry}</span>
+                </div>
               </div>
             </div>
             
             <div className="flex items-center gap-3">
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/notifications')}
+                variant={selectedCountry === 'Malta' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCountry('Malta')}
               >
-                <Bell className="w-5 h-5" />
+                🇲🇹 Malta
               </Button>
               <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/profile')}
+                variant={selectedCountry === 'Rwanda' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCountry('Rwanda')}
               >
-                <User className="w-5 h-5" />
+                🇷🇼 Rwanda
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 space-y-6 pb-24">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Greeting */}
         <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold mb-1">
-                  {getTimeGreeting()}! 👋
-                </h2>
-                <p className="text-orange-100">
-                  Welcome to ICUPA - Discover amazing food & drinks
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-orange-100">Ready to order?</div>
-              </div>
-            </div>
+            <h2 className="text-2xl font-bold mb-1">Good day! 👋</h2>
+            <p className="text-orange-100">Discover amazing bars & restaurants in {selectedCountry}</p>
+            <div className="mt-2 text-sm text-orange-100">{filteredBars.length} places found</div>
           </CardContent>
         </Card>
 
@@ -298,113 +132,93 @@ const ClientHome = () => {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search menu items..."
+            placeholder="Search bars & restaurants..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
 
-        {/* Categories */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          <Button
-            variant={selectedCategory === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedCategory('all')}
-            className="flex-shrink-0"
-          >
-            <span className="mr-2">🍽️</span>
-            All
-          </Button>
-          {categories.map((category) => (
-            <Button
-              key={category.id}
-              variant={selectedCategory === category.name.toLowerCase() ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory(category.name.toLowerCase())}
-              className="flex-shrink-0"
-            >
-              <span className="mr-2">{getCategoryIcon(category.name)}</span>
-              {category.name}
-            </Button>
-          ))}
-        </div>
+        {/* Debug */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4 text-sm">
+            <div>🔍 Loading: {loading ? 'Yes' : 'No'}</div>
+            <div>📊 Total bars: {bars.length}</div>
+            <div>🔎 Filtered: {filteredBars.length}</div>
+            <div>🏁 Status: {loading ? 'Loading...' : 'Ready'}</div>
+          </CardContent>
+        </Card>
 
-        {/* Menu Grid */}
+        {/* Bars Grid */}
         {loading ? (
-          <div className="grid grid-cols-2 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="h-64">
-                <Skeleton className="h-32 w-full rounded-t-lg" />
-                <div className="p-3 space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="h-96">
+                <Skeleton className="h-48 w-full rounded-t-lg" />
+                <div className="p-4 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-8 w-full" />
                 </div>
               </Card>
             ))}
           </div>
-        ) : filteredItems.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4">
-            {filteredItems.map((item) => (
-              <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                <div className="relative h-32 bg-gray-200 rounded-t-lg overflow-hidden">
-                  {item.image_url ? (
-                    <img 
-                      src={item.image_url} 
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ChefHat className="w-8 h-8 text-gray-400" />
-                    </div>
-                  )}
-                  
-                  {item.prep_time_minutes && (
-                    <div className="absolute top-2 right-2">
-                      <Badge variant="secondary" className="text-xs">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {item.prep_time_minutes}m
-                      </Badge>
-                    </div>
-                  )}
-                </div>
+        ) : filteredBars.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredBars.map((bar) => (
+              <Card key={bar.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+                <BarPhotoCarousel
+                  barId={bar.id}
+                  barName={bar.name}
+                  height={200}
+                  autoRotate={true}
+                  showControls={true}
+                  showIndicators={true}
+                />
                 
-                <CardContent className="p-3">
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-sm line-clamp-1">{item.name}</h3>
-                    
-                    {item.description && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {item.description}
-                      </p>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-xl">{bar.name}</h3>
+                    {bar.has_menu && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-default">
+                            <FileText className="w-5 h-5 text-green-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Menu available</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-orange-600">
-                        {formatPrice(item.price_local)}
-                      </span>
-                    </div>
-                    
-                    {item.tags && item.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {item.tags.slice(0, 2).map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <Button
-                      onClick={() => addToCart(item.id)}
-                      className="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm h-8"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Add to Cart
-                    </Button>
                   </div>
+                  
+                  <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
+                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>{bar.address}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap mb-4">
+                    {bar.rating && (
+                      <Badge variant="outline" className="text-xs">
+                        <Star className="w-3 h-3 mr-1 text-yellow-500 fill-current" />
+                        {bar.rating.toFixed(1)} stars
+                      </Badge>
+                    )}
+                    {bar.review_count && (
+                      <Badge variant="outline" className="text-xs">
+                        <Users className="w-3 h-3 mr-1" />
+                        {bar.review_count} reviews
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <Button
+                    onClick={() => navigate(`/menu/${bar.id}?name=${encodeURIComponent(bar.name)}`)}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Menu
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -412,48 +226,11 @@ const ClientHome = () => {
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              No items found
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Try adjusting your search or category filter
-            </p>
+            <h3 className="text-lg font-semibold mb-2">No establishments found</h3>
+            <p className="text-gray-600">Try adjusting your search or select a different country</p>
           </div>
         )}
       </div>
-
-      {/* Cart Bar */}
-      {cartCount > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 z-50">
-          <Card className="bg-orange-500 border-orange-600 shadow-lg">
-            <CardContent className="p-4">
-              <Button
-                onClick={() => navigate('/cart')}
-                className="w-full bg-white text-orange-600 hover:bg-gray-50 font-semibold flex items-center justify-between"
-                size="lg"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <ShoppingCart className="w-5 h-5" />
-                    <Badge className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center p-0">
-                      {cartCount}
-                    </Badge>
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm">
-                      {cartCount} item{cartCount !== 1 ? 's' : ''}
-                    </div>
-                    <div className="text-lg font-bold">
-                      {formatPrice(cartTotal)}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-sm">View Cart →</span>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };

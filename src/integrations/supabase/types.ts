@@ -47,6 +47,59 @@ export type Database = {
           },
         ]
       }
+      ai_assistant_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          role: string
+          session_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          role: string
+          session_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          role?: string
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_assistant_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_assistant_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_assistant_sessions: {
+        Row: {
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           context_data: Json | null
@@ -163,6 +216,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_usage: {
+        Row: {
+          cost_usd: number | null
+          created_at: string | null
+          function_name: string
+          id: string
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string | null
+          function_name: string
+          id?: string
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string | null
+          function_name?: string
+          id?: string
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
       ai_waiter_logs: {
         Row: {
@@ -356,12 +436,69 @@ export type Database = {
           },
         ]
       }
+      bar_photos: {
+        Row: {
+          bar_id: string
+          created_at: string | null
+          enhanced_url: string | null
+          height: number | null
+          id: string
+          is_enhanced: boolean | null
+          metadata: Json | null
+          original_url: string
+          photo_reference: string | null
+          processing_status: string | null
+          supabase_url: string | null
+          updated_at: string | null
+          width: number | null
+        }
+        Insert: {
+          bar_id: string
+          created_at?: string | null
+          enhanced_url?: string | null
+          height?: number | null
+          id?: string
+          is_enhanced?: boolean | null
+          metadata?: Json | null
+          original_url: string
+          photo_reference?: string | null
+          processing_status?: string | null
+          supabase_url?: string | null
+          updated_at?: string | null
+          width?: number | null
+        }
+        Update: {
+          bar_id?: string
+          created_at?: string | null
+          enhanced_url?: string | null
+          height?: number | null
+          id?: string
+          is_enhanced?: boolean | null
+          metadata?: Json | null
+          original_url?: string
+          photo_reference?: string | null
+          processing_status?: string | null
+          supabase_url?: string | null
+          updated_at?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bar_photos_bar_id_fkey"
+            columns: ["bar_id"]
+            isOneToOne: false
+            referencedRelation: "bars"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bars: {
         Row: {
           address: string | null
           contact_number: string | null
           created_at: string | null
           google_place_id: string | null
+          has_menu: boolean
           id: string
           location_gps: unknown | null
           name: string
@@ -375,6 +512,7 @@ export type Database = {
           contact_number?: string | null
           created_at?: string | null
           google_place_id?: string | null
+          has_menu?: boolean
           id?: string
           location_gps?: unknown | null
           name: string
@@ -388,6 +526,7 @@ export type Database = {
           contact_number?: string | null
           created_at?: string | null
           google_place_id?: string | null
+          has_menu?: boolean
           id?: string
           location_gps?: unknown | null
           name?: string
@@ -395,6 +534,160 @@ export type Database = {
           review_count?: number | null
           updated_at?: string | null
           website_url?: string | null
+        }
+        Relationships: []
+      }
+      conversation_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          match_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          match_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          match_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "trip_matches_wizard"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_details: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          driver_id: string
+          id: string
+          license_expiry: string
+          license_number: string
+          preferred_radius_km: number | null
+          rating: number | null
+          total_trips: number | null
+          updated_at: string | null
+          verified: boolean | null
+          years_driving: number | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          driver_id: string
+          id?: string
+          license_expiry: string
+          license_number: string
+          preferred_radius_km?: number | null
+          rating?: number | null
+          total_trips?: number | null
+          updated_at?: string | null
+          verified?: boolean | null
+          years_driving?: number | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          driver_id?: string
+          id?: string
+          license_expiry?: string
+          license_number?: string
+          preferred_radius_km?: number | null
+          rating?: number | null
+          total_trips?: number | null
+          updated_at?: string | null
+          verified?: boolean | null
+          years_driving?: number | null
+        }
+        Relationships: []
+      }
+      driver_vehicles: {
+        Row: {
+          color: string
+          created_at: string | null
+          driver_id: string
+          id: string
+          is_primary: boolean | null
+          license_plate: string
+          make: string
+          model: string
+          total_seats: number | null
+          updated_at: string | null
+          vehicle_type: string | null
+          year: number | null
+        }
+        Insert: {
+          color: string
+          created_at?: string | null
+          driver_id: string
+          id?: string
+          is_primary?: boolean | null
+          license_plate: string
+          make: string
+          model: string
+          total_seats?: number | null
+          updated_at?: string | null
+          vehicle_type?: string | null
+          year?: number | null
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          driver_id?: string
+          id?: string
+          is_primary?: boolean | null
+          license_plate?: string
+          make?: string
+          model?: string
+          total_seats?: number | null
+          updated_at?: string | null
+          vehicle_type?: string | null
+          year?: number | null
         }
         Relationships: []
       }
@@ -597,6 +890,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      locations_cache: {
+        Row: {
+          address: string
+          country: string | null
+          created_at: string | null
+          id: string
+          location: unknown
+          name: string
+          place_id: string
+        }
+        Insert: {
+          address: string
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          location: unknown
+          name: string
+          place_id: string
+        }
+        Update: {
+          address?: string
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          location?: unknown
+          name?: string
+          place_id?: string
+        }
+        Relationships: []
       }
       menu_analytics: {
         Row: {
@@ -944,6 +1267,44 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          receiver_id: string | null
+          sender_id: string | null
+          trip_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          receiver_id?: string | null
+          sender_id?: string | null
+          trip_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          receiver_id?: string | null
+          sender_id?: string | null
+          trip_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips_wizard"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_templates: {
         Row: {
           active: boolean | null
@@ -1193,8 +1554,10 @@ export type Database = {
           notification_sent: boolean | null
           payment_method: string | null
           payment_status: string | null
+          special_instructions: string | null
           status: string | null
           table_identifier: string | null
+          table_number: string | null
           total_amount: number
           updated_at: string
           vendor_id: string
@@ -1215,8 +1578,10 @@ export type Database = {
           notification_sent?: boolean | null
           payment_method?: string | null
           payment_status?: string | null
+          special_instructions?: string | null
           status?: string | null
           table_identifier?: string | null
+          table_number?: string | null
           total_amount: number
           updated_at?: string
           vendor_id: string
@@ -1237,8 +1602,10 @@ export type Database = {
           notification_sent?: boolean | null
           payment_method?: string | null
           payment_status?: string | null
+          special_instructions?: string | null
           status?: string | null
           table_identifier?: string | null
+          table_number?: string | null
           total_amount?: number
           updated_at?: string
           vendor_id?: string
@@ -1372,6 +1739,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      points_transactions: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          points: number
+          reference_id: string | null
+          reference_type: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          points: number
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          points?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       posters: {
         Row: {
@@ -1526,6 +1926,33 @@ export type Database = {
           },
         ]
       }
+      push_registrations: {
+        Row: {
+          created_at: string | null
+          id: string
+          platform: string | null
+          token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          platform?: string | null
+          token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          platform?: string | null
+          token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       qr_analytics: {
         Row: {
           id: number
@@ -1673,6 +2100,117 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           window_start?: string | null
+        }
+        Relationships: []
+      }
+      referral_tracking: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          referral_code: string
+          referred_id: string
+          referred_points_earned: number | null
+          referrer_id: string
+          referrer_points_earned: number | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          referral_code: string
+          referred_id: string
+          referred_points_earned?: number | null
+          referrer_id: string
+          referrer_points_earned?: number | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          referral_code?: string
+          referred_id?: string
+          referred_points_earned?: number | null
+          referrer_id?: string
+          referrer_points_earned?: number | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          code: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          referred_id: string | null
+          referrer_id: string | null
+          status: string | null
+        }
+        Insert: {
+          code: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          referred_id?: string | null
+          referrer_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          code?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          referred_id?: string | null
+          referrer_id?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      rewards_catalog: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          points_cost: number
+          stock_quantity: number | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_until: string | null
+          value_amount: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_cost: number
+          stock_quantity?: number | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+          value_amount?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_cost?: number
+          stock_quantity?: number | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+          value_amount?: number | null
         }
         Relationships: []
       }
@@ -1878,6 +2416,218 @@ export type Database = {
           effective_date?: string
           id?: string
           version?: string
+        }
+        Relationships: []
+      }
+      trip_matches_wizard: {
+        Row: {
+          created_at: string | null
+          driver_trip_id: string | null
+          id: string
+          match_score: number | null
+          passenger_trip_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          driver_trip_id?: string | null
+          id?: string
+          match_score?: number | null
+          passenger_trip_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          driver_trip_id?: string | null
+          id?: string
+          match_score?: number | null
+          passenger_trip_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_matches_wizard_driver_trip_id_fkey"
+            columns: ["driver_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips_wizard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_matches_wizard_passenger_trip_id_fkey"
+            columns: ["passenger_trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips_wizard"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips_wizard: {
+        Row: {
+          created_at: string | null
+          departure_time: string
+          destination_location: unknown
+          destination_text: string
+          distance_km: number | null
+          duration_minutes: number | null
+          id: string
+          origin_location: unknown
+          origin_text: string
+          price: number | null
+          role: string
+          seats: number | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+          vehicle_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          departure_time: string
+          destination_location: unknown
+          destination_text: string
+          distance_km?: number | null
+          duration_minutes?: number | null
+          id?: string
+          origin_location: unknown
+          origin_text: string
+          price?: number | null
+          role: string
+          seats?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          departure_time?: string
+          destination_location?: unknown
+          destination_text?: string
+          distance_km?: number | null
+          duration_minutes?: number | null
+          id?: string
+          origin_location?: unknown
+          origin_text?: string
+          price?: number | null
+          role?: string
+          seats?: number | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
+      user_points: {
+        Row: {
+          available_points: number | null
+          created_at: string | null
+          id: string
+          total_points: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          available_points?: number | null
+          created_at?: string | null
+          id?: string
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          available_points?: number | null
+          created_at?: string | null
+          id?: string
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_rewards: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          points_spent: number
+          reward_id: string
+          status: string | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          points_spent: number
+          reward_id: string
+          status?: string | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          points_spent?: number
+          reward_id?: string
+          status?: string | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_rewards_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          auth_user_id: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          language: string | null
+          name: string | null
+          onboarding_completed: boolean | null
+          phone: string | null
+          promo_code: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          name?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          promo_code?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          name?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          promo_code?: string | null
+          role?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2345,12 +3095,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_top_locations: {
+        Row: {
+          location: string | null
+          uses: number | null
+        }
+        Relationships: []
+      }
+      v_daily_trip_counts: {
+        Row: {
+          day: string | null
+          driver_trips: number | null
+          passenger_requests: number | null
+          total_trips: number | null
+        }
+        Relationships: []
+      }
+      v_driver_ratings: {
+        Row: {
+          avg_rating: number | null
+          driver_id: string | null
+          name: string | null
+          trips_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      calculate_trip_price: {
+        Args: { distance_km: number; country_code?: string }
+        Returns: number
+      }
       cleanup_old_logs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      expire_old_passenger_requests: {
+        Args: { hours?: number }
+        Returns: number
+      }
+      generate_promo_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_anonymous_uuid: {
         Args: Record<PropertyKey, never>
@@ -2359,6 +3145,46 @@ export type Database = {
       get_system_uuid: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      refresh_all_materialized_views: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      refresh_mv_top_locations: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
       }
     }
     Enums: {

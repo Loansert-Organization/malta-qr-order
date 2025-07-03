@@ -2,21 +2,25 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { ConsolidatedSessionProvider } from "@/providers/ConsolidatedSessionProvider";
 import { lazy, Suspense, useEffect } from "react";
 import LoadingState from "@/components/LoadingState";
 import { supabase } from "@/integrations/supabase/client";
 import { AnimatePresence } from 'framer-motion';
 import PageTransition from '@/components/PageTransition';
+import { CartProvider } from '@/contexts/CartContext';
 
 // Lazy load all route components
+const WelcomeWizard = lazy(() => import("./components/WelcomeWizard"));
 const Index = lazy(() => import("./pages/Index"));
 const ClientHome = lazy(() => import("./pages/ClientHome"));
 // const ClientOrder = lazy(() => import("./pages/ClientOrder")); // DEPRECATED
 const MenuPage = lazy(() => import("./pages/MenuPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const ConfirmPage = lazy(() => import("./pages/ConfirmPage"));
+const OrderStatus = lazy(() => import("./pages/OrderStatus"));
+const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
 const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
 const VendorOrders = lazy(() => import("./pages/VendorOrders"));
 const VendorMenu = lazy(() => import("./pages/VendorMenu"));
@@ -35,6 +39,12 @@ const OrderTracking = lazy(() => import("./pages/OrderTracking"));
 const OrderRating = lazy(() => import("./pages/OrderRating"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
+
+// TEMPORARY: Import new admin components for manual client-side testing
+import MenuImageGenerator from "@/components/admin/MenuImageGenerator";
+import GoogleMapsDataFetcher from "@/components/admin/GoogleMapsDataFetcher";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,26 +77,45 @@ const AnonymousAuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// TEMPORARY: Component to host the admin tools for client-side testing
+const TempAdminToolsPage = () => (
+  <PageTransition>
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <h1 className="text-3xl font-bold mb-6">Temporary Admin Tools</h1>
+      <p className="text-sm text-red-500 font-semibold">NOTE: This page is for temporary testing only and should be removed once the main admin panel is accessible.</p>
+      <MenuImageGenerator />
+      <GoogleMapsDataFetcher />
+    </div>
+  </PageTransition>
+);
+
 const RoutesWithAnimation = () => {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Main Landing Page */}
-        <Route path="/" element={<PageTransition><Index /></PageTransition>} />
+        {/* Main Landing Page - Now shows WelcomeWizard */}
+        <Route path="/" element={<PageTransition><WelcomeWizard /></PageTransition>} />
+        {/* Landing page moved to /landing */}
+        <Route path="/landing" element={<PageTransition><Index /></PageTransition>} />
         {/* Client App Routes */}
         <Route path="/home" element={<PageTransition><ClientHome /></PageTransition>} />
         <Route path="/client" element={<PageTransition><ClientHome /></PageTransition>} />
+        <Route path="/client/home" element={<PageTransition><ClientHome /></PageTransition>} />
         <Route path="/menu/:barId" element={<PageTransition><MenuPage /></PageTransition>} />
         <Route path="/checkout/:barId" element={<PageTransition><CheckoutPage /></PageTransition>} />
         <Route path="/order" element={<PageTransition><CheckoutPage /></PageTransition>} />
         <Route path="/confirm/:orderId" element={<PageTransition><ConfirmPage /></PageTransition>} />
+        <Route path="/order-status/:orderId" element={<PageTransition><OrderStatus /></PageTransition>} />
+        <Route path="/order-success/:orderId" element={<PageTransition><OrderSuccess /></PageTransition>} />
         <Route path="/confirmed/:orderId" element={<PageTransition><ConfirmPage /></PageTransition>} />
         {/* <Route path="/order/:vendorSlug" element={<PageTransition><ClientOrder /></PageTransition>} /> */} {/* DEPRECATED */}
         <Route path="/order/tracking/:orderId" element={<PageTransition><OrderTracking /></PageTransition>} />
         <Route path="/rate-order/:orderId" element={<PageTransition><OrderRating /></PageTransition>} />
         <Route path="/payment-success" element={<PageTransition><PaymentSuccess /></PageTransition>} />
         <Route path="/favorites" element={<PageTransition><FavoritesPage /></PageTransition>} />
+        <Route path="/cart" element={<PageTransition><CartPage /></PageTransition>} />
+        <Route path="/order-confirmation/:orderId" element={<PageTransition><OrderConfirmationPage /></PageTransition>} />
 
         {/* Vendor App Routes */}
         <Route path="/vendor" element={<PageTransition><VendorDashboard /></PageTransition>} />
@@ -106,6 +135,9 @@ const RoutesWithAnimation = () => {
         <Route path="/admin/tools" element={<PageTransition><AdminTools /></PageTransition>} />
         <Route path="/admin/accessibility" element={<PageTransition><AdminAccessibility /></PageTransition>} />
 
+        {/* TEMPORARY: Route for testing admin tools */} 
+        <Route path="/temp-admin-tools" element={<TempAdminToolsPage />} />
+
         {/* Catch all route */}
         <Route path="*" element={<PageTransition><Index /></PageTransition>} />
       </Routes>
@@ -121,9 +153,17 @@ const App = () => (
       <BrowserRouter>
         <AnonymousAuthProvider>
           <ConsolidatedSessionProvider>
-            <Suspense fallback={<LoadingState />}>
-              <RoutesWithAnimation />
-            </Suspense>
+            <CartProvider>
+              <Suspense fallback={<LoadingState />}>
+                {/* TEMPORARY: Link to access the temporary admin tools from the WelcomeWizard */}
+                <div className="fixed bottom-4 right-4 z-50">
+                  <Link to="/temp-admin-tools" className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg">
+                    Test Admin Tools
+                  </Link>
+                </div>
+                <RoutesWithAnimation />
+              </Suspense>
+            </CartProvider>
           </ConsolidatedSessionProvider>
         </AnonymousAuthProvider>
       </BrowserRouter>

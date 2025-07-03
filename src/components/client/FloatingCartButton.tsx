@@ -32,7 +32,7 @@ const FloatingCartButton: React.FC<Props> = ({ count, subtotal, currency }) => {
               aria-label="Open cart"
               size="lg"
               className="shadow-lg relative bg-primary text-white hover:bg-primary/90"
-              onClick={() => navigate('/order')}
+              onClick={() => navigate('/cart')}
             >
               <ShoppingCart className="mr-2 h-5 w-5" />
               {count}
