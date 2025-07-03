@@ -79,9 +79,10 @@ const BarsCleanupTool = () => {
         bars_with_images: 0
       });
       
+      const errorMessage = error instanceof Error ? error.message : "An error occurred during cleanup";
       toast({
         title: "❌ Cleanup Failed",
-        description: error.message || "An error occurred during cleanup",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

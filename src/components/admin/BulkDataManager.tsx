@@ -209,7 +209,7 @@ const BulkDataManager: React.FC = () => {
                     <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
                       <h5 className="font-semibold text-red-800 mb-2">Errors ({results.errors.length})</h5>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {results.errors.slice(0, 5).map((error, index) => (
+                        {results.errors.slice(0, 5).map((error: string, index: number) => (
                           <p key={index} className="text-sm text-red-600">• {error}</p>
                         ))}
                         {results.errors.length > 5 && (

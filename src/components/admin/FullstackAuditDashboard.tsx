@@ -288,7 +288,7 @@ const FullstackAuditDashboard: React.FC = () => {
 
         <TabsContent value="audit-report">
           <FullstackAuditReport 
-            report={auditReport} 
+            report={auditReport || undefined} 
             onRunAudit={runFullAudit}
             isRunning={isRunningAudit}
           />

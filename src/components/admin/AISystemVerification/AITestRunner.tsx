@@ -38,9 +38,10 @@ export const useAITestRunner = ({ updateHealthCheck, setTestResults }: AITestRun
       
       return data;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateHealthCheck('AI System Health', {
         status: 'down',
-        error: error.message,
+        error: errorMessage,
         responseTime: Date.now() - startTime
       });
       throw error;
@@ -81,9 +82,10 @@ export const useAITestRunner = ({ updateHealthCheck, setTestResults }: AITestRun
       
       return data;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateHealthCheck('Malta AI Waiter', {
         status: 'down',
-        error: error.message,
+        error: errorMessage,
         responseTime: Date.now() - startTime
       });
       throw error;
@@ -128,9 +130,10 @@ export const useAITestRunner = ({ updateHealthCheck, setTestResults }: AITestRun
       
       return data;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       updateHealthCheck('AI Router', {
         status: 'down',
-        error: error.message,
+        error: errorMessage,
         responseTime: Date.now() - startTime
       });
       throw error;

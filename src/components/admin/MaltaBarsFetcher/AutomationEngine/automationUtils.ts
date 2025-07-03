@@ -5,9 +5,13 @@ interface AutomationJob {
   id: string;
   job_type: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
-  error_message?: string;
+  error_message?: string | null;
   progress_data?: any;
-  created_at: string;
+  created_at: string | null;
+  bar_id?: string | null;
+  completed_at?: string | null;
+  started_at?: string | null;
+  target_url?: string | null;
 }
 
 export const runGoogleMapsFetch = async (setProgress: (progress: number) => void) => {

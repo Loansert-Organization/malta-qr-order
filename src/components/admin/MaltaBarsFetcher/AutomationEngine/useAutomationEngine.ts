@@ -41,7 +41,13 @@ export const useAutomationEngine = () => {
       
       const typedJobs: AutomationJob[] = (data || []).map(job => ({
         ...job,
-        status: job.status as 'pending' | 'running' | 'completed' | 'failed'
+        status: job.status as 'pending' | 'running' | 'completed' | 'failed',
+        target_url: job.target_url || undefined,
+        bar_id: job.bar_id || undefined,
+        error_message: job.error_message || undefined,
+        started_at: job.started_at || undefined,
+        completed_at: job.completed_at || undefined,
+        created_at: job.created_at || new Date().toISOString()
       }));
       
       setJobs(typedJobs);

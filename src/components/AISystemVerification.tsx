@@ -1,5 +1,5 @@
 
-import React from 'react';
+
 import AISystemVerificationMain from './admin/AISystemVerification';
 
 const AISystemVerification = () => {
