@@ -66,8 +66,8 @@ const MenuSection: React.FC<MenuSectionProps> = ({
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
         <TabsList className="grid grid-cols-2 lg:grid-cols-4 w-full">
           {categories.map((category) => (
-            <TabsTrigger key={category} value={category} className="capitalize">
-              {category === 'all' ? 'All Items' : category}
+            <TabsTrigger key={category} value={category || ''} className="capitalize">
+              {category === 'all' ? 'All Items' : (category || '')}
             </TabsTrigger>
           ))}
         </TabsList>

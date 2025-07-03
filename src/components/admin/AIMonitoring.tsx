@@ -122,7 +122,11 @@ const AIMonitoring = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      setRecentLogs(logs || []);
+      setRecentLogs((logs || []).map(log => ({
+        ...log,
+        ai_model_used: log.ai_model_used || 'unknown',
+        satisfaction_score: log.satisfaction_score || 0
+      })));
     } catch (error) {
       console.error('Error loading recent logs:', error);
     }

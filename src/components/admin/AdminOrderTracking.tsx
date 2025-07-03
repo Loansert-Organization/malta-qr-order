@@ -89,7 +89,14 @@ const AdminOrderTracking: React.FC = () => {
         .limit(100);
 
       if (ordersError) throw ordersError;
-      setOrders(ordersData || []);
+      setOrders((ordersData || []).map(order => ({
+        ...order,
+        status: order.status || 'pending',
+        payment_status: order.payment_status || 'pending',
+        customer_name: order.customer_name || undefined,
+        customer_email: order.customer_email || undefined,
+        customer_phone: order.customer_phone || undefined
+      })));
 
       // Calculate stats
       const totalOrders = ordersData?.length || 0;

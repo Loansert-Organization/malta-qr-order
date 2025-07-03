@@ -26,7 +26,7 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
   handleSearch,
   addToCart
 }) => {
-  const [data, setData] = useState();
+  const [data] = useState();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,8 +34,7 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
       setLoading(true);
       try {
         const result = await fetch('/api/data');
-        const json = await result.json();
-        setData(json);
+        await result.json();
       } catch (error) {
         console.log(error);
       }
@@ -45,8 +44,8 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
     fetchData();
   }, []);
 
-  const processData = (items) => {
-    return items.map(item => ({
+  const processData = (items: any[]) => {
+    return items.map((item: any) => ({
       ...item,
       processed: true
     }));

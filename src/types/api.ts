@@ -765,7 +765,7 @@ export interface FormField<T = unknown> {
 // =============================================================================
 
 export type FormSubmitHandler<T = Record<string, unknown>> = (data: T) => Promise<void> | void;
-export type ClickHandler = (event: React.MouseEvent<HTMLButtonElement>) => void;
+export type ClickHandler = (event?: React.MouseEvent<HTMLButtonElement>) => void;
 export type ChangeHandler = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
 export type SelectHandler<T = string> = (value: T) => void;
 export type AsyncHandler<T = unknown> = (data: T) => Promise<void>;
