@@ -78,7 +78,7 @@ const MainContent: React.FC<MainContentProps> = ({
   searchTerm = '',
   nearestBar = null,
   onBarSelect,
-  onOrderComplete,
+  
   cartItems = [],
   onAddToCart,
   onRemoveFromCart

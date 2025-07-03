@@ -60,7 +60,7 @@ export const BarsTable: React.FC<BarsTableProps> = ({ bars }) => {
                       </span>
                     </TableCell>
                     <TableCell className="text-sm text-gray-500">
-                      {new Date(bar.created_at).toLocaleDateString()}
+                      {bar.created_at ? new Date(bar.created_at).toLocaleDateString() : 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))}

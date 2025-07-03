@@ -20,7 +20,7 @@ export const useMaltaBarsFetcher = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setBars(data || []);
+      setBars((data as Bar[]) || []);
     } catch (error: any) {
       toast({
         title: "Error",

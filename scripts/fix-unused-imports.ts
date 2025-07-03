@@ -84,11 +84,13 @@ const TARGET_FILES = [
   'src/components/admin/FullstackAuditReport.tsx',
   'src/components/admin/GDPRCompliance.tsx',
   'src/components/admin/ICUPAProductionValidator.tsx',
+  'src/components/admin/LegalDocumentEditor.tsx',
   'src/components/admin/LiveOrderHeatmap.tsx',
   'src/components/admin/MaltaBarsFetcher/AutomationEngine.tsx',
   'src/components/admin/MaltaBarsFetcher/AutomationEngine/AutomationControlPanel.tsx',
   'src/components/admin/MaltaBarsFetcher/MenuAnalytics.tsx',
   'src/components/admin/MaltaBarsFetcher/hooks/useMaltaBarsFetcher.ts',
+  'src/components/admin/MaltaBarsFetcher/AutomationEngine/automationUtils.ts',
   'src/components/admin/MenuQATool.tsx'
 ];
 
@@ -143,6 +145,9 @@ function main() {
   
   console.log(`\n✨ Fixed ${totalFixed} files`);
 }
+
+// Auto-run if script is executed directly  
+main();
 
 if (require.main === module) {
   main();

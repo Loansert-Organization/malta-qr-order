@@ -6,11 +6,13 @@ export interface Bar {
   contact_number: string | null;
   rating: number | null;
   review_count: number | null;
-  google_place_id: string;
+  google_place_id: string | null;
+  website_url?: string | null;
+  has_menu: boolean;
   data_quality_score?: number;
   is_active?: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   location_gps?: unknown;
 }
 

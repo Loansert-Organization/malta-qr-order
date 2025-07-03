@@ -36,7 +36,7 @@ interface MenuItem {
   description?: string;
   image_url?: string;
   category: string;
-  allergens?: string[];
+  allergens?: any;
   vendor_id: string;
   vendor_name: string;
   issues: QAIssue[];
@@ -88,7 +88,8 @@ const MenuQATool = () => {
           description,
           image_url,
           category,
-          allergens
+          allergens,
+          menu_id
         `)
         .order('created_at', { ascending: false });
 
@@ -115,13 +116,19 @@ const MenuQATool = () => {
       });
 
       const itemsWithIssues = (menuItemsData || []).map(item => {
-        const vendorInfo = menuToVendorMap.get(item.menu_id) || { 
+        const vendorInfo = menuToVendorMap.get(item.menu_id || '') || { 
           vendor_id: 'unknown', 
           vendor_name: 'Unknown Vendor' 
         };
         
         return {
-          ...item,
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          description: item.description || undefined,
+          image_url: item.image_url || undefined,
+          category: item.category || 'Uncategorized',
+          allergens: item.allergens || [],
           vendor_id: vendorInfo.vendor_id,
           vendor_name: vendorInfo.vendor_name,
           issues: analyzeItem(item)

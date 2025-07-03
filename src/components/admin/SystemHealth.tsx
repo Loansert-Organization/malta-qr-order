@@ -95,7 +95,7 @@ const SystemHealth = () => {
         .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
 
       // Process metrics data
-      const processedMetrics = processMetricsData(recentMetrics || [], perfLogs || [], errorCount?.count || 0);
+      const processedMetrics = processMetricsData(recentMetrics || [], perfLogs || [], (errorCount as any)?.[0]?.count || 0);
       setMetrics(processedMetrics);
 
       // Check service status
