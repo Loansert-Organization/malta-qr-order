@@ -1,0 +1,36 @@
+-- Insert Malta bars/restaurants into the bars table with conflict handling
+INSERT INTO bars (
+    name,
+    address,
+    created_at,
+    updated_at,
+    has_menu
+) VALUES 
+    ('Aqualuna Lido', 'Malta', NOW(), NOW(), false),
+    ('Bistro 516', 'Malta', NOW(), NOW(), false),
+    ('Black Bull', 'Malta', NOW(), NOW(), false),
+    ('Brown''s Kitchen', 'Malta', NOW(), NOW(), false),
+    ('Bus Stop Lounge', 'Malta', NOW(), NOW(), false),
+    ('Cafe Cuba St Julians', 'St Julians, Malta', NOW(), NOW(), false),
+    ('Cuba Campus Hub', 'Malta', NOW(), NOW(), false),
+    ('Cuba Shoreline', 'Malta', NOW(), NOW(), false),
+    ('Doma Marsascala', 'Marsascala, Malta', NOW(), NOW(), false),
+    ('Exiles', 'Malta', NOW(), NOW(), false),
+    ('Felice Brasserie', 'Malta', NOW(), NOW(), false),
+    ('Fortizza', 'Malta', NOW(), NOW(), false),
+    ('House of Flavors', 'Malta', NOW(), NOW(), false),
+    ('Kings Gate', 'Malta', NOW(), NOW(), false),
+    ('Mamma Mia', 'Malta', NOW(), NOW(), false),
+    ('Medasia Fusion Lounge', 'Malta', NOW(), NOW(), false),
+    ('Okurama Asian Fusion', 'Malta', NOW(), NOW(), false),
+    ('Paparazzi 29', 'Malta', NOW(), NOW(), false),
+    ('Peperino Pizza Cucina Verace', 'Malta', NOW(), NOW(), false),
+    ('Sakura Japanese Cuisine Lounge', 'Malta', NOW(), NOW(), false),
+    ('Spinola Cafe Lounge St Julians', 'St Julians, Malta', NOW(), NOW(), false),
+    ('Surfside', 'Malta', NOW(), NOW(), false),
+    ('Tex Mex American Bar Grill Paceville', 'Paceville, Malta', NOW(), NOW(), false),
+    ('The Brew Bar Grill', 'Malta', NOW(), NOW(), false),
+    ('The Londoner British Pub Sliema', 'Sliema, Malta', NOW(), NOW(), false),
+    ('Victoria Gastro Pub', 'Malta', NOW(), NOW(), false),
+    ('Zion Reggae Bar', 'Malta', NOW(), NOW(), false)
+ON CONFLICT (name) DO NOTHING;

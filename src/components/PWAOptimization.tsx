@@ -51,7 +51,7 @@ const PWAOptimization = () => {
     isLoading: false,
   });
 
-  const handleEnableNotifications = async () => {
+  const _handleEnableNotifications = async () => {
     try {
       if ("Notification" in window) {
         const permission = await Notification.requestPermission();
