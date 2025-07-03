@@ -2,12 +2,9 @@
 
 const fs = require('fs');
 
-console.log('🔧 Comprehensive TypeScript error fix...\n');
+console.log('🔧 Final TypeScript error fix...\n');
 
 const fixes = [
-  // PWAOptimization.tsx - fix unused function
-  { file: 'src/components/PWAOptimization.tsx', pattern: /const _handleEnableNotifications = async \(\) => \{/, replacement: 'const _handleEnableNotifications = async () => {' },
-  
   // Remove unused React imports
   { file: 'src/components/SearchSection.tsx', pattern: /import React from 'react';\n/, replacement: '' },
   { file: 'src/components/WelcomeWizard.tsx', pattern: /import React from 'react';\n/, replacement: '' },
@@ -25,7 +22,7 @@ const fixes = [
   { file: 'src/components/admin/SystemMonitoringDashboard.tsx', pattern: /import React from 'react';\n/, replacement: '' },
   { file: 'src/components/admin/VendorApprovalSystem.tsx', pattern: /import React from 'react';\n/, replacement: '' },
 
-  // Fix unused imports and variables
+  // Fix unused variables and imports
   { file: 'src/components/SmartMenu/SmartMenuFilters.tsx', pattern: /const commonAllergens = /g, replacement: 'const _commonAllergens = ' },
   { file: 'src/components/SmartMenu/SmartMenuWeatherContext.tsx', pattern: /, contextData, menuItems/g, replacement: '' },
   { file: 'src/components/admin/AIMonitoring.tsx', pattern: /import { Button } from '@\/components\/ui\/button';\n/, replacement: '' },
@@ -51,6 +48,8 @@ const fixes = [
   { file: 'src/components/admin/FinancialOverview.tsx', pattern: /, BarChart, Bar/g, replacement: '' },
   { file: 'src/components/admin/FullstackAuditReport.tsx', pattern: /, AlertTriangle/g, replacement: '' },
   { file: 'src/components/admin/GDPRCompliance.tsx', pattern: /, AlertCircle/g, replacement: '' },
+  { file: 'src/components/admin/GoogleMapsImportWizard.tsx', pattern: /import { Textarea } from '@\/components\/ui\/textarea';\n/, replacement: '' },
+  { file: 'src/components/admin/GoogleMapsImportWizard.tsx', pattern: /, Play/g, replacement: '' },
   { file: 'src/components/admin/ICUPAProductionValidator.tsx', pattern: /const vendors = /g, replacement: 'const _vendors = ' },
   { file: 'src/components/admin/LegalDocumentEditor.tsx', pattern: /import { Input } from '@\/components\/ui\/input';\n/, replacement: '' },
   { file: 'src/components/admin/LiveOrderHeatmap.tsx', pattern: /const intensity = /g, replacement: 'const _intensity = ' },
@@ -59,6 +58,7 @@ const fixes = [
   { file: 'src/components/admin/MaltaBarsFetcher/MenuAnalytics.tsx', pattern: /, entry\) =>/g, replacement: ', _entry) =>' },
   { file: 'src/components/admin/MaltaBarsFetcher/hooks/useMaltaBarsFetcher.ts', pattern: /, incremental\) =>/g, replacement: ', _incremental) =>' },
   { file: 'src/components/admin/MaltaBarsFetcher/hooks/useMaltaBarsFetcher.ts', pattern: /const data = /g, replacement: 'const _data = ' },
+  { file: 'src/components/admin/MaltaBarsFetcher/AutomationEngine/automationUtils.ts', pattern: /export interface AutomationJob/g, replacement: 'export interface _AutomationJob' },
   { file: 'src/components/admin/MenuQATool.tsx', pattern: /, CardHeader, CardTitle/g, replacement: '' },
   { file: 'src/components/admin/MenuQATool.tsx', pattern: /import { Badge } from '@\/components\/ui\/badge';\n/, replacement: '' },
   { file: 'src/components/admin/MenuQATool.tsx', pattern: /, Filter/g, replacement: '' },
@@ -70,6 +70,7 @@ const fixes = [
   { file: 'src/components/admin/SystemMonitoringDashboard.tsx', pattern: /, Server, Users, Clock, Wifi/g, replacement: '' },
   { file: 'src/components/admin/SystemMonitoringDashboard.tsx', pattern: /const activeOrders = /g, replacement: 'const _activeOrders = ' },
   { file: 'src/components/admin/VendorApprovalSystem.tsx', pattern: /, AlertTriangle/g, replacement: '' },
+  { file: 'src/components/admin/VendorApprovalSystem.tsx', pattern: /, vendor\) =>/g, replacement: ', _vendor) =>' },
   { file: 'src/components/admin/VendorManagement.tsx', pattern: /, useState/g, replacement: '' },
   { file: 'src/components/admin/VendorManagement.tsx', pattern: /, Clock/g, replacement: '' },
 ];

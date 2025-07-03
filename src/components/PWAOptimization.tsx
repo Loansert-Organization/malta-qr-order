@@ -48,22 +48,7 @@ const PWAOptimization = () => {
     isLoading: false,
   });
 
-  const _handleEnableNotifications = async () => {
-    try {
-      if ("Notification" in window) {
-        const permission = await Notification.requestPermission();
-        setState((prev) => ({
-          ...prev,
-          notificationsEnabled: permission === "granted",
-        }));
-      }
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-      }));
-    }
-  };
+  // Notification functionality removed
 
   const handleOfflineModeToggle = async () => {
     try {
