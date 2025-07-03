@@ -13,8 +13,8 @@ interface PendingVendor {
   slug?: string;
   location: string | null;
   description: string | null;
-  revolut_link?: string;
-  stripe_link?: string;
+  revolut_link?: string | null;
+  stripe_link?: string | null;
   active: boolean | null;
   created_at: string;
   business_name?: string;
