@@ -140,12 +140,12 @@ const SystemMonitoringDashboard = () => {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    return (errorLogs || []).map((log, index) => ({
+    return (errorLogs || []).map((log, _index) => ({
       id: log.id,
       type: log.severity === 'high' ? 'error' : log.severity === 'medium' ? 'warning' : 'info',
       message: log.error_message,
-      timestamp: log.created_at,
-      resolved: log.resolved
+      timestamp: log.created_at || new Date().toISOString(),
+      resolved: log.resolved || false
     }));
   };
 
@@ -160,7 +160,7 @@ const SystemMonitoringDashboard = () => {
     const hourlyData = new Map();
     
     (performanceLogs || []).forEach(log => {
-      const hour = new Date(log.created_at).toISOString().slice(0, 13);
+      const hour = new Date(log.created_at || new Date()).toISOString().slice(0, 13);
       const existing = hourlyData.get(hour) || { 
         responseTime: [], 
         throughput: 0, 
@@ -170,7 +170,7 @@ const SystemMonitoringDashboard = () => {
       
       existing.responseTime.push(log.response_time);
       existing.totalRequests += 1;
-      if (log.status_code >= 400) existing.errorCount += 1;
+      if (log.status_code && log.status_code >= 400) existing.errorCount += 1;
       
       hourlyData.set(hour, existing);
     });
