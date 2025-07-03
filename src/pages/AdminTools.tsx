@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { adminLogger } from '@/services/adminLoggingService';
+import GoogleMapsImportWizard from '@/components/admin/GoogleMapsImportWizard';
 
 interface GlobalSetting {
   key: string;
@@ -41,6 +42,7 @@ const AdminTools = () => {
   // Dialog states
   const [showAddBarDialog, setShowAddBarDialog] = useState(false);
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  const [showImportWizard, setShowImportWizard] = useState(false);
   
   // Form states
   const [newBarForm, setNewBarForm] = useState({
@@ -373,18 +375,11 @@ const AdminTools = () => {
               <CardContent>
                 <Button
                   className="w-full"
-                  onClick={async () => {
-                    setLoading(true);
-                    const { data, error } = await supabase.functions.invoke('import_bars');
-                    setLoading(false);
-                    if (error) {
-                      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-                    } else {
-                      toast({ title: 'Import finished', description: JSON.stringify(data.imported) });
-                    }
-                  }}
+                  onClick={() => setShowImportWizard(true)}
+                  disabled={loading}
                 >
-                  Run Import Now
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Launch Import Wizard
                 </Button>
               </CardContent>
             </Card>
@@ -625,6 +620,12 @@ const AdminTools = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Google Maps Import Wizard */}
+      <GoogleMapsImportWizard 
+        open={showImportWizard} 
+        onOpenChange={setShowImportWizard} 
+      />
     </div>
   );
 };
