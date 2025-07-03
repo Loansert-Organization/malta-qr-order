@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
 import { CartItem, Vendor } from '@/hooks/useOrderDemo/types';
@@ -51,13 +49,13 @@ const CartSection: React.FC<CartSectionProps> = ({
     );
   }
 
-  // Show checkout flow if in checkout mode
+  // Show checkout flow if user initiated checkout
   if (showCheckout && vendor) {
     return (
       <div className="lg:col-span-1">
         <EnhancedCheckoutFlow
-          cart={cart}
           vendorId={vendor.id}
+          cart={cart}
           guestSessionId={guestSessionId}
           onOrderSuccess={handleOrderSuccess}
           onClose={() => setShowCheckout(false)}
@@ -66,79 +64,62 @@ const CartSection: React.FC<CartSectionProps> = ({
     );
   }
 
-  // Regular cart view
   return (
     <div className="lg:col-span-1">
-      <Card className="sticky top-6">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <ShoppingCart className="h-5 w-5 mr-2" />
-            Your Order
-            {cart.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {getTotalItems()}
-              </Badge>
-            )}
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5" />
+            Your Order ({getTotalItems()} items)
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {cart.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>Your cart is empty</p>
-              <p className="text-sm">Add some delicious items to get started!</p>
+              <p className="text-sm">Browse the menu to add items</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <>
               {/* Cart Items */}
               <div className="space-y-3">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
-                      <h4 className="font-medium text-sm">{item.name}</h4>
-                      <p className="text-xs text-gray-600">€{item.price.toFixed(2)} each</p>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="font-medium">{item.menu_item?.name || 'Unknown Item'}</span>
+                          <span className="text-gray-500 text-sm">€{item.unit_price.toFixed(2)}</span>
+                        </div>
                         <Button
+                          variant="ghost"
                           size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            if (item.quantity > 1) {
-                              // This would need to be passed as a prop or handled differently
-                              // For now, we'll just remove the item
-                              removeFromCart(item.id);
-                            } else {
-                              removeFromCart(item.id);
-                            }
-                          }}
-                          className="h-6 w-6 p-0"
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-red-500 hover:text-red-700"
                         >
-                          {item.quantity > 1 ? <Minus className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />}
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                        
-                        <span className="text-sm font-medium w-8 text-center">
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={item.quantity <= 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="px-3 py-1 bg-white rounded border text-sm">
                           {item.quantity}
                         </span>
-                        
                         <Button
-                          size="sm"
                           variant="outline"
-                          onClick={() => {
-                            // This would need to be passed as a prop
-                            // For now, just show the quantity
-                          }}
-                          className="h-6 w-6 p-0"
+                          size="sm"
+                          className="h-8 w-8 p-0"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
-                      </div>
-                      
-                      <div className="text-right min-w-[60px]">
-                        <p className="text-sm font-semibold">
-                          €{(item.price * item.quantity).toFixed(2)}
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -147,43 +128,33 @@ const CartSection: React.FC<CartSectionProps> = ({
 
               <Separator />
 
-              {/* Cart Summary */}
+              {/* Order Summary */}
               <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Subtotal ({getTotalItems()} items)</span>
-                  <span className="text-sm font-medium">€{getTotalPrice().toFixed(2)}</span>
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>€{getTotalPrice().toFixed(2)}</span>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Service Fee</span>
-                  <span className="text-sm font-medium">€0.00</span>
+                <div className="flex justify-between text-sm">
+                  <span>Service Fee</span>
+                  <span>€0.00</span>
                 </div>
-                
                 <Separator />
-                
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold text-lg">€{getTotalPrice().toFixed(2)}</span>
+                <div className="flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>€{getTotalPrice().toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Checkout Button */}
-              <Button
-                onClick={() => setShowCheckout(true)}
-                className="w-full bg-green-600 hover:bg-green-700"
+              <Button 
+                className="w-full" 
                 size="lg"
+                onClick={() => setShowCheckout(true)}
+                disabled={cart.length === 0}
               >
                 Proceed to Checkout
               </Button>
-
-              {/* Vendor Info */}
-              {vendor && (
-                <div className="text-xs text-gray-500 text-center">
-                  <p>You're ordering from {vendor.name}</p>
-                  {vendor.location && <p>{vendor.location}</p>}
-                </div>
-              )}
-            </div>
+            </>
           )}
         </CardContent>
       </Card>

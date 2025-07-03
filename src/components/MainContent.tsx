@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { supabase } from '@/integrations/supabase/client';
+
 import { toast } from 'sonner';
 import type { 
   Bar, 
@@ -15,7 +15,7 @@ import type {
   ErrorHandler,
   ClickHandler 
 } from '@/types/api';
-import CartSection from './CartSidebar';
+import CartSection from './MainContent/CartSection';
 import AIWaiterButton from './AIWaiterButton';
 import Header from './MainContent/Header';
 import LeftColumn from './MainContent/LeftColumn';
@@ -86,11 +86,11 @@ const MainContent: React.FC<MainContentProps> = ({
   const navigate = useNavigate();
   const [showAIWaiter, setShowAIWaiter] = useState(false);
   const [showAIVerification, setShowAIVerification] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  
   const [cartSummary, setCartSummary] = useState<CartSummaryItem[]>([]);
 
   // Memoized handlers to prevent unnecessary re-renders
-  const handleOrderComplete = useCallback((orderId: string): void => {
+  const handleOrderComplete = useCallback((orderId: string) => {
     console.log('Order completed:', orderId);
     if (onOrderComplete) {
       // Create a properly typed order object
@@ -197,19 +197,30 @@ const MainContent: React.FC<MainContentProps> = ({
     try {
       const items = cartItems.length > 0 ? cartItems : cart;
       const summary: CartSummaryItem[] = items.reduce((acc: CartSummaryItem[], item) => {
-        // Type guard to ensure we have the required properties
-        if ('id' in item && 'name' in item && 'price' in item) {
-          const existingItem = acc.find(summaryItem => summaryItem.id === item.id);
+        // Handle cart items properly
+        if ('menu_item_id' in item && 'quantity' in item) {
+          // This is a CartItem
+          const cartItem = item as CartItem;
+          const existingItem = acc.find(summaryItem => summaryItem.id === cartItem.id);
           if (existingItem) {
-            existingItem.quantity += item.quantity || 1;
+            existingItem.quantity += cartItem.quantity;
           } else {
             acc.push({
-              id: item.id,
-              name: item.name,
-              price: typeof item.price === 'number' ? item.price : 0,
-              quantity: item.quantity || 1
+              id: cartItem.id,
+              name: cartItem.menu_item?.name || 'Unknown Item',
+              price: cartItem.unit_price || 0,
+              quantity: cartItem.quantity
             });
           }
+        } else if ('id' in item && 'name' in item && 'price' in item) {
+          // This is a MenuItem
+          const menuItem = item as MenuItem;
+          acc.push({
+            id: menuItem.id,
+            name: menuItem.name,
+            price: menuItem.price,
+            quantity: 1
+          });
         }
         return acc;
       }, []);
@@ -247,14 +258,11 @@ const MainContent: React.FC<MainContentProps> = ({
           {/* Right Column - Cart */}
           <CartSection
             cart={cart}
-            onAddToCart={handleAddToCart}
-            onRemoveFromCart={handleRemoveFromCart}
+            vendor={vendor}
+            guestSessionId={guestSessionId}
+            removeFromCart={handleRemoveFromCart}
             getTotalPrice={getTotalPrice}
             getTotalItems={getTotalItems}
-            vendorId={vendor.id}
-            vendorName={vendor.name}
-            guestSessionId={guestSessionId}
-            onOrderComplete={handleOrderComplete}
           />
         </div>
       </div>
