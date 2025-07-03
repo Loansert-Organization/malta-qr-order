@@ -31,6 +31,11 @@ const UNUSED_FIXES = [
   { pattern: /, Bar,/g, replacement: ',' },
   { pattern: /, AlertCircle/g, replacement: '' },
   { pattern: /, ShoppingCart/g, replacement: '' },
+  { pattern: /, CardHeader/g, replacement: '' },
+  { pattern: /, CardTitle/g, replacement: '' },
+  { pattern: /, Filter/g, replacement: '' },
+  { pattern: /, Database/g, replacement: '' },
+  { pattern: /, Bell/g, replacement: '' },
   
   // Fix unused variables
   { pattern: /  contextData,\n/gm, replacement: '' },
@@ -45,11 +50,13 @@ const UNUSED_FIXES = [
   { pattern: /const getLanguageFlag = /gm, replacement: 'const _getLanguageFlag = ' },
   { pattern: /, index\) =>/gm, replacement: ', _index) =>' },
   { pattern: /, incremental\) =>/gm, replacement: ', _incremental) =>' },
-  { pattern: /const data = /gm, replacement: 'const _data = ' },
   { pattern: /const vendors = /gm, replacement: 'const _vendors = ' },
   { pattern: /const intensity = /gm, replacement: 'const _intensity = ' },
   { pattern: /const table = /gm, replacement: 'const _table = ' },
   { pattern: /, entry\) =>/gm, replacement: ', _entry) =>' },
+  { pattern: /const updateError = /gm, replacement: 'const _updateError = ' },
+  { pattern: /const isAnonymous = /gm, replacement: 'const _isAnonymous = ' },
+  { pattern: /import { toast } from 'sonner';\n/gm, replacement: '' },
 ];
 
 // Files that commonly have these issues
@@ -58,7 +65,6 @@ const TARGET_FILES = [
   'src/components/CartSidebar.tsx',
   'src/components/DynamicHeroSection.tsx',
   'src/components/ErrorBoundaries/AIErrorBoundary.tsx',
-  'src/components/MainContent.tsx',
   'src/components/MainContent/HeroSection.tsx',
   'src/components/MainContent/LeftColumn.tsx',
   'src/components/MainContent/MenuSection.tsx',
@@ -91,7 +97,11 @@ const TARGET_FILES = [
   'src/components/admin/MaltaBarsFetcher/MenuAnalytics.tsx',
   'src/components/admin/MaltaBarsFetcher/hooks/useMaltaBarsFetcher.ts',
   'src/components/admin/MaltaBarsFetcher/AutomationEngine/automationUtils.ts',
-  'src/components/admin/MenuQATool.tsx'
+  'src/components/admin/MenuQATool.tsx',
+  'src/components/admin/ProductionSystemManager.tsx',
+  'src/components/admin/SupportDashboard.tsx',
+  'src/components/admin/SystemHealth.tsx',
+  'src/components/admin/SystemHealthMonitor.tsx'
 ];
 
 function fixFile(filePath: string): boolean {
@@ -148,7 +158,3 @@ function main() {
 
 // Auto-run if script is executed directly  
 main();
-
-if (require.main === module) {
-  main();
-}

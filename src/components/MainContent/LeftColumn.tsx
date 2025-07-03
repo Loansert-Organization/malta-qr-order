@@ -26,7 +26,6 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
   handleSearch,
   addToCart
 }) => {
-  const [data] = useState();
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -43,13 +42,6 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
 
     fetchData();
   }, []);
-
-  const processData = (items: any[]) => {
-    return items.map((item: any) => ({
-      ...item,
-      processed: true
-    }));
-  };
 
   if (loading) return <div>Loading...</div>;
 
