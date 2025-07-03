@@ -7,6 +7,7 @@ import DatabaseInitializer from '@/components/admin/DatabaseInitializer';
 import BulkDataManager from '@/components/admin/BulkDataManager';
 import MenuImageGenerator from '@/components/admin/MenuImageGenerator';
 import GoogleMapsDataFetcher from '@/components/admin/GoogleMapsDataFetcher';
+import MenuImporter from '@/components/admin/MenuImporter';
 
 const AdminDashboard = () => {
   return (
@@ -37,6 +38,9 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <MenuImageGenerator />
               <GoogleMapsDataFetcher />
+            </div>
+            <div className="mt-6">
+              <MenuImporter />
             </div>
             <div className="mt-6">
               <BulkDataManager />
