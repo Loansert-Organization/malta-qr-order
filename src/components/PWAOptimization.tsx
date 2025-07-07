@@ -18,12 +18,9 @@ import {
   WifiOff,
   Bell,
   Download,
-  CheckCircle,
   AlertTriangle,
   Zap,
-  Shield,
   Globe,
-  Users,
 } from "lucide-react";
 
 interface PWAMetrics {
@@ -51,22 +48,22 @@ const PWAOptimization = () => {
     isLoading: false,
   });
 
-  const handleEnableNotifications = async () => {
-    try {
-      if ("Notification" in window) {
-        const permission = await Notification.requestPermission();
-        setState((prev) => ({
-          ...prev,
-          notificationsEnabled: permission === "granted",
-        }));
-      }
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-      }));
-    }
-  };
+  // const handleEnableNotifications = async () => {
+  //   try {
+  //     if ("Notification" in window) {
+  //       const permission = await Notification.requestPermission();
+  //       setState((prev) => ({
+  //         ...prev,
+  //         notificationsEnabled: permission === "granted",
+  //       }));
+  //     }
+  //   } catch (error) {
+  //     setState((prev) => ({
+  //       ...prev,
+  //       error: error as Error,
+  //       }));
+  //   }
+  // };
 
   const handleOfflineModeToggle = async () => {
     try {

@@ -15,8 +15,8 @@ interface HeroSectionProps {
 
 const HeroSection: React.FC<HeroSectionProps> = ({
   layout,
-  vendor,
-  weatherData,
+  vendor: _vendor,
+  weatherData: _weatherData,
   contextData,
   onCtaClick
 }) => {

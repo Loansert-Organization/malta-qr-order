@@ -26,33 +26,33 @@ const LeftColumn: React.FC<LeftColumnProps> = ({
   handleSearch,
   addToCart
 }) => {
-  const [data, setData] = useState();
-  const [loading, setLoading] = useState(false);
+  // const [data, setData] = useState();
+  // const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const result = await fetch('/api/data');
-        const json = await result.json();
-        setData(json);
-      } catch (error) {
-        console.log(error);
-      }
-      setLoading(false);
-    };
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const result = await fetch('/api/data');
+  //       const json = await result.json();
+  //       setData(json);
+  //     } catch (error) {
+  //       console.log(error);
+  //     }
+  //     setLoading(false);
+  //   };
 
-    fetchData();
-  }, []);
+  //   fetchData();
+  // }, []);
 
-  const processData = (items) => {
-    return items.map(item => ({
-      ...item,
-      processed: true
-    }));
-  };
+  // const processData = (items: any[]) => {
+  //   return items.map(item => ({
+  //     ...item,
+  //     processed: true
+  //   }));
+  // };
 
-  if (loading) return <div>Loading...</div>;
+  // if (loading) return <div>Loading...</div>;
 
   return (
     <div className="lg:col-span-3 space-y-6">

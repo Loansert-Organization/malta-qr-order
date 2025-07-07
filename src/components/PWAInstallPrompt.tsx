@@ -1,5 +1,5 @@
 
-import React from 'react';
+// import React from 'react'; // Unused - removed
 import { X, Download, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

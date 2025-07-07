@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Star, Clock } from 'lucide-react';
 import { MenuItem } from '@/hooks/useOrderDemo/types';
 
@@ -43,7 +43,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({
 
   // Get unique categories
   const categories = useMemo(() => {
-    const cats = ['all', ...new Set(menuItems.map(item => item.category).filter(Boolean))];
+    const cats = ['all', ...new Set(menuItems.map(item => item.category || '').filter(Boolean))];
     return cats;
   }, [menuItems]);
 

@@ -90,49 +90,49 @@ const MainContent: React.FC<MainContentProps> = ({
   const [cartSummary, setCartSummary] = useState<CartSummaryItem[]>([]);
 
   // Memoized handlers to prevent unnecessary re-renders
-  const handleOrderComplete = useCallback((orderId: string): void => {
-    console.log('Order completed:', orderId);
-    if (onOrderComplete) {
-      // Create a properly typed order object
-      const order: Order = {
-        id: orderId,
-        vendor_id: vendor.id,
-        order_number: `ORD-${Date.now()}`,
-        items: cart.map(item => ({
-          id: `item-${item.id}`,
-          order_id: orderId,
-          menu_item_id: item.menu_item_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          modifiers: item.modifiers?.map(mod => ({
-            id: `mod-${mod.modifier_id}`,
-            modifier_id: mod.modifier_id,
-            name: mod.name,
-            price: mod.price,
-            quantity: 1
-          })) || []
-        })),
-        subtotal: getTotalPrice(),
-        tax_amount: 0,
-        service_fee: 0,
-        delivery_fee: 0,
-        discount_amount: 0,
-        total_amount: getTotalPrice(),
-        currency: 'EUR',
-        country: 'Malta',
-        order_status: 'pending',
-        payment_status: 'pending',
-        customer_info: {},
-        agreed_to_terms: true,
-        whatsapp_consent: false,
-        marketing_consent: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      onOrderComplete(order);
-    }
-  }, [onOrderComplete, vendor.id, cart, getTotalPrice]);
+  // const handleOrderComplete = useCallback((orderId: string): void => {
+  //   console.log('Order completed:', orderId);
+  //   if (onOrderComplete) {
+  //     // Create a properly typed order object
+  //     const order: Order = {
+  //       id: orderId,
+  //       vendor_id: vendor.id,
+  //       order_number: `ORD-${Date.now()}`,
+  //       items: cart.map(item => ({
+  //         id: `item-${item.id}`,
+  //         order_id: orderId,
+  //         menu_item_id: item.menu_item_id,
+  //         quantity: item.quantity,
+  //         unit_price: item.unit_price,
+  //         total_price: item.total_price,
+  //         modifiers: item.modifiers?.map(mod => ({
+  //           id: `mod-${mod.modifier_id}`,
+  //           modifier_id: mod.modifier_id,
+  //           name: mod.name,
+  //           price: mod.price,
+  //           quantity: 1
+  //         })) || []
+  //       })),
+  //       subtotal: getTotalPrice(),
+  //       tax_amount: 0,
+  //       service_fee: 0,
+  //       delivery_fee: 0,
+  //       discount_amount: 0,
+  //       total_amount: getTotalPrice(),
+  //       currency: 'EUR',
+  //       country: 'Malta',
+  //       order_status: 'pending',
+  //       payment_status: 'pending',
+  //       customer_info: {},
+  //       agreed_to_terms: true,
+  //       whatsapp_consent: false,
+  //       marketing_consent: false,
+  //       created_at: new Date().toISOString(),
+  //       updated_at: new Date().toISOString()
+  //     };
+  //     onOrderComplete(order);
+  //   }
+  // }, [onOrderComplete, vendor.id, cart, getTotalPrice]);
 
   // Type-safe addToCart wrapper
   const handleAddToCart = useCallback(async (item: MenuItem): Promise<void> => {
@@ -247,7 +247,7 @@ const MainContent: React.FC<MainContentProps> = ({
           {/* Right Column - Cart */}
           <CartSection
             cart={cart}
-            vendor={vendor}
+            vendor={vendor as any}
             guestSessionId={guestSessionId}
             removeFromCart={handleRemoveFromCart}
             getTotalPrice={getTotalPrice}

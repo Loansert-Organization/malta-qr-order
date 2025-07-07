@@ -2,7 +2,8 @@
 import React from 'react';
 import AIWaiterModal from '@/components/ai/AIWaiterModal';
 import AIVerificationModal from '@/components/ai/AIVerificationModal';
-import { MenuItem } from '@/types/api';
+import { MenuItem as ApiMenuItem } from '@/types/api';
+import { MenuItem as DemoMenuItem } from '@/hooks/useOrderDemo/types';
 
 interface AIModalsProps {
   vendorId: string;
@@ -12,7 +13,7 @@ interface AIModalsProps {
   showAIVerification: boolean;
   onCloseAIWaiter: () => void;
   onCloseAIVerification: () => void;
-  onAddToCart: (item: MenuItem) => Promise<void>;
+  onAddToCart: (item: ApiMenuItem | DemoMenuItem) => Promise<void>;
 }
 
 const AIModals: React.FC<AIModalsProps> = ({

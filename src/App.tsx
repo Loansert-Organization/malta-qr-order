@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { ConsolidatedSessionProvider } from "@/providers/ConsolidatedSessionProvider";
 import { lazy, Suspense, useEffect } from "react";
 import LoadingState from "@/components/LoadingState";
@@ -46,7 +46,7 @@ const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
 const VendorOrderDetail = lazy(() => import("./pages/VendorOrderDetail"));
-const UserProfile = lazy(() => import("./pages/UserProfile"));
+// const UserProfile = lazy(() => import("./pages/UserProfile")); // Unused - removed
 const SupplierDirectory = lazy(() => import("./components/marketplace/SupplierDirectory"));
 const EntertainerDirectory = lazy(() => import("./components/marketplace/EntertainerDirectory"));
 const BarOnboardingWizard = lazy(() => import("./components/admin/BarOnboardingWizard"));
