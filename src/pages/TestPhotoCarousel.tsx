@@ -26,9 +26,10 @@ const TestPhotoCarousel = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    fetchBarsWithMultiplePhotos();
-  }, []);
+  // Remove auto-fetch to prevent loop
+  // useEffect(() => {
+  //   fetchBarsWithMultiplePhotos();
+  // }, []);
 
   const fetchBarsWithMultiplePhotos = async () => {
     setLoading(true);

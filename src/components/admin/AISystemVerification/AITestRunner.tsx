@@ -40,7 +40,7 @@ export const useAITestRunner = ({ updateHealthCheck, setTestResults }: AITestRun
     } catch (error) {
       updateHealthCheck('AI System Health', {
         status: 'down',
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         responseTime: Date.now() - startTime
       });
       throw error;

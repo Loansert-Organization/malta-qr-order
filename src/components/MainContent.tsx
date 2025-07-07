@@ -68,8 +68,6 @@ const MainContent: React.FC<MainContentProps> = ({
   handleSearch,
   addToCart,
   removeFromCart,
-  getTotalPrice,
-  getTotalItems,
   guestSessionId,
   // Enhanced props with defaults
   bars = [],

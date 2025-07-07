@@ -1,8 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export class ErrorMonitorService {
-  async logError(error: Error, context?: any): Promise<void> {
+  async logError(error: Error, context?: Record<string, unknown>): Promise<void> {
     try {
       await supabase.from('error_logs').insert([{
         error_type: error.name || 'Unknown',
