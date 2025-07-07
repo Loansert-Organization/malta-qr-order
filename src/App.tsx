@@ -59,6 +59,16 @@ const ClientSettings = lazy(() => import("./pages/ClientSettings"));
 const FAQHelp = lazy(() => import("./pages/FAQHelp"));
 const VendorMenuItemEditor = lazy(() => import("./pages/VendorMenuItemEditor"));
 
+// New admin pages
+const AdminBarList = lazy(() => import("./pages/AdminBarList"));
+const AdminAgentTasks = lazy(() => import("./pages/AdminAgentTasks"));
+const AdminAgentPersona = lazy(() => import("./pages/AdminAgentPersona"));
+const AdminAgentLearning = lazy(() => import("./pages/AdminAgentLearning"));
+const AdminSystemLogs = lazy(() => import("./pages/AdminSystemLogs"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const AdminEntertainers = lazy(() => import("./pages/AdminEntertainers"));
+const AdminSuppliers = lazy(() => import("./pages/AdminSuppliers"));
+
 // TEMPORARY: Import new admin components for manual client-side testing
 import MenuImageGenerator from "@/components/admin/MenuImageGenerator";
 import GoogleMapsDataFetcher from "@/components/admin/GoogleMapsDataFetcher";
@@ -162,6 +172,7 @@ const RoutesWithAnimation = () => {
         <Route path="/admin" element={<PageTransition><AdminPanel /></PageTransition>} />
         <Route path="/admin/audit" element={<PageTransition><ProductionAudit /></PageTransition>} />
         <Route path="/admin/bars" element={<PageTransition><AdminBars /></PageTransition>} />
+        <Route path="/admin/bars/list" element={<PageTransition><AdminBarList /></PageTransition>} />
         <Route path="/admin/menus" element={<PageTransition><AdminMenus /></PageTransition>} />
         <Route path="/admin/orders" element={<PageTransition><AdminOrders /></PageTransition>} />
         <Route path="/admin/payments" element={<PageTransition><AdminPayments /></PageTransition>} />
@@ -169,6 +180,15 @@ const RoutesWithAnimation = () => {
         <Route path="/admin/accessibility" element={<PageTransition><AdminAccessibility /></PageTransition>} />
         <Route path="/admin/bar-onboarding" element={<PageTransition><BarOnboardingWizard /></PageTransition>} />
         <Route path="/admin/menu-import" element={<PageTransition><MenuImportWizard /></PageTransition>} />
+        
+        {/* New Admin Routes */}
+        <Route path="/admin/agents/tasks" element={<PageTransition><AdminAgentTasks /></PageTransition>} />
+        <Route path="/admin/agents/persona" element={<PageTransition><AdminAgentPersona /></PageTransition>} />
+        <Route path="/admin/agents/learning" element={<PageTransition><AdminAgentLearning /></PageTransition>} />
+        <Route path="/admin/logs" element={<PageTransition><AdminSystemLogs /></PageTransition>} />
+        <Route path="/admin/settings" element={<PageTransition><AdminSettings /></PageTransition>} />
+        <Route path="/admin/entertainers" element={<PageTransition><AdminEntertainers /></PageTransition>} />
+        <Route path="/admin/suppliers" element={<PageTransition><AdminSuppliers /></PageTransition>} />
 
         {/* Marketplace Routes */}
         <Route path="/marketplace/suppliers" element={<PageTransition><SupplierDirectory /></PageTransition>} />

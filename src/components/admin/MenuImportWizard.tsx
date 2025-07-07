@@ -1,33 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  CheckCircle, 
+  ChevronLeft, 
+  ChevronRight, 
   Upload, 
   FileText, 
-  Database, 
-  Globe, 
-  Settings, 
-  CheckCircle,
-  AlertTriangle,
-  ArrowRight,
-  ArrowLeft,
+  Image as ImageIcon,
+  Link,
   Plus,
-  X,
+  Edit,
+  Trash2,
+  Save,
+  Eye,
   Download,
-  RefreshCw
+  Search,
+  Camera,
+  FileImage,
+  FilePdf,
+  Globe
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AdminLayout from './AdminLayout';
 
 interface MenuItem {
+  id: string;
   name: string;
   description: string;
   price: number;
@@ -35,547 +46,875 @@ interface MenuItem {
   image?: string;
   available: boolean;
   allergens?: string[];
-  nutritionalInfo?: {
-    calories?: number;
-    protein?: number;
-    carbs?: number;
-    fat?: number;
-  };
+  dietary_tags?: string[];
+}
+
+interface MenuData {
+  id?: string;
+  bar_id: string;
+  bar_name: string;
+  name: string;
+  description?: string;
+  items: MenuItem[];
+  categories: string[];
+  confirmed: boolean;
+  created_at?: string;
 }
 
 interface ImportSource {
   type: 'file' | 'url' | 'api' | 'manual';
-  name: string;
-  data?: any;
+  data?: File | string;
+  name?: string;
 }
+
+const steps = [
+  { id: 1, title: 'Select Source', description: 'Choose import method' },
+  { id: 2, title: 'Upload & Process', description: 'Upload and OCR processing' },
+  { id: 3, title: 'Preview & Edit', description: 'Review and edit extracted data' },
+  { id: 4, title: 'Generate Images', description: 'Create missing images' },
+  { id: 5, title: 'Review & Submit', description: 'Final review and save' },
+];
+
+const categories = [
+  'Appetizers', 'Starters', 'Main Course', 'Desserts', 'Drinks', 'Cocktails',
+  'Beer', 'Wine', 'Coffee', 'Tea', 'Snacks', 'Sides', 'Salads', 'Soups'
+];
+
+const bars = [
+  { id: '1', name: 'The Blue Bar', location: 'Valletta, Malta' },
+  { id: '2', name: 'Cafe Luna', location: 'Sliema, Malta' },
+  { id: '3', name: 'The Grand Hotel Bar', location: 'St. Julian\'s, Malta' },
+];
 
 const MenuImportWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedBar, setSelectedBar] = useState('');
   const [importSource, setImportSource] = useState<ImportSource | null>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [importProgress, setImportProgress] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [menuData, setMenuData] = useState<MenuData | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const [generatingImages, setGeneratingImages] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  const totalSteps = 4;
-  const progress = (currentStep / totalSteps) * 100;
+  // Mock OCR processing
+  const processMenuFile = async (file: File) => {
+    setProcessing(true);
+    try {
+      // Simulate OCR processing
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Mock extracted data
+      const mockItems: MenuItem[] = [
+        {
+          id: '1',
+          name: 'Margherita Pizza',
+          description: 'Fresh tomato sauce, mozzarella, basil',
+          price: 12.50,
+          category: 'Main Course',
+          available: true,
+          allergens: ['gluten', 'dairy'],
+          dietary_tags: ['vegetarian']
+        },
+        {
+          id: '2',
+          name: 'Caesar Salad',
+          description: 'Romaine lettuce, parmesan, croutons, caesar dressing',
+          price: 8.90,
+          category: 'Salads',
+          available: true,
+          allergens: ['gluten', 'dairy', 'eggs'],
+          dietary_tags: ['vegetarian']
+        },
+        {
+          id: '3',
+          name: 'Espresso',
+          description: 'Single shot of premium Italian coffee',
+          price: 2.50,
+          category: 'Coffee',
+          available: true,
+          allergens: [],
+          dietary_tags: ['vegan', 'gluten-free']
+        },
+        {
+          id: '4',
+          name: 'Aperol Spritz',
+          description: 'Aperol, prosecco, soda water, orange slice',
+          price: 7.50,
+          category: 'Cocktails',
+          available: true,
+          allergens: [],
+          dietary_tags: ['vegan', 'gluten-free']
+        }
+      ];
 
-  // Mock bars data - in real app this would come from API
-  const bars = [
-    { id: '1', name: 'The Blue Bar', city: 'Valletta' },
-    { id: '2', name: 'Harbor View Pub', city: 'Sliema' },
-    { id: '3', name: 'Mediterranean Cafe', city: 'St. Julian\'s' },
-  ];
+      const extractedData: MenuData = {
+        bar_id: selectedBar,
+        bar_name: bars.find(b => b.id === selectedBar)?.name || '',
+        name: `${file.name.split('.')[0]} Menu`,
+        description: `Menu imported from ${file.name}`,
+        items: mockItems,
+        categories: [...new Set(mockItems.map(item => item.category))],
+        confirmed: false,
+      };
 
-  const importSources = [
-    { type: 'file', name: 'CSV/Excel File', icon: FileText },
-    { type: 'url', name: 'Website URL', icon: Globe },
-    { type: 'api', name: 'API Endpoint', icon: Database },
-    { type: 'manual', name: 'Manual Entry', icon: Plus },
-  ];
-
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+      setMenuData(extractedData);
+      toast({
+        title: "Processing complete",
+        description: `Extracted ${mockItems.length} items from ${file.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Processing failed",
+        description: "Failed to process menu file",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
     }
   };
 
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+  const processMenuUrl = async (url: string) => {
+    setProcessing(true);
+    try {
+      // Simulate URL processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Mock extracted data from URL
+      const mockItems: MenuItem[] = [
+        {
+          id: '1',
+          name: 'Burger Deluxe',
+          description: 'Angus beef, cheddar, bacon, special sauce',
+          price: 15.90,
+          category: 'Main Course',
+          available: true,
+          allergens: ['gluten', 'dairy', 'eggs'],
+          dietary_tags: []
+        },
+        {
+          id: '2',
+          name: 'Fish & Chips',
+          description: 'Fresh cod, beer batter, hand-cut fries',
+          price: 13.50,
+          category: 'Main Course',
+          available: true,
+          allergens: ['gluten', 'fish'],
+          dietary_tags: []
+        }
+      ];
+
+      const extractedData: MenuData = {
+        bar_id: selectedBar,
+        bar_name: bars.find(b => b.id === selectedBar)?.name || '',
+        name: 'Online Menu',
+        description: `Menu imported from ${url}`,
+        items: mockItems,
+        categories: [...new Set(mockItems.map(item => item.category))],
+        confirmed: false,
+      };
+
+      setMenuData(extractedData);
+      toast({
+        title: "Processing complete",
+        description: `Extracted ${mockItems.length} items from URL`,
+      });
+    } catch (error) {
+      toast({
+        title: "Processing failed",
+        description: "Failed to process menu URL",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setImportSource({ type: 'file', name: file.name, data: file });
-      // Simulate file processing
-      setIsProcessing(true);
-      setTimeout(() => {
-        setIsProcessing(false);
-        // Mock parsed data
-        setMenuItems([
-          { name: 'Margarita', description: 'Classic tequila cocktail', price: 8.50, category: 'Cocktails', available: true },
-          { name: 'Caesar Salad', description: 'Fresh romaine with parmesan', price: 12.00, category: 'Salads', available: true },
-        ]);
-      }, 2000);
+      setImportSource({ type: 'file', data: file, name: file.name });
     }
   };
 
-  const handleUrlImport = async (url: string) => {
-    setIsProcessing(true);
-    try {
-      // Simulate URL scraping
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      setMenuItems([
-        { name: 'Local Beer', description: 'Craft beer from local brewery', price: 6.00, category: 'Beer', available: true },
-        { name: 'Pizza Margherita', description: 'Traditional Italian pizza', price: 15.00, category: 'Pizza', available: true },
-      ]);
-      setImportSource({ type: 'url', name: url });
-    } catch (error) {
-      toast({
-        title: "Import Failed",
-        description: "Could not import menu from the provided URL.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
+  const handleUrlSubmit = (url: string) => {
+    if (url.trim()) {
+      setImportSource({ type: 'url', data: url, name: 'URL Import' });
     }
   };
 
-  const handleApiImport = async (endpoint: string, apiKey: string) => {
-    setIsProcessing(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      setMenuItems([
-        { name: 'Wine Selection', description: 'Premium wine list', price: 25.00, category: 'Wine', available: true },
-        { name: 'Cheese Board', description: 'Assorted local cheeses', price: 18.00, category: 'Appetizers', available: true },
-      ]);
-      setImportSource({ type: 'api', name: endpoint });
-    } catch (error) {
+  const handleProcess = async () => {
+    if (!importSource || !selectedBar) {
       toast({
-        title: "API Import Failed",
-        description: "Could not fetch menu data from the API.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const addMenuItem = () => {
-    const newItem: MenuItem = {
-      name: '',
-      description: '',
-      price: 0,
-      category: '',
-      available: true,
-    };
-    setMenuItems([...menuItems, newItem]);
-  };
-
-  const updateMenuItem = (index: number, field: keyof MenuItem, value: any) => {
-    setMenuItems(prev => prev.map((item, i) => 
-      i === index ? { ...item, [field]: value } : item
-    ));
-  };
-
-  const removeMenuItem = (index: number) => {
-    setMenuItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const validateMenuItems = () => {
-    const errors: string[] = [];
-    menuItems.forEach((item, index) => {
-      if (!item.name.trim()) errors.push(`Item ${index + 1}: Name is required`);
-      if (item.price <= 0) errors.push(`Item ${index + 1}: Price must be greater than 0`);
-      if (!item.category.trim()) errors.push(`Item ${index + 1}: Category is required`);
-    });
-    setValidationErrors(errors);
-    return errors.length === 0;
-  };
-
-  const handleImport = async () => {
-    if (!validateMenuItems()) {
-      toast({
-        title: "Validation Errors",
-        description: "Please fix the validation errors before importing.",
-        variant: "destructive",
+        title: "Missing information",
+        description: "Please select a bar and import source",
+        variant: "destructive"
       });
       return;
     }
 
-    setIsProcessing(true);
-    setImportProgress(0);
-
-    // Simulate import process
-    const steps = ['Validating data', 'Processing items', 'Uploading to database', 'Finalizing'];
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setImportProgress(((i + 1) / steps.length) * 100);
+    if (importSource.type === 'file' && importSource.data instanceof File) {
+      await processMenuFile(importSource.data);
+    } else if (importSource.type === 'url' && typeof importSource.data === 'string') {
+      await processMenuUrl(importSource.data);
     }
-
-    toast({
-      title: "Import Successful",
-      description: `Successfully imported ${menuItems.length} menu items.`,
-    });
-
-    setIsProcessing(false);
-    setCurrentStep(1);
-    setMenuItems([]);
-    setImportSource(null);
   };
 
+  const generateMissingImages = async () => {
+    if (!menuData) return;
+    
+    setGeneratingImages(true);
+    try {
+      // Simulate image generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const updatedItems = menuData.items.map(item => ({
+        ...item,
+        image: item.image || `https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=${encodeURIComponent(item.name)}`
+      }));
+
+      setMenuData({ ...menuData, items: updatedItems });
+      toast({
+        title: "Images generated",
+        description: "All missing images have been created",
+      });
+    } catch (error) {
+      toast({
+        title: "Image generation failed",
+        description: "Failed to generate some images",
+        variant: "destructive"
+      });
+    } finally {
+      setGeneratingImages(false);
+    }
+  };
+
+  const saveToDatabase = async () => {
+    if (!menuData) return;
+    
+    setSaving(true);
+    try {
+      // Simulate database save
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Here you would call your Supabase/Firestore API
+      console.log('Saving menu:', menuData);
+      
+      toast({
+        title: "Success!",
+        description: `Menu with ${menuData.items.length} items has been saved`,
+      });
+      
+      navigate('/admin/menus');
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: "Failed to save menu to database",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const editMenuItem = (item: MenuItem) => {
+    setEditingItem({ ...item });
+  };
+
+  const saveMenuItem = () => {
+    if (!editingItem || !menuData) return;
+    
+    setMenuData({
+      ...menuData,
+      items: menuData.items.map(item => 
+        item.id === editingItem.id ? editingItem : item
+      )
+    });
+    setEditingItem(null);
+    toast({
+      title: "Item updated",
+      description: "Menu item has been saved",
+    });
+  };
+
+  const addMenuItem = () => {
+    if (!menuData) return;
+    
+    const newItem: MenuItem = {
+      id: `new-${Date.now()}`,
+      name: '',
+      description: '',
+      price: 0,
+      category: 'Main Course',
+      available: true,
+      allergens: [],
+      dietary_tags: []
+    };
+    
+    setMenuData({
+      ...menuData,
+      items: [...menuData.items, newItem]
+    });
+    setEditingItem(newItem);
+  };
+
+  const removeMenuItem = (itemId: string) => {
+    if (!menuData) return;
+    
+    setMenuData({
+      ...menuData,
+      items: menuData.items.filter(item => item.id !== itemId)
+    });
+    toast({
+      title: "Item removed",
+      description: "Menu item has been deleted",
+    });
+  };
+
+  const nextStep = () => {
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const renderStepIndicator = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center">
+            <div className="flex items-center">
+              <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                ${currentStep >= step.id 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-600'
+                }
+              `}>
+                {currentStep > step.id ? <CheckCircle className="h-4 w-4" /> : step.id}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">{step.title}</p>
+                <p className="text-xs text-gray-500">{step.description}</p>
+              </div>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`
+                w-16 h-0.5 mx-4
+                ${currentStep > step.id ? 'bg-blue-600' : 'bg-gray-200'}
+              `} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const renderStep1 = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Select Bar
-        </CardTitle>
-        <CardDescription>
-          Choose the bar or restaurant to import menu items for
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="bar-select">Select Bar *</Label>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Bar</CardTitle>
+        </CardHeader>
+        <CardContent>
           <Select value={selectedBar} onValueChange={setSelectedBar}>
             <SelectTrigger>
-              <SelectValue placeholder="Choose a bar..." />
+              <SelectValue placeholder="Choose a bar" />
             </SelectTrigger>
             <SelectContent>
-              {bars.map((bar) => (
+              {bars.map(bar => (
                 <SelectItem key={bar.id} value={bar.id}>
-                  {bar.name} - {bar.city}
+                  <div>
+                    <div className="font-medium">{bar.name}</div>
+                    <div className="text-sm text-gray-500">{bar.location}</div>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </CardContent>
+      </Card>
 
-        {selectedBar && (
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              Selected: {bars.find(b => b.id === selectedBar)?.name}
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Choose Import Method</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* File Upload */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <FileImage className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="font-medium mb-2">Upload Menu File</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload PDF or image files (JPG, PNG, PDF)
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button 
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Choose File
+            </Button>
+            {importSource?.type === 'file' && (
+              <p className="text-sm text-green-600 mt-2">
+                Selected: {importSource.name}
+              </p>
+            )}
+          </div>
+
+          {/* URL Import */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Globe className="h-5 w-5 text-blue-600" />
+              <h3 className="font-medium">Import from URL</h3>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter menu URL"
+                onChange={(e) => handleUrlSubmit(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                variant="outline"
+                onClick={() => handleUrlSubmit('https://example.com/menu')}
+              >
+                <Link className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Manual Entry */}
+          <div className="border rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-5 w-5 text-green-600" />
+              <h3 className="font-medium">Manual Entry</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-3">
+              Create menu items manually
+            </p>
+            <Button 
+              variant="outline"
+              onClick={() => setImportSource({ type: 'manual' })}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Start Manual Entry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button 
+          onClick={nextStep} 
+          disabled={!selectedBar || !importSource}
+          className="flex items-center gap-2"
+        >
+          Next Step
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 
   const renderStep2 = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Import Source
-        </CardTitle>
-        <CardDescription>
-          Choose how you want to import the menu data
-        </CardDescription>
+        <CardTitle>Process Menu</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {importSources.map((source) => {
-            const Icon = source.icon;
-            return (
-              <Card
-                key={source.type}
-                className={`cursor-pointer transition-colors ${
-                  importSource?.type === source.type ? 'border-primary' : ''
-                }`}
-                onClick={() => setImportSource({ type: source.type, name: source.name })}
+        {!menuData ? (
+          <div className="text-center py-8">
+            <div className="mb-4">
+              {processing ? (
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+              ) : (
+                <FileText className="h-12 w-12 mx-auto text-gray-400" />
+              )}
+            </div>
+            <h3 className="font-medium mb-2">
+              {processing ? 'Processing Menu...' : 'Ready to Process'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {processing 
+                ? 'Extracting menu items using AI OCR...' 
+                : 'Click process to extract menu items from your source'
+              }
+            </p>
+            {!processing && (
+              <Button 
+                onClick={handleProcess}
+                className="flex items-center gap-2"
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-6 w-6" />
-                    <div>
-                      <h4 className="font-medium">{source.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {source.type === 'file' && 'Upload CSV or Excel file'}
-                        {source.type === 'url' && 'Scrape menu from website'}
-                        {source.type === 'api' && 'Connect to external API'}
-                        {source.type === 'manual' && 'Enter items manually'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {importSource && (
+                <Search className="h-4 w-4" />
+                Process Menu
+              </Button>
+            )}
+          </div>
+        ) : (
           <div className="space-y-4">
-            <Separator />
+            <div className="bg-green-50 p-4 rounded-lg">
+              <h4 className="font-medium text-green-900 mb-2">Processing Complete!</h4>
+              <p className="text-green-700">
+                Successfully extracted {menuData.items.length} items from {importSource?.name}
+              </p>
+            </div>
             
-            {importSource.type === 'file' && (
-              <div className="space-y-2">
-                <Label htmlFor="file-upload">Upload Menu File</Label>
-                <Input
-                  id="file-upload"
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileUpload}
-                  disabled={isProcessing}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Supported formats: CSV, Excel (.xlsx, .xls)
-                </p>
-              </div>
-            )}
-
-            {importSource.type === 'url' && (
-              <div className="space-y-2">
-                <Label htmlFor="url-input">Website URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="url-input"
-                    placeholder="https://example.com/menu"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        const target = e.target as HTMLInputElement;
-                        handleUrlImport(target.value);
-                      }
-                    }}
-                    disabled={isProcessing}
-                  />
-                  <Button 
-                    onClick={() => {
-                      const input = document.getElementById('url-input') as HTMLInputElement;
-                      if (input.value) handleUrlImport(input.value);
-                    }}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Import'}
-                  </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium mb-2">Menu Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div><strong>Items Found:</strong> {menuData.items.length}</div>
+                  <div><strong>Categories:</strong> {menuData.categories.length}</div>
+                  <div><strong>Price Range:</strong> €{Math.min(...menuData.items.map(i => i.price)).toFixed(2)} - €{Math.max(...menuData.items.map(i => i.price)).toFixed(2)}</div>
                 </div>
               </div>
-            )}
-
-            {importSource.type === 'api' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="api-endpoint">API Endpoint</Label>
-                  <Input
-                    id="api-endpoint"
-                    placeholder="https://api.example.com/menu"
-                  />
+              <div>
+                <h4 className="font-medium mb-2">Categories Found</h4>
+                <div className="flex flex-wrap gap-1">
+                  {menuData.categories.map(cat => (
+                    <Badge key={cat} variant="secondary">
+                      {cat}
+                    </Badge>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key (Optional)</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Enter API key if required"
-                  />
-                </div>
-                <Button 
-                  onClick={() => {
-                    const endpoint = (document.getElementById('api-endpoint') as HTMLInputElement).value;
-                    const apiKey = (document.getElementById('api-key') as HTMLInputElement).value;
-                    if (endpoint) handleApiImport(endpoint, apiKey);
-                  }}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Connect API'}
-                </Button>
               </div>
-            )}
-
-            {importSource.type === 'manual' && (
-              <div className="space-y-4">
-                <Button onClick={addMenuItem} className="w-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Menu Item
-                </Button>
-                <p className="text-sm text-muted-foreground">
-                  Start adding menu items manually. You can also import from a file first and then edit.
-                </p>
-              </div>
-            )}
+            </div>
           </div>
         )}
 
-        {isProcessing && (
-          <Alert>
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            <AlertDescription>
-              Processing import source... Please wait.
-            </AlertDescription>
-          </Alert>
-        )}
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={prevStep}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={nextStep} 
+            disabled={!menuData}
+            className="flex items-center gap-2"
+          >
+            Next Step
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
 
   const renderStep3 = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Review & Edit Menu Items
-        </CardTitle>
-        <CardDescription>
-          Review imported items and make any necessary adjustments
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {validationErrors.length > 0 && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <ul className="list-disc list-inside">
-                {validationErrors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="flex justify-between items-center">
-          <h4 className="font-medium">Menu Items ({menuItems.length})</h4>
-          <Button onClick={addMenuItem} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
-        </div>
-
-        <div className="space-y-4">
-          {menuItems.map((item, index) => (
-            <div key={index} className="border rounded-lg p-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h5 className="font-medium">Item {index + 1}</h5>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeMenuItem(index)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Name *</Label>
-                  <Input
-                    value={item.name}
-                    onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
-                    placeholder="Item name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Category *</Label>
-                  <Input
-                    value={item.category}
-                    onChange={(e) => updateMenuItem(index, 'category', e.target.value)}
-                    placeholder="e.g., Drinks, Food, Desserts"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={item.description}
-                  onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
-                  placeholder="Describe the item"
-                  rows={2}
+    <div className="space-y-6">
+      {editingItem ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit Menu Item</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="item-name">Name</Label>
+                <Input
+                  id="item-name"
+                  value={editingItem.name}
+                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Price (€) *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={item.price}
-                    onChange={(e) => updateMenuItem(index, 'price', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <Checkbox
-                    id={`available-${index}`}
-                    checked={item.available}
-                    onCheckedChange={(checked) => updateMenuItem(index, 'available', checked)}
-                  />
-                  <Label htmlFor={`available-${index}`}>Available</Label>
-                </div>
+              <div>
+                <Label htmlFor="item-price">Price (€)</Label>
+                <Input
+                  id="item-price"
+                  type="number"
+                  step="0.01"
+                  value={editingItem.price}
+                  onChange={(e) => setEditingItem({ ...editingItem, price: parseFloat(e.target.value) || 0 })}
+                />
               </div>
             </div>
-          ))}
-        </div>
+            
+            <div>
+              <Label htmlFor="item-description">Description</Label>
+              <Textarea
+                id="item-description"
+                value={editingItem.description}
+                onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="item-category">Category</Label>
+              <Select 
+                value={editingItem.category} 
+                onValueChange={(value) => setEditingItem({ ...editingItem, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(cat => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button onClick={saveMenuItem} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save Changes
+              </Button>
+              <Button variant="outline" onClick={() => setEditingItem(null)}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Preview & Edit Menu Items</CardTitle>
+              <Button onClick={addMenuItem} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {menuData?.items.map((item) => (
+                <Card key={item.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{item.name}</h4>
+                        <Badge variant="outline">{item.category}</Badge>
+                        <Badge variant={item.available ? "default" : "secondary"}>
+                          {item.available ? "Available" : "Unavailable"}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="font-medium">€{item.price.toFixed(2)}</span>
+                        {item.allergens && item.allergens.length > 0 && (
+                          <span className="text-red-600">
+                            Allergens: {item.allergens.join(', ')}
+                          </span>
+                        )}
+                        {item.dietary_tags && item.dietary_tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {item.dietary_tags.map(tag => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => editMenuItem(item)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeMenuItem(item.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {menuItems.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No menu items to review. Add items or import from a source.</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={prevStep}>
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+        <Button 
+          onClick={nextStep} 
+          disabled={!menuData || menuData.items.length === 0}
+          className="flex items-center gap-2"
+        >
+          Next Step
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 
   const renderStep4 = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          Import Summary
-        </CardTitle>
-        <CardDescription>
-          Review the import details and complete the process
-        </CardDescription>
+        <CardTitle>Generate Missing Images</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h4 className="font-medium">Import Details</h4>
-            <div className="space-y-2 text-sm">
-              <div><strong>Bar:</strong> {bars.find(b => b.id === selectedBar)?.name}</div>
-              <div><strong>Source:</strong> {importSource?.name}</div>
-              <div><strong>Items:</strong> {menuItems.length}</div>
-              <div><strong>Available:</strong> {menuItems.filter(item => item.available).length}</div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="font-medium">Categories</h4>
-            <div className="flex flex-wrap gap-1">
-              {Array.from(new Set(menuItems.map(item => item.category))).map((category) => (
-                <Badge key={category} variant="secondary">{category}</Badge>
-              ))}
-            </div>
-          </div>
+        <div className="text-center py-8">
+          <ImageIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="font-medium mb-2">Image Generation</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Generate AI-powered images for menu items that don't have photos
+          </p>
+          <Button 
+            onClick={generateMissingImages}
+            disabled={generatingImages}
+            className="flex items-center gap-2"
+          >
+            {generatingImages ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+            ) : (
+              <Camera className="h-4 w-4" />
+            )}
+            {generatingImages ? 'Generating...' : 'Generate Images'}
+          </Button>
         </div>
 
-        <Separator />
-
-        <div className="space-y-4">
-          <h4 className="font-medium">Menu Items Preview</h4>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {menuItems.map((item, index) => (
-              <div key={index} className="flex justify-between items-center p-2 border rounded">
-                <div>
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-sm text-muted-foreground">{item.category}</div>
+        {menuData && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {menuData.items.map((item) => (
+              <Card key={item.id} className="p-4">
+                <div className="aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                  {item.image ? (
+                    <img 
+                      src={item.image} 
+                      alt={item.name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      <ImageIcon className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm">No image</p>
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <div className="font-medium">€{item.price.toFixed(2)}</div>
-                  <Badge variant={item.available ? "default" : "secondary"}>
-                    {item.available ? "Available" : "Unavailable"}
-                  </Badge>
-                </div>
-              </div>
+                <h4 className="font-medium text-sm">{item.name}</h4>
+                <p className="text-xs text-gray-600">€{item.price.toFixed(2)}</p>
+              </Card>
             ))}
-          </div>
-        </div>
-
-        {isProcessing && (
-          <div className="space-y-2">
-            <Progress value={importProgress} />
-            <p className="text-sm text-muted-foreground text-center">
-              Importing menu items... {Math.round(importProgress)}%
-            </p>
           </div>
         )}
 
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            Ready to import {menuItems.length} menu items to {bars.find(b => b.id === selectedBar)?.name}.
-          </AlertDescription>
-        </Alert>
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={prevStep}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={nextStep} 
+            disabled={!menuData}
+            className="flex items-center gap-2"
+          >
+            Next Step
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderStep5 = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Review & Submit</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">Menu Summary</h4>
+          <p className="text-blue-700">
+            You are about to save a menu with {menuData?.items.length} items to {menuData?.bar_name}.
+          </p>
+        </div>
+
+        {menuData && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{menuData.items.length}</div>
+                <div className="text-sm text-gray-600">Total Items</div>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{menuData.categories.length}</div>
+                <div className="text-sm text-gray-600">Categories</div>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">
+                  €{menuData.items.reduce((sum, item) => sum + item.price, 0).toFixed(2)}
+                </div>
+                <div className="text-sm text-gray-600">Total Value</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium">Menu Items Preview</h4>
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {menuData.items.slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex justify-between items-center p-2 border rounded">
+                    <div>
+                      <div className="font-medium">{item.name}</div>
+                      <div className="text-sm text-gray-600">{item.category}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">€{item.price.toFixed(2)}</div>
+                      <Badge variant={item.available ? "default" : "secondary"} className="text-xs">
+                        {item.available ? "Available" : "Unavailable"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {menuData.items.length > 5 && (
+                  <div className="text-center text-sm text-gray-500 py-2">
+                    ... and {menuData.items.length - 5} more items
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={prevStep}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={saveToDatabase} 
+            disabled={saving || !menuData}
+            className="flex items-center gap-2"
+          >
+            {saving ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {saving ? 'Saving...' : 'Save to Database'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -586,58 +925,22 @@ const MenuImportWizard: React.FC = () => {
       case 2: return renderStep2();
       case 3: return renderStep3();
       case 4: return renderStep4();
+      case 5: return renderStep5();
       default: return renderStep1();
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">Menu Import Wizard</h1>
-        <p className="text-muted-foreground">
-          Step {currentStep} of {totalSteps} - Import menu items for bars and restaurants
-        </p>
-      </div>
-
-      <Progress value={progress} className="w-full" />
-
-      <div className="space-y-6">
+    <AdminLayout 
+      title="Menu Import Wizard" 
+      subtitle={`Step ${currentStep} of ${steps.length}`}
+      showBackButton
+    >
+      <div className="max-w-4xl mx-auto">
+        {renderStepIndicator()}
         {renderCurrentStep()}
-
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-
-          {currentStep < totalSteps ? (
-            <Button 
-              onClick={handleNext}
-              disabled={
-                (currentStep === 1 && !selectedBar) ||
-                (currentStep === 2 && !importSource) ||
-                (currentStep === 3 && menuItems.length === 0)
-              }
-            >
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleImport} 
-              disabled={isProcessing || menuItems.length === 0}
-              className="min-w-[120px]"
-            >
-              {isProcessing ? "Importing..." : "Import Menu"}
-            </Button>
-          )}
-        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

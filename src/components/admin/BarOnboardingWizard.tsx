@@ -1,293 +1,328 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { 
-  Building2, 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { 
+  CheckCircle, 
+  Circle, 
+  ChevronLeft, 
+  ChevronRight, 
   MapPin, 
   Phone, 
   Globe, 
-  Clock, 
-  Menu, 
-  Upload, 
-  Settings, 
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft,
+  Image as ImageIcon,
+  Search,
   Plus,
-  X
+  Edit,
+  Trash2,
+  Save,
+  Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AdminLayout from './AdminLayout';
 
 interface BarData {
+  id?: string;
   name: string;
-  description: string;
   address: string;
-  city: string;
-  country: string;
   phone: string;
-  website: string;
-  email: string;
-  openingHours: {
-    [key: string]: { open: string; close: string; closed: boolean };
-  };
+  website?: string;
+  logo?: string;
+  country: string;
+  city: string;
+  latitude?: number;
+  longitude?: number;
   categories: string[];
-  features: string[];
-  photos: string[];
-  menuItems: MenuItem[];
+  tags: string[];
+  confirmed: boolean;
+  created_at?: string;
 }
 
-interface MenuItem {
+interface GooglePlace {
+  place_id: string;
   name: string;
-  description: string;
-  price: number;
-  category: string;
-  image?: string;
-  available: boolean;
+  formatted_address: string;
+  phone_number?: string;
+  website?: string;
+  photos?: Array<{ photo_reference: string }>;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  types: string[];
 }
+
+const countries = [
+  { code: 'MT', name: 'Malta' },
+  { code: 'RW', name: 'Rwanda' },
+  { code: 'IT', name: 'Italy' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'FR', name: 'France' },
+  { code: 'DE', name: 'Germany' },
+];
+
+const categories = [
+  'Restaurant', 'Bar', 'Cafe', 'Lounge', 'Pub', 'Club', 'Wine Bar', 'Cocktail Bar',
+  'Beer Garden', 'Sports Bar', 'Irish Pub', 'Gastropub', 'Brewery', 'Distillery'
+];
+
+const tags = [
+  'Live Music', 'DJ', 'Karaoke', 'Sports TV', 'Outdoor Seating', 'Rooftop',
+  'Waterfront', 'Historic', 'Modern', 'Casual', 'Fine Dining', 'Family Friendly',
+  'Pet Friendly', 'Wheelchair Accessible', 'Free WiFi', 'Parking Available'
+];
+
+const steps = [
+  { id: 1, title: 'Select Country', description: 'Choose the country/region' },
+  { id: 2, title: 'Search Bars', description: 'Find bars using Google Places' },
+  { id: 3, title: 'Preview Results', description: 'Review and select bars' },
+  { id: 4, title: 'Edit Details', description: 'Manual editing and customization' },
+  { id: 5, title: 'Review & Submit', description: 'Final review and confirmation' },
+];
 
 const BarOnboardingWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [barData, setBarData] = useState<BarData>({
-    name: '',
-    description: '',
-    address: '',
-    city: '',
-    country: '',
-    phone: '',
-    website: '',
-    email: '',
-    openingHours: {
-      monday: { open: '09:00', close: '23:00', closed: false },
-      tuesday: { open: '09:00', close: '23:00', closed: false },
-      wednesday: { open: '09:00', close: '23:00', closed: false },
-      thursday: { open: '09:00', close: '23:00', closed: false },
-      friday: { open: '09:00', close: '00:00', closed: false },
-      saturday: { open: '10:00', close: '00:00', closed: false },
-      sunday: { open: '10:00', close: '22:00', closed: false },
-    },
-    categories: [],
-    features: [],
-    photos: [],
-    menuItems: [],
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GooglePlace[]>([]);
+  const [selectedBars, setSelectedBars] = useState<BarData[]>([]);
+  const [editingBar, setEditingBar] = useState<BarData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  const totalSteps = 5;
-  const progress = (currentStep / totalSteps) * 100;
+  // Mock Google Places API search
+  const searchGooglePlaces = async (query: string, country: string) => {
+    setSearching(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Mock results
+      const mockResults: GooglePlace[] = [
+        {
+          place_id: '1',
+          name: 'The Blue Bar',
+          formatted_address: '123 Main Street, Valletta, Malta',
+          phone_number: '+356 2123 4567',
+          website: 'https://thebluebar.mt',
+          photos: [{ photo_reference: 'mock1' }],
+          geometry: { location: { lat: 35.8989, lng: 14.5146 } },
+          types: ['bar', 'establishment']
+        },
+        {
+          place_id: '2',
+          name: 'Cafe Luna',
+          formatted_address: '456 Republic Street, Sliema, Malta',
+          phone_number: '+356 2123 4568',
+          website: 'https://cafeluna.mt',
+          photos: [{ photo_reference: 'mock2' }],
+          geometry: { location: { lat: 35.9128, lng: 14.5029 } },
+          types: ['cafe', 'establishment']
+        },
+        {
+          place_id: '3',
+          name: 'The Grand Hotel Bar',
+          formatted_address: '789 St. Julian\'s Bay, St. Julian\'s, Malta',
+          phone_number: '+356 2123 4569',
+          website: 'https://grandhotel.mt',
+          photos: [{ photo_reference: 'mock3' }],
+          geometry: { location: { lat: 35.9225, lng: 14.4884 } },
+          types: ['bar', 'restaurant', 'establishment']
+        }
+      ];
+      
+      setSearchResults(mockResults);
+      toast({
+        title: "Search completed",
+        description: `Found ${mockResults.length} bars in ${country}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Search failed",
+        description: "Failed to search Google Places API",
+        variant: "destructive"
+      });
+    } finally {
+      setSearching(false);
+    }
+  };
 
-  const categories = [
-    'Bar', 'Restaurant', 'Cafe', 'Pub', 'Nightclub', 'Wine Bar', 'Cocktail Bar', 'Sports Bar'
-  ];
+  const handleSearch = () => {
+    if (!searchQuery.trim() || !selectedCountry) {
+      toast({
+        title: "Missing information",
+        description: "Please enter a search query and select a country",
+        variant: "destructive"
+      });
+      return;
+    }
+    searchGooglePlaces(searchQuery, selectedCountry);
+  };
 
-  const features = [
-    'Live Music', 'DJ', 'Karaoke', 'Sports TV', 'Outdoor Seating', 'Private Events', 
-    'Food Service', 'Craft Beer', 'Wine Selection', 'Cocktails', 'Happy Hour'
-  ];
+  const selectBar = (place: GooglePlace) => {
+    const barData: BarData = {
+      name: place.name,
+      address: place.formatted_address,
+      phone: place.phone_number || '',
+      website: place.website || '',
+      country: selectedCountry,
+      city: place.formatted_address.split(',')[1]?.trim() || '',
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      categories: place.types.filter(type => categories.includes(type.charAt(0).toUpperCase() + type.slice(1))),
+      tags: [],
+      confirmed: false,
+    };
+    
+    setSelectedBars(prev => [...prev, barData]);
+    toast({
+      title: "Bar selected",
+      description: `${place.name} added to selection`,
+    });
+  };
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
+  const removeBar = (index: number) => {
+    setSelectedBars(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const editBar = (index: number) => {
+    setEditingBar({ ...selectedBars[index], id: index.toString() });
+  };
+
+  const saveBarEdit = () => {
+    if (!editingBar) return;
+    
+    setSelectedBars(prev => 
+      prev.map((bar, index) => 
+        index.toString() === editingBar.id ? editingBar : bar
+      )
+    );
+    setEditingBar(null);
+    toast({
+      title: "Bar updated",
+      description: "Bar details have been saved",
+    });
+  };
+
+  const saveToDatabase = async () => {
+    setSaving(true);
+    try {
+      // Simulate database save
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Here you would call your Supabase/Firestore API
+      console.log('Saving bars:', selectedBars);
+      
+      toast({
+        title: "Success!",
+        description: `${selectedBars.length} bars have been onboarded successfully`,
+      });
+      
+      navigate('/admin/bars');
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: "Failed to save bars to database",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const nextStep = () => {
+    if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
 
-  const handlePrevious = () => {
+  const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      // TODO: Implement bar creation API call
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      
-      toast({
-        title: "Bar Created Successfully",
-        description: `${barData.name} has been added to the platform.`,
-      });
-      
-      // Reset form or redirect
-      setCurrentStep(1);
-      setBarData({
-        name: '',
-        description: '',
-        address: '',
-        city: '',
-        country: '',
-        phone: '',
-        website: '',
-        email: '',
-        openingHours: {
-          monday: { open: '09:00', close: '23:00', closed: false },
-          tuesday: { open: '09:00', close: '23:00', closed: false },
-          wednesday: { open: '09:00', close: '23:00', closed: false },
-          thursday: { open: '09:00', close: '23:00', closed: false },
-          friday: { open: '09:00', close: '00:00', closed: false },
-          saturday: { open: '10:00', close: '00:00', closed: false },
-          sunday: { open: '10:00', close: '22:00', closed: false },
-        },
-        categories: [],
-        features: [],
-        photos: [],
-        menuItems: [],
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create bar. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const updateBarData = (field: keyof BarData, value: any) => {
-    setBarData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const toggleCategory = (category: string) => {
-    setBarData(prev => ({
-      ...prev,
-      categories: prev.categories.includes(category)
-        ? prev.categories.filter(c => c !== category)
-        : [...prev.categories, category]
-    }));
-  };
-
-  const toggleFeature = (feature: string) => {
-    setBarData(prev => ({
-      ...prev,
-      features: prev.features.includes(feature)
-        ? prev.features.filter(f => f !== feature)
-        : [...prev.features, feature]
-    }));
-  };
-
-  const addMenuItem = () => {
-    const newItem: MenuItem = {
-      name: '',
-      description: '',
-      price: 0,
-      category: '',
-      available: true,
-    };
-    setBarData(prev => ({
-      ...prev,
-      menuItems: [...prev.menuItems, newItem]
-    }));
-  };
-
-  const updateMenuItem = (index: number, field: keyof MenuItem, value: any) => {
-    setBarData(prev => ({
-      ...prev,
-      menuItems: prev.menuItems.map((item, i) => 
-        i === index ? { ...item, [field]: value } : item
-      )
-    }));
-  };
-
-  const removeMenuItem = (index: number) => {
-    setBarData(prev => ({
-      ...prev,
-      menuItems: prev.menuItems.filter((_, i) => i !== index)
-    }));
-  };
+  const renderStepIndicator = () => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center">
+            <div className="flex items-center">
+              <div className={`
+                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                ${currentStep >= step.id 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-600'
+                }
+              `}>
+                {currentStep > step.id ? <CheckCircle className="h-4 w-4" /> : step.id}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">{step.title}</p>
+                <p className="text-xs text-gray-500">{step.description}</p>
+              </div>
+            </div>
+            {index < steps.length - 1 && (
+              <div className={`
+                w-16 h-0.5 mx-4
+                ${currentStep > step.id ? 'bg-blue-600' : 'bg-gray-200'}
+              `} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   const renderStep1 = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          Basic Information
-        </CardTitle>
-        <CardDescription>
-          Enter the basic details about the bar or restaurant
-        </CardDescription>
+        <CardTitle>Select Country/Region</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Bar Name *</Label>
-            <Input
-              id="name"
-              value={barData.name}
-              onChange={(e) => updateBarData('name', e.target.value)}
-              placeholder="Enter bar name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="city">City *</Label>
-            <Input
-              id="city"
-              value={barData.city}
-              onChange={(e) => updateBarData('city', e.target.value)}
-              placeholder="Enter city"
-            />
-          </div>
+      <CardContent className="space-y-6">
+        <div>
+          <Label htmlFor="country">Country</Label>
+          <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a country" />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map(country => (
+                <SelectItem key={country.code} value={country.code}>
+                  {country.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={barData.description}
-            onChange={(e) => updateBarData('description', e.target.value)}
-            placeholder="Describe the bar, its atmosphere, and specialties"
-            rows={3}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input
-            id="address"
-            value={barData.address}
-            onChange={(e) => updateBarData('address', e.target.value)}
-            placeholder="Enter full address"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              value={barData.phone}
-              onChange={(e) => updateBarData('phone', e.target.value)}
-              placeholder="Phone number"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={barData.email}
-              onChange={(e) => updateBarData('email', e.target.value)}
-              placeholder="Email address"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              value={barData.website}
-              onChange={(e) => updateBarData('website', e.target.value)}
-              placeholder="Website URL"
-            />
-          </div>
+        <div className="flex justify-end">
+          <Button 
+            onClick={nextStep} 
+            disabled={!selectedCountry}
+            className="flex items-center gap-2"
+          >
+            Next Step
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -296,58 +331,91 @@ const BarOnboardingWizard: React.FC = () => {
   const renderStep2 = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Opening Hours
-        </CardTitle>
-        <CardDescription>
-          Set the opening and closing times for each day
-        </CardDescription>
+        <CardTitle>Search Bars</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {Object.entries(barData.openingHours).map(([day, hours]) => (
-          <div key={day} className="flex items-center gap-4 p-3 border rounded-lg">
-            <div className="w-24 font-medium capitalize">{day}</div>
-            <Checkbox
-              checked={!hours.closed}
-              onCheckedChange={(checked) => {
-                updateBarData('openingHours', {
-                  ...barData.openingHours,
-                  [day]: { ...hours, closed: !checked }
-                });
-              }}
-            />
-            {!hours.closed ? (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={hours.open}
-                  onChange={(e) => {
-                    updateBarData('openingHours', {
-                      ...barData.openingHours,
-                      [day]: { ...hours, open: e.target.value }
-                    });
-                  }}
-                  className="w-32"
-                />
-                <span>to</span>
-                <Input
-                  type="time"
-                  value={hours.close}
-                  onChange={(e) => {
-                    updateBarData('openingHours', {
-                      ...barData.openingHours,
-                      [day]: { ...hours, close: e.target.value }
-                    });
-                  }}
-                  className="w-32"
-                />
-              </div>
-            ) : (
-              <Badge variant="secondary">Closed</Badge>
-            )}
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="search">Search Query</Label>
+            <div className="flex gap-2">
+              <Input
+                id="search"
+                placeholder="e.g., bars in Valletta, restaurants in Sliema"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                onClick={handleSearch} 
+                disabled={searching || !searchQuery.trim()}
+                className="flex items-center gap-2"
+              >
+                {searching ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                Search
+              </Button>
+            </div>
           </div>
-        ))}
+        </div>
+
+        {searchResults.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="font-medium">Search Results</h3>
+            <div className="grid gap-4">
+              {searchResults.map((place) => (
+                <Card key={place.place_id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium">{place.name}</h4>
+                      <p className="text-sm text-gray-600 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {place.formatted_address}
+                      </p>
+                      {place.phone_number && (
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {place.phone_number}
+                        </p>
+                      )}
+                      {place.website && (
+                        <p className="text-sm text-gray-600 flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          {place.website}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => selectBar(place)}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Select
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={prevStep}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={nextStep} 
+            disabled={selectedBars.length === 0}
+            className="flex items-center gap-2"
+          >
+            Next Step
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -355,211 +423,312 @@ const BarOnboardingWizard: React.FC = () => {
   const renderStep3 = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Menu className="h-5 w-5" />
-          Categories & Features
-        </CardTitle>
-        <CardDescription>
-          Select categories and features that describe the establishment
-        </CardDescription>
+        <CardTitle>Preview Selected Bars</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div>
-          <Label className="text-base font-medium">Categories</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-            {categories.map((category) => (
-              <div key={category} className="flex items-center space-x-2">
-                <Checkbox
-                  id={category}
-                  checked={barData.categories.includes(category)}
-                  onCheckedChange={() => toggleCategory(category)}
-                />
-                <Label htmlFor={category} className="text-sm">{category}</Label>
+        <div className="space-y-4">
+          {selectedBars.map((bar, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-medium">{bar.name}</h4>
+                    <Badge variant="outline">{bar.country}</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">{bar.address}</p>
+                  {bar.phone && (
+                    <p className="text-sm text-gray-600">{bar.phone}</p>
+                  )}
+                  {bar.categories.length > 0 && (
+                    <div className="flex gap-1 mt-2">
+                      {bar.categories.map(cat => (
+                        <Badge key={cat} variant="secondary" className="text-xs">
+                          {cat}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => editBar(index)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => removeBar(index)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            ))}
-          </div>
+            </Card>
+          ))}
         </div>
 
-        <Separator />
-
-        <div>
-          <Label className="text-base font-medium">Features & Amenities</Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-            {features.map((feature) => (
-              <div key={feature} className="flex items-center space-x-2">
-                <Checkbox
-                  id={feature}
-                  checked={barData.features.includes(feature)}
-                  onCheckedChange={() => toggleFeature(feature)}
-                />
-                <Label htmlFor={feature} className="text-sm">{feature}</Label>
-              </div>
-            ))}
-          </div>
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={prevStep}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={nextStep} 
+            disabled={selectedBars.length === 0}
+            className="flex items-center gap-2"
+          >
+            Next Step
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
   );
 
   const renderStep4 = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Menu Items
-        </CardTitle>
-        <CardDescription>
-          Add menu items that customers can order
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Button onClick={addMenuItem} className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Menu Item
-        </Button>
-
-        {barData.menuItems.map((item, index) => (
-          <div key={index} className="border rounded-lg p-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <h4 className="font-medium">Item {index + 1}</h4>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeMenuItem(index)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+    <div className="space-y-6">
+      {editingBar ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit Bar Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={editingBar.name}
+                  onChange={(e) => setEditingBar({ ...editingBar, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={editingBar.phone}
+                  onChange={(e) => setEditingBar({ ...editingBar, phone: e.target.value })}
+                />
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={item.name}
-                  onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
-                  placeholder="Item name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Input
-                  value={item.category}
-                  onChange={(e) => updateMenuItem(index, 'category', e.target.value)}
-                  placeholder="e.g., Drinks, Food, Desserts"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
+            <div>
+              <Label htmlFor="address">Address</Label>
               <Textarea
-                value={item.description}
-                onChange={(e) => updateMenuItem(index, 'description', e.target.value)}
-                placeholder="Describe the item"
-                rows={2}
+                id="address"
+                value={editingBar.address}
+                onChange={(e) => setEditingBar({ ...editingBar, address: e.target.value })}
               />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Price (€) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={item.price}
-                  onChange={(e) => updateMenuItem(index, 'price', parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <Checkbox
-                  id={`available-${index}`}
-                  checked={item.available}
-                  onCheckedChange={(checked) => updateMenuItem(index, 'available', checked)}
-                />
-                <Label htmlFor={`available-${index}`}>Available</Label>
+            
+            <div>
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                value={editingBar.website || ''}
+                onChange={(e) => setEditingBar({ ...editingBar, website: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <Label>Categories</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {categories.map(cat => (
+                  <Badge
+                    key={cat}
+                    variant={editingBar.categories.includes(cat) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      const newCategories = editingBar.categories.includes(cat)
+                        ? editingBar.categories.filter(c => c !== cat)
+                        : [...editingBar.categories, cat];
+                      setEditingBar({ ...editingBar, categories: newCategories });
+                    }}
+                  >
+                    {cat}
+                  </Badge>
+                ))}
               </div>
             </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+            
+            <div>
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant={editingBar.tags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      const newTags = editingBar.tags.includes(tag)
+                        ? editingBar.tags.filter(t => t !== tag)
+                        : [...editingBar.tags, tag];
+                      setEditingBar({ ...editingBar, tags: newTags });
+                    }}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button onClick={saveBarEdit} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save Changes
+              </Button>
+              <Button variant="outline" onClick={() => setEditingBar(null)}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manual Editing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              Click the edit button on any bar to modify its details, categories, and tags.
+            </p>
+            <div className="space-y-4">
+              {selectedBars.map((bar, index) => (
+                <Card key={index} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-medium">{bar.name}</h4>
+                        <Badge variant="outline">{bar.country}</Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">{bar.address}</p>
+                      {bar.categories.length > 0 && (
+                        <div className="flex gap-1 mt-2">
+                          {bar.categories.map(cat => (
+                            <Badge key={cat} variant="secondary" className="text-xs">
+                              {cat}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      {bar.tags.length > 0 && (
+                        <div className="flex gap-1 mt-2">
+                          {bar.tags.map(tag => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => editBar(index)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={prevStep}>
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+        <Button 
+          onClick={nextStep} 
+          disabled={selectedBars.length === 0}
+          className="flex items-center gap-2"
+        >
+          Next Step
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 
   const renderStep5 = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="h-5 w-5" />
-          Review & Submit
-        </CardTitle>
-        <CardDescription>
-          Review all information before creating the bar
-        </CardDescription>
+        <CardTitle>Review & Submit</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h4 className="font-medium">Basic Information</h4>
-            <div className="space-y-2 text-sm">
-              <div><strong>Name:</strong> {barData.name}</div>
-              <div><strong>City:</strong> {barData.city}</div>
-              <div><strong>Address:</strong> {barData.address}</div>
-              <div><strong>Phone:</strong> {barData.phone}</div>
-              <div><strong>Email:</strong> {barData.email}</div>
-              <div><strong>Website:</strong> {barData.website}</div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="font-medium">Categories & Features</h4>
-            <div className="space-y-2">
-              <div><strong>Categories:</strong></div>
-              <div className="flex flex-wrap gap-1">
-                {barData.categories.map((category) => (
-                  <Badge key={category} variant="secondary">{category}</Badge>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div><strong>Features:</strong></div>
-              <div className="flex flex-wrap gap-1">
-                {barData.features.map((feature) => (
-                  <Badge key={feature} variant="outline">{feature}</Badge>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">Summary</h4>
+          <p className="text-blue-700">
+            You are about to onboard {selectedBars.length} bar{selectedBars.length !== 1 ? 's' : ''} to the ICUPA platform.
+          </p>
         </div>
-
-        <Separator />
 
         <div className="space-y-4">
-          <h4 className="font-medium">Menu Items ({barData.menuItems.length})</h4>
-          <div className="space-y-2">
-            {barData.menuItems.map((item, index) => (
-              <div key={index} className="flex justify-between items-center p-2 border rounded">
-                <div>
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-sm text-muted-foreground">{item.category}</div>
+          {selectedBars.map((bar, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h4 className="font-medium">{bar.name}</h4>
+                    <Badge variant="outline">{bar.country}</Badge>
+                  </div>
+                  <p className="text-sm text-gray-600">{bar.address}</p>
+                  {bar.phone && (
+                    <p className="text-sm text-gray-600">{bar.phone}</p>
+                  )}
+                  {bar.categories.length > 0 && (
+                    <div className="flex gap-1 mt-2">
+                      {bar.categories.map(cat => (
+                        <Badge key={cat} variant="secondary" className="text-xs">
+                          {cat}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {bar.tags.length > 0 && (
+                    <div className="flex gap-1 mt-2">
+                      {bar.tags.map(tag => (
+                        <Badge key={tag} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <div className="font-medium">€{item.price.toFixed(2)}</div>
-                  <Badge variant={item.available ? "default" : "secondary"}>
-                    {item.available ? "Available" : "Unavailable"}
-                  </Badge>
-                </div>
+                <Badge variant="outline" className="text-xs">
+                  Ready
+                </Badge>
               </div>
-            ))}
-          </div>
+            </Card>
+          ))}
         </div>
 
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            All information has been reviewed. Click "Create Bar" to add this establishment to the platform.
-          </AlertDescription>
-        </Alert>
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={prevStep}>
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button 
+            onClick={saveToDatabase} 
+            disabled={saving || selectedBars.length === 0}
+            className="flex items-center gap-2"
+          >
+            {saving ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            {saving ? 'Saving...' : 'Submit to Database'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -576,46 +745,16 @@ const BarOnboardingWizard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">Bar Onboarding Wizard</h1>
-        <p className="text-muted-foreground">
-          Step {currentStep} of {totalSteps} - Complete the setup for a new bar or restaurant
-        </p>
-      </div>
-
-      <Progress value={progress} className="w-full" />
-
-      <div className="space-y-6">
+    <AdminLayout 
+      title="Bar Onboarding Wizard" 
+      subtitle={`Step ${currentStep} of ${steps.length}`}
+      showBackButton
+    >
+      <div className="max-w-4xl mx-auto">
+        {renderStepIndicator()}
         {renderCurrentStep()}
-
-        <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-
-          {currentStep < totalSteps ? (
-            <Button onClick={handleNext}>
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isSubmitting}
-              className="min-w-[120px]"
-            >
-              {isSubmitting ? "Creating..." : "Create Bar"}
-            </Button>
-          )}
-        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 
