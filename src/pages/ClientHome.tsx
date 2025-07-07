@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChefHat, Bell, User, Search, MapPin, Phone, Star, Users, ExternalLink, FileText } from 'lucide-react';
+import { ChefHat, Bell, User, Search, MapPin, Phone, Star, Users, ExternalLink, FileText, AlertCircle } from 'lucide-react';
 import { BarPhotoCarousel } from '@/components/ui/bar-photo-carousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-const supabase = createClient(
-  'https://nireplgrlwhwppjtfxbb.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pcmVwbGdybHdod3BwanRmeGJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1MjYzMzMsImV4cCI6MjA2NjEwMjMzM30.nBdmNTrbS5CvEMV-2k-hkUbUA1NCsi4Xwt69kkrJnvs'
-);
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Bar {
   id: string;
@@ -33,6 +29,8 @@ const ClientHome = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState(false);
 
   useEffect(() => {
     fetchBarsData();
@@ -40,9 +38,29 @@ const ClientHome = () => {
 
   const fetchBarsData = async () => {
     setLoading(true);
+    setError(null);
+    setConnectionError(false);
+    
     try {
       console.log('🔍 Fetching bars data...');
       
+      // Test connection first
+      try {
+        const { error: pingError } = await supabase.from('bars').select('count', { count: 'exact', head: true });
+        if (pingError) {
+          console.error('Database connection error:', pingError);
+          setConnectionError(true);
+          setLoading(false);
+          return;
+        }
+      } catch (pingErr) {
+        console.error('Failed to connect to database:', pingErr);
+        setConnectionError(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Proceed with main query if connection is good
       const { data: barsData, error } = await supabase
         .from('bars')
         .select('*')
@@ -51,24 +69,35 @@ const ClientHome = () => {
 
       if (error) {
         console.error('❌ Error fetching bars:', error);
+        setError(`Failed to fetch data: ${error.message}`);
         setBars([]);
       } else {
         console.log('✅ Raw bars data:', barsData?.length);
         
-        const filteredData = barsData?.filter(bar => {
-          if (selectedCountry === 'Malta') {
-            return bar.address?.includes('Malta');
-          } else if (selectedCountry === 'Rwanda') {
-            return bar.address?.includes('Rwanda') || bar.address?.includes('Kigali');
-          }
-          return true;
-        }) || [];
+        if (!barsData || barsData.length === 0) {
+          setError('No bars found in the database');
+          setBars([]);
+        } else {
+          const filteredData = barsData.filter(bar => {
+            if (selectedCountry === 'Malta') {
+              return bar.address?.includes('Malta');
+            } else if (selectedCountry === 'Rwanda') {
+              return bar.address?.includes('Rwanda') || bar.address?.includes('Kigali');
+            }
+            return true;
+          });
 
-        setBars(filteredData);
-        console.log(`📊 Loaded ${filteredData.length} bars for ${selectedCountry}`);
+          setBars(filteredData);
+          console.log(`📊 Loaded ${filteredData.length} bars for ${selectedCountry}`);
+          
+          if (filteredData.length === 0) {
+            setError(`No bars found for ${selectedCountry}`);
+          }
+        }
       }
     } catch (error) {
       console.error('💥 Critical error:', error);
+      setError('An unexpected error occurred. Please try again later.');
       setBars([]);
     } finally {
       setLoading(false);
@@ -119,6 +148,25 @@ const ClientHome = () => {
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Connection Error Alert */}
+        {connectionError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Database Connection Error</AlertTitle>
+            <AlertDescription>
+              Unable to connect to the database. Please check your internet connection or try again later.
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => fetchBarsData()}
+              >
+                Retry Connection
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Greeting */}
         <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">
           <CardContent className="p-6">
@@ -145,9 +193,19 @@ const ClientHome = () => {
             <div>🔍 Loading: {loading ? 'Yes' : 'No'}</div>
             <div>📊 Total bars: {bars.length}</div>
             <div>🔎 Filtered: {filteredBars.length}</div>
-            <div>🏁 Status: {loading ? 'Loading...' : 'Ready'}</div>
+            <div>🏁 Status: {loading ? 'Loading...' : error ? 'Error' : 'Ready'}</div>
+            {error && <div className="text-red-500">⚠️ Error: {error}</div>}
           </CardContent>
         </Card>
+
+        {/* Error State */}
+        {error && !loading && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {/* Bars Grid */}
         {loading ? (
@@ -228,6 +286,14 @@ const ClientHome = () => {
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-lg font-semibold mb-2">No establishments found</h3>
             <p className="text-gray-600">Try adjusting your search or select a different country</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-4"
+              onClick={() => fetchBarsData()}
+            >
+              Refresh Data
+            </Button>
           </div>
         )}
       </div>

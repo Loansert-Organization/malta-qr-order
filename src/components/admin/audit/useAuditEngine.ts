@@ -68,7 +68,7 @@ export const useAuditEngine = () => {
       console.log('🔧 Auditing Backend...');
 
       try {
-        const { data: healthCheck, error } = await supabase
+        const { error } = await supabase
           .from('vendors')
           .select('count')
           .limit(1);
@@ -121,7 +121,7 @@ export const useAuditEngine = () => {
 
       for (const tableName of criticalTables) {
         try {
-          const { data, error } = await supabase
+          const { error } = await supabase
             .from(tableName as any)
             .select('*')
             .limit(1);
@@ -180,7 +180,7 @@ export const useAuditEngine = () => {
 
       for (const functionName of aiEdgeFunctions) {
         try {
-          const { data, error } = await supabase.functions.invoke(functionName, {
+          const { error } = await supabase.functions.invoke(functionName, {
             body: { test: true }
           });
 
@@ -229,7 +229,7 @@ export const useAuditEngine = () => {
       console.log('🔒 Auditing Security...');
 
       try {
-        const { data: session } = await supabase.auth.getSession();
+        await supabase.auth.getSession();
         
         findings.push({
           id: 'auth_system',

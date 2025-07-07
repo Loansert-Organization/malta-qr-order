@@ -1,25 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Activity, 
-  Database, 
   Server, 
+  Database, 
+  Activity, 
+  CheckCircle, 
   AlertTriangle, 
-  CheckCircle,
-  RefreshCw,
-  Zap,
-  Clock,
-  Users,
-  TrendingUp,
-  TrendingDown,
-  Minus
+  RefreshCw, 
+  BarChart3, 
+  Users, 
+  TrendingUp, 
+  AlertCircle, 
+  Clock 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'react-hot-toast';
 import { useToast } from '@/hooks/use-toast';
 
 interface SystemMetric {

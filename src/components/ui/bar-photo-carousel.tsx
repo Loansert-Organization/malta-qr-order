@@ -3,12 +3,7 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon, Camera } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://nireplgrlwhwppjtfxbb.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pcmVwbGdybHdod3BwanRmeGJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1MjYzMzMsImV4cCI6MjA2NjEwMjMzM30.nBdmNTrbS5CvEMV-2k-hkUbUA1NCsi4Xwt69kkrJnvs'
-);
+import { supabase } from '@/integrations/supabase/client';
 
 interface BarPhoto {
   id: string;
@@ -44,6 +39,10 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState<Record<number, boolean>>({});
+  const [fetchAttempted, setFetchAttempted] = useState(false);
+
+  // Fallback image URL
+  const fallbackImage = "https://placehold.co/1024x768/orange/white?text=No+Image+Available";
 
   // Fetch photos for the bar
   useEffect(() => {
@@ -51,6 +50,19 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
       try {
         setLoading(true);
         setError(null);
+        setFetchAttempted(true);
+
+        // First check if we can connect to Supabase
+        try {
+          const { error: pingError } = await supabase.from('bar_photos').select('count', { count: 'exact', head: true });
+          if (pingError) {
+            console.error('Database connection error:', pingError);
+            throw new Error('Database connection failed');
+          }
+        } catch (pingErr) {
+          console.error('Failed to connect to database:', pingErr);
+          throw new Error('Database connection failed');
+        }
 
         const { data, error: fetchError } = await supabase
           .from('bar_photos')
@@ -93,9 +105,33 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
               };
               
               setPhotos([fallbackPhoto]);
+            } else {
+              // Use fallback image if website_url isn't a valid image URL
+              const fallbackPhoto: BarPhoto = {
+                id: 'fallback-photo',
+                original_url: fallbackImage,
+                supabase_url: fallbackImage,
+                enhanced_url: fallbackImage,
+                is_enhanced: false,
+                width: 1024,
+                height: 768
+              };
+              
+              setPhotos([fallbackPhoto]);
             }
           } else {
-            setPhotos([]);
+            // Use fallback image if no website_url
+            const fallbackPhoto: BarPhoto = {
+              id: 'fallback-photo',
+              original_url: fallbackImage,
+              supabase_url: fallbackImage,
+              enhanced_url: fallbackImage,
+              is_enhanced: false,
+              width: 1024,
+              height: 768
+            };
+            
+            setPhotos([fallbackPhoto]);
           }
         } else {
           setPhotos(data);
@@ -104,6 +140,19 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
       } catch (err) {
         console.error('Error fetching bar photos:', err);
         setError('Failed to load photos');
+        
+        // Use fallback image on error
+        const fallbackPhoto: BarPhoto = {
+          id: 'error-fallback-photo',
+          original_url: fallbackImage,
+          supabase_url: fallbackImage,
+          enhanced_url: fallbackImage,
+          is_enhanced: false,
+          width: 1024,
+          height: 768
+        };
+        
+        setPhotos([fallbackPhoto]);
       } finally {
         setLoading(false);
       }
@@ -112,7 +161,7 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
     if (barId) {
       fetchPhotos();
     }
-  }, [barId, barName]);
+  }, [barId, barName, fallbackImage]);
 
   // Auto rotation
   useEffect(() => {
@@ -130,9 +179,24 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
     setImageLoading(prev => ({ ...prev, [index]: false }));
   };
 
+  // Handle image error with fallback
   const handleImageError = (index: number) => {
     setImageLoading(prev => ({ ...prev, [index]: false }));
     console.error(`Failed to load image at index ${index}`);
+    
+    // Replace the failed image with the fallback
+    setPhotos(prev => {
+      const newPhotos = [...prev];
+      if (newPhotos[index]) {
+        newPhotos[index] = {
+          ...newPhotos[index],
+          original_url: fallbackImage,
+          supabase_url: fallbackImage,
+          enhanced_url: fallbackImage
+        };
+      }
+      return newPhotos;
+    });
   };
 
   const handleImageLoadStart = (index: number) => {
@@ -181,7 +245,7 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
   }
 
   // No photos state
-  if (photos.length === 0) {
+  if (photos.length === 0 && !loading && fetchAttempted) {
     return (
       <div className={`relative bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-lg flex items-center justify-center ${className}`} style={{ height }}>
         <div className="text-center p-4">
@@ -204,7 +268,7 @@ export const BarPhotoCarousel: React.FC<BarPhotoCarouselProps> = ({
       <div className="relative w-full h-full">
         <img
           key={currentIndex}
-          src={currentPhoto.enhanced_url || currentPhoto.supabase_url || currentPhoto.original_url}
+          src={currentPhoto.enhanced_url || currentPhoto.supabase_url || currentPhoto.original_url || fallbackImage}
           alt={`${barName} - Photo ${currentIndex + 1}`}
           className="w-full h-full object-cover transition-opacity duration-500"
           onLoad={() => handleImageLoad(currentIndex)}

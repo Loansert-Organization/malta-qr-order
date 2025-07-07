@@ -4,19 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 import { 
   Server, 
-  Database, 
-  Shield, 
   Activity, 
-  Bell, 
-  Settings, 
+  AlertTriangle, 
+  CheckCircle, 
   Users, 
-  BarChart3,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  HardDrive
+  BarChart3, 
+  Settings, 
+  RefreshCw, 
+  Zap 
 } from 'lucide-react';
 import { icupaProductionSystem, type AnalyticsData, type SystemHealth, type SecurityAuditResult } from '@/services/icupaProductionSystem';
 

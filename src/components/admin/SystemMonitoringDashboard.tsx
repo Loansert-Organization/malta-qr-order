@@ -1,23 +1,20 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Activity, 
-  Server, 
   Database, 
-  Users, 
   AlertTriangle, 
   CheckCircle, 
-  Clock,
-  Cpu,
-  HardDrive,
-  Wifi,
-  RefreshCw,
-  Download
+  RefreshCw, 
+  TrendingUp, 
+  TrendingDown, 
+  BarChart3, 
+  Settings 
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,10 +101,7 @@ const SystemMonitoringDashboard = () => {
       .order('created_at', { ascending: false })
       .limit(100);
 
-    const { data: activeOrders } = await supabase
-      .from('orders')
-      .select('id')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    // Active orders data fetch removed as it's not currently used
 
     // Calculate health metrics
     const errorRate = errorLogs ? (errorLogs.length / 100) * 100 : 0;
@@ -273,7 +267,7 @@ const SystemMonitoringDashboard = () => {
             onClick={handleExportData}
             className="flex items-center space-x-2"
           >
-            <Download className="h-4 w-4" />
+            <Settings className="h-4 w-4" />
             <span>Export</span>
           </Button>
         </div>
@@ -370,7 +364,7 @@ const SystemMonitoringDashboard = () => {
                       <p className="text-sm text-gray-600">CPU Usage</p>
                       <p className="text-2xl font-bold">{systemHealth.cpuUsage.toFixed(1)}%</p>
                     </div>
-                    <Cpu className="h-8 w-8 text-blue-600" />
+                    <BarChart3 className="h-8 w-8 text-blue-600" />
                   </div>
                 </CardContent>
               </Card>
@@ -382,7 +376,7 @@ const SystemMonitoringDashboard = () => {
                       <p className="text-sm text-gray-600">Memory Usage</p>
                       <p className="text-2xl font-bold">{systemHealth.memoryUsage.toFixed(1)}%</p>
                     </div>
-                    <HardDrive className="h-8 w-8 text-green-600" />
+                    <TrendingUp className="h-8 w-8 text-green-600" />
                   </div>
                 </CardContent>
               </Card>

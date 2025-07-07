@@ -142,7 +142,7 @@ const VendorApprovalSystem = () => {
         owner_email: app.owner_email,
         owner_phone: app.owner_phone,
         status: app.status as VendorApplication['status'],
-        applied_at: app.applied_at || app.created_at,
+        applied_at: app.applied_at || app.created_at || new Date().toISOString(),
         reviewed_at: app.reviewed_at,
         reviewer_notes: app.reviewer_notes,
         documents: app.vendor_documents || [],

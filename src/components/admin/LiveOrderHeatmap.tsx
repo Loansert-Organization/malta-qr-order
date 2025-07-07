@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin, TrendingUp, Users, Clock } from 'lucide-react';
@@ -213,7 +212,6 @@ const LiveOrderHeatmap: React.FC = () => {
                 
                 {/* Location Markers */}
                 {heatmapData.map((location, index) => {
-                  const intensity = Math.min(location.orders / 5, 1); // Normalize intensity
                   const size = Math.max(20, location.orders * 2); // Size based on orders
                   
                   return (
