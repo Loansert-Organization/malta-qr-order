@@ -5,11 +5,17 @@ import path from 'path';
 // This script connects to Supabase, fetches all bars, counts the number of menu items for each,
 // and generates a JSON report detailing the menu status.
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://nireplgrlwhwppjtfxbb.supabase.co',
-  // It's recommended to use the service_role key for admin tasks, stored in environment variables.
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pcmVwbGdybHdod3BwanRmeGJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1MjYzMzMsImV4cCI6MjA2NjEwMjMzM30.nBdmNTrbS5CvEMV-2k-hkUbUA1NCsi4Xwt69kkrJnvs'
-);
+// SECURITY: Service role key must be provided via environment variable
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://nireplgrlwhwppjtfxbb.supabase.co';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  console.error('   Set it with: export SUPABASE_SERVICE_ROLE_KEY=your_service_key');
+  process.exit(1);
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 async function generateMenuStatusReport() {
   console.log('📊 Generating menu status report...');
