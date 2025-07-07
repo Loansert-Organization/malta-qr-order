@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Clock, Star, Leaf } from 'lucide-react';
+import { ShoppingCart, Star, Leaf } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,9 +50,9 @@ const SmartMenu: React.FC<SmartMenuProps> = ({ vendorId }) => {
       if (error) throw error;
 
       if (items) {
-        setMenuItems(items);
+        setMenuItems(items as any);
         // Extract unique categories
-        const uniqueCategories = ['all', ...new Set(items.map(item => item.category).filter(Boolean))];
+        const uniqueCategories = ['all', ...new Set(items.map(item => item.category || '').filter(Boolean))];
         setCategories(uniqueCategories);
       }
     } catch (error) {

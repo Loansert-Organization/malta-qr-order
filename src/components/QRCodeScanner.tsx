@@ -42,7 +42,7 @@ const QRCodeScanner: React.FC = () => {
       const { data: vendor, error } = await supabase
         .from('vendors')
         .select('id, name, location, description')
-        .eq('slug', slug)
+        .eq('slug', slug || '')
         .eq('active', true)
         .single();
 
@@ -61,7 +61,12 @@ const QRCodeScanner: React.FC = () => {
         .eq('code_type', table ? 'table' : section ? 'section' : 'venue');
 
       setScanResult({
-        vendor,
+        vendor: {
+          id: vendor.id,
+          name: vendor.name,
+          location: vendor.location || '',
+          description: vendor.description || ''
+        },
         table: table || undefined,
         section: section || undefined
       });

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,7 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Users,
-  Zap
+  Users
 } from 'lucide-react';
 
 interface AIMetrics {
@@ -122,27 +121,27 @@ const AIMonitoring = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      setRecentLogs(logs || []);
+      setRecentLogs((logs as any) || []);
     } catch (error) {
       console.error('Error loading recent logs:', error);
     }
   };
 
-  const getModelBadgeColor = (model: string) => {
-    if (model.includes('gpt-4')) return 'bg-blue-100 text-blue-800';
-    if (model.includes('claude')) return 'bg-purple-100 text-purple-800';
-    if (model.includes('gemini')) return 'bg-green-100 text-green-800';
-    return 'bg-gray-100 text-gray-800';
-  };
+  // const getModelBadgeColor = (model: string) => {
+  //   if (model.includes('gpt-4')) return 'bg-blue-100 text-blue-800';
+  //   if (model.includes('claude')) return 'bg-purple-100 text-purple-800';
+  //   if (model.includes('gemini')) return 'bg-green-100 text-green-800';
+  //   return 'bg-gray-100 text-gray-800';
+  // };
 
-  const getLanguageFlag = (lang: string) => {
-    switch (lang) {
-      case 'en': return '🇬🇧';
-      case 'mt': return '🇲🇹';
-      case 'it': return '🇮🇹';
-      default: return '🌐';
-    }
-  };
+  // const getLanguageFlag = (lang: string) => {
+  //   switch (lang) {
+  //     case 'en': return '🇬🇧';
+  //     case 'mt': return '🇲🇹';
+  //     case 'it': return '🇮🇹';
+  //     default: return '🌐';
+  //   }
+  // };
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 
-import React from 'react';
+// import React from 'react'; // Unused - removed
 import { Search, Mic } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

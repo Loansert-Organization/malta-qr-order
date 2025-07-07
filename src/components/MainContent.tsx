@@ -78,7 +78,7 @@ const MainContent: React.FC<MainContentProps> = ({
   searchTerm = '',
   nearestBar = null,
   onBarSelect,
-  onOrderComplete,
+  onOrderComplete: _onOrderComplete,
   cartItems = [],
   onAddToCart,
   onRemoveFromCart
@@ -239,7 +239,7 @@ const MainContent: React.FC<MainContentProps> = ({
             contextData={contextData}
             searchQuery={searchQuery}
             menuItems={menuItems}
-            handleHeroCtaClick={handleHeroCtaClick}
+            handleHeroCtaClick={() => handleHeroCtaClick()}
             handleSearch={handleSearch}
             addToCart={handleAddToCart}
           />
@@ -247,7 +247,7 @@ const MainContent: React.FC<MainContentProps> = ({
           {/* Right Column - Cart */}
           <CartSection
             cart={cart}
-            vendor={vendor as any}
+            vendor={vendor}
             guestSessionId={guestSessionId}
             removeFromCart={handleRemoveFromCart}
             getTotalPrice={getTotalPrice}
@@ -347,7 +347,7 @@ const MainContent: React.FC<MainContentProps> = ({
         showAIVerification={showAIVerification}
         onCloseAIWaiter={() => setShowAIWaiter(false)}
         onCloseAIVerification={() => setShowAIVerification(false)}
-        onAddToCart={handleAddToCart}
+        onAddToCart={(item: any) => handleAddToCart(item)}
         vendorId={vendor.id}
         vendorName={vendor.name}
         guestSessionId={guestSessionId}
