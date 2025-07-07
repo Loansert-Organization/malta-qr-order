@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import AdminLayout from '@/components/admin/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Home, Store, Menu, ShoppingBag, DollarSign, FileCheck, Users, Settings } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  ShoppingBag, 
+  DollarSign, 
+  TrendingUp,
+  Activity,
+  AlertCircle,
+  Store,
+  Menu,
+  FileCheck
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import SystemHealthMonitor from '@/components/admin/SystemHealthMonitor';
 
 interface AdminStats {
   totalBars: number;
@@ -145,46 +157,23 @@ const AdminPanel = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading admin dashboard...</p>
+      <AdminLayout title="Admin Dashboard" subtitle="Loading...">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading admin dashboard...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/')}
-              >
-                <Home className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">ICUPA Admin Panel</h1>
-                <p className="text-gray-600">System Control Center</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/settings')}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-8">
+    <AdminLayout 
+      title="Admin Dashboard" 
+      subtitle="Overview of ICUPA Malta operations"
+    >
+      <div className="space-y-6">
         {/* Global Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <StatCard
@@ -360,7 +349,7 @@ const AdminPanel = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

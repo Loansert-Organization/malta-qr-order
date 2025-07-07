@@ -15,7 +15,7 @@ import type {
   ErrorHandler,
   ClickHandler 
 } from '@/types/api';
-import CartSection from './CartSidebar';
+import CartSidebar from './CartSidebar';
 import AIWaiterButton from './AIWaiterButton';
 import Header from './MainContent/Header';
 import LeftColumn from './MainContent/LeftColumn';
@@ -239,19 +239,21 @@ const MainContent: React.FC<MainContentProps> = ({
             contextData={contextData}
             searchQuery={searchQuery}
             menuItems={menuItems}
-            handleHeroCtaClick={() => handleHeroCtaClick()}
+            handleHeroCtaClick={handleHeroCtaClick}
             handleSearch={handleSearch}
             addToCart={handleAddToCart}
           />
 
           {/* Right Column - Cart */}
-          <CartSection
-            cart={cart}
-            vendor={vendor}
+          <CartSidebar 
+            items={cart}
+            isOpen={true}
+            onOpenChange={() => {}}
+            onUpdateQuantity={handleRemoveFromCart}
+            onRemoveItem={handleRemoveFromCart}
+            totalPrice={getTotalPrice()}
+            totalItems={getTotalItems()}
             guestSessionId={guestSessionId}
-            removeFromCart={handleRemoveFromCart}
-            getTotalPrice={getTotalPrice}
-            getTotalItems={getTotalItems}
           />
         </div>
       </div>
