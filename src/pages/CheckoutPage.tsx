@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, Minus, Trash2, Phone, CreditCard, Smartphone, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Minus, Trash2, Phone, CreditCard, Smartphone, Loader2, Banknote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PAYMENT_METHODS } from '@/lib/constants';
@@ -43,6 +43,7 @@ const CheckoutPage = () => {
   const [bar, setBar] = useState<any>(null);
   const [processingOrder, setProcessingOrder] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
+  const [processingCashOrder, setProcessingCashOrder] = useState(false);
 
   const barId = paramBarId || queryBarId || orderData?.barId || '';
 
@@ -215,10 +216,10 @@ const CheckoutPage = () => {
       localStorage.removeItem(`cart_${barId}`);
       clearCart();
 
-      // Show order success after payment modal
+      // Navigate to confirmation page
       setTimeout(() => {
-        navigate(`/order-success/${order.id}`);
-      }, 3000);
+        navigate(`/confirm/${order.id}`);
+      }, 2000);
 
     } catch (error) {
       console.error('Error processing order:', error);
@@ -228,6 +229,89 @@ const CheckoutPage = () => {
         variant: "destructive"
       });
       setProcessingOrder(false);
+    }
+  };
+
+  const handleCashPayment = async () => {
+    if (!orderData || !bar) return;
+
+    if (orderData.items.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add items to your cart before checkout",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setProcessingCashOrder(true);
+    
+    try {
+      // Generate anonymous session ID if no phone number
+      const sessionId = phoneNumber || `anon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Prepare order items with proper structure
+      const orderItems = orderData.items.map(item => ({
+        item_id: item.id,
+        item_name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.price * item.quantity
+      }));
+
+      // Create order in database with cash payment
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          bar_id: barId,
+          user_id: null, // Anonymous order
+          items: orderItems,
+          total_price: orderData.subtotal,
+          customer_phone: phoneNumber || null,
+          payment_status: 'pending',
+          payment_method: 'cash',
+          status: 'pending',
+          currency: orderData.currency,
+          session_id: sessionId,
+          order_notes: orderNotes || null,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create payment record for cash
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: order.id,
+          payment_method: 'cash',
+          status: 'pending',
+          amount: orderData.subtotal,
+          currency: orderData.currency
+        })
+        .select()
+        .single();
+
+      if (paymentError) throw paymentError;
+
+      // Clear cart and order data
+      localStorage.removeItem('pendingOrder');
+      localStorage.removeItem(`cart_${barId}`);
+      clearCart();
+
+      // Navigate to confirmation page
+      navigate(`/confirm/${order.id}`);
+
+    } catch (error) {
+      console.error('Error processing cash order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process order. Please try again.",
+        variant: "destructive"
+      });
+      setProcessingCashOrder(false);
     }
   };
 
@@ -413,6 +497,27 @@ const CheckoutPage = () => {
               ) : (
                 <><CreditCard className="mr-2 h-5 w-5" /> Pay with Revolut</>
               )}
+            </>
+          )}
+        </Button>
+        
+        {/* Cash Payment Button */}
+        <Button 
+          className="w-full mt-3" 
+          size="lg"
+          variant="outline"
+          onClick={handleCashPayment}
+          disabled={processingCashOrder || orderData.items.length === 0}
+        >
+          {processingCashOrder ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Processing Order...
+            </>
+          ) : (
+            <>
+              <Banknote className="mr-2 h-5 w-5" />
+              Place Order & Pay Cash at Counter
             </>
           )}
         </Button>
