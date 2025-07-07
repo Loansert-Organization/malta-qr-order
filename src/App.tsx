@@ -46,6 +46,11 @@ const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
 const VendorOrderDetail = lazy(() => import("./pages/VendorOrderDetail"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const SupplierDirectory = lazy(() => import("./components/marketplace/SupplierDirectory"));
+const EntertainerDirectory = lazy(() => import("./components/marketplace/EntertainerDirectory"));
+const BarOnboardingWizard = lazy(() => import("./components/admin/BarOnboardingWizard"));
+const MenuImportWizard = lazy(() => import("./components/admin/MenuImportWizard"));
 
 // TEMPORARY: Import new admin components for manual client-side testing
 import MenuImageGenerator from "@/components/admin/MenuImageGenerator";
@@ -147,6 +152,16 @@ const RoutesWithAnimation = () => {
         <Route path="/admin/payments" element={<PageTransition><AdminPayments /></PageTransition>} />
         <Route path="/admin/tools" element={<PageTransition><AdminTools /></PageTransition>} />
         <Route path="/admin/accessibility" element={<PageTransition><AdminAccessibility /></PageTransition>} />
+        <Route path="/admin/bar-onboarding" element={<PageTransition><BarOnboardingWizard /></PageTransition>} />
+        <Route path="/admin/menu-import" element={<PageTransition><MenuImportWizard /></PageTransition>} />
+
+        {/* Marketplace Routes */}
+        <Route path="/marketplace/suppliers" element={<PageTransition><SupplierDirectory /></PageTransition>} />
+        <Route path="/marketplace/entertainers" element={<PageTransition><EntertainerDirectory /></PageTransition>} />
+
+        {/* User Profile Routes */}
+        <Route path="/profile" element={<PageTransition><UserProfile /></PageTransition>} />
+        <Route path="/settings" element={<PageTransition><UserProfile /></PageTransition>} />
 
         {/* TEMPORARY: Route for testing admin tools */} 
         <Route path="/temp-admin-tools" element={<TempAdminToolsPage />} />
