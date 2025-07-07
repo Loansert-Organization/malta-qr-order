@@ -52,6 +52,13 @@ const EntertainerDirectory = lazy(() => import("./components/marketplace/Enterta
 const BarOnboardingWizard = lazy(() => import("./components/admin/BarOnboardingWizard"));
 const MenuImportWizard = lazy(() => import("./components/admin/MenuImportWizard"));
 
+// New missing pages
+const BarList = lazy(() => import("./pages/BarList"));
+const ClientProfile = lazy(() => import("./pages/ClientProfile"));
+const ClientSettings = lazy(() => import("./pages/ClientSettings"));
+const FAQHelp = lazy(() => import("./pages/FAQHelp"));
+const VendorMenuItemEditor = lazy(() => import("./pages/VendorMenuItemEditor"));
+
 // TEMPORARY: Import new admin components for manual client-side testing
 import MenuImageGenerator from "@/components/admin/MenuImageGenerator";
 import GoogleMapsDataFetcher from "@/components/admin/GoogleMapsDataFetcher";
@@ -113,6 +120,7 @@ const RoutesWithAnimation = () => {
         <Route path="/home" element={<PageTransition><ClientHome /></PageTransition>} />
         <Route path="/client" element={<PageTransition><ClientHome /></PageTransition>} />
         <Route path="/client/home" element={<PageTransition><ClientHome /></PageTransition>} />
+        <Route path="/bars" element={<PageTransition><BarList /></PageTransition>} />
         <Route path="/bars/:barId" element={<PageTransition><BarDetail /></PageTransition>} />
         <Route path="/bars/:barId/menu/:category" element={<PageTransition><MenuCategory /></PageTransition>} />
         <Route path="/menu/:barId" element={<PageTransition><MenuPage /></PageTransition>} />
@@ -132,6 +140,8 @@ const RoutesWithAnimation = () => {
         <Route path="/favorites" element={<PageTransition><FavoritesPage /></PageTransition>} />
         <Route path="/cart" element={<PageTransition><CartPage /></PageTransition>} />
         <Route path="/order-confirmation/:orderId" element={<PageTransition><OrderConfirmationPage /></PageTransition>} />
+        <Route path="/help" element={<PageTransition><FAQHelp /></PageTransition>} />
+        <Route path="/faq" element={<PageTransition><FAQHelp /></PageTransition>} />
 
         {/* Vendor App Routes */}
         <Route path="/vendor" element={<PageTransition><VendorDashboard /></PageTransition>} />
@@ -139,9 +149,14 @@ const RoutesWithAnimation = () => {
         <Route path="/vendor/orders/incoming" element={<PageTransition><VendorOrders /></PageTransition>} />
         <Route path="/vendor/orders/:orderId" element={<PageTransition><VendorOrderDetail /></PageTransition>} />
         <Route path="/vendor/menu" element={<PageTransition><VendorMenu /></PageTransition>} />
+        <Route path="/vendor/menu/:itemId/edit" element={<PageTransition><VendorMenuItemEditor /></PageTransition>} />
+        <Route path="/vendor/menu/new" element={<PageTransition><VendorMenuItemEditor /></PageTransition>} />
         <Route path="/vendor/payments" element={<PageTransition><VendorPayments /></PageTransition>} />
         <Route path="/vendor/settings" element={<PageTransition><VendorSettings /></PageTransition>} />
         <Route path="/vendor/onboarding" element={<PageTransition><VendorOnboarding /></PageTransition>} />
+        <Route path="/vendor/marketplace/suppliers" element={<PageTransition><SupplierDirectory /></PageTransition>} />
+        <Route path="/vendor/marketplace/entertainers" element={<PageTransition><EntertainerDirectory /></PageTransition>} />
+        <Route path="/vendor/profile" element={<PageTransition><ClientProfile /></PageTransition>} />
 
         {/* Admin Panel Routes */}
         <Route path="/admin" element={<PageTransition><AdminPanel /></PageTransition>} />
@@ -160,8 +175,10 @@ const RoutesWithAnimation = () => {
         <Route path="/marketplace/entertainers" element={<PageTransition><EntertainerDirectory /></PageTransition>} />
 
         {/* User Profile Routes */}
-        <Route path="/profile" element={<PageTransition><UserProfile /></PageTransition>} />
-        <Route path="/settings" element={<PageTransition><UserProfile /></PageTransition>} />
+        <Route path="/profile" element={<PageTransition><ClientProfile /></PageTransition>} />
+        <Route path="/settings" element={<PageTransition><ClientSettings /></PageTransition>} />
+        <Route path="/client/profile" element={<PageTransition><ClientProfile /></PageTransition>} />
+        <Route path="/client/settings" element={<PageTransition><ClientSettings /></PageTransition>} />
 
         {/* TEMPORARY: Route for testing admin tools */} 
         <Route path="/temp-admin-tools" element={<TempAdminToolsPage />} />
