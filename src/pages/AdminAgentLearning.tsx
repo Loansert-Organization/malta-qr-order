@@ -29,4 +29,4 @@ const AdminAgentLearning: React.FC = () => {
   );
 };
 
-export default AdminAgentLearning; 
+export default AdminAgentLearning;

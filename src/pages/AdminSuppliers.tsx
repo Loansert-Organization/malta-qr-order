@@ -29,4 +29,4 @@ const AdminSuppliers: React.FC = () => {
   );
 };
 
-export default AdminSuppliers; 
+export default AdminSuppliers;

@@ -29,4 +29,4 @@ const AdminSystemLogs: React.FC = () => {
   );
 };
 
-export default AdminSystemLogs; 
+export default AdminSystemLogs;

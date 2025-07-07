@@ -29,4 +29,4 @@ const AdminEntertainers: React.FC = () => {
   );
 };
 
-export default AdminEntertainers; 
+export default AdminEntertainers;

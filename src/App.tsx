@@ -59,8 +59,7 @@ const ClientSettings = lazy(() => import("./pages/ClientSettings"));
 const FAQHelp = lazy(() => import("./pages/FAQHelp"));
 const VendorMenuItemEditor = lazy(() => import("./pages/VendorMenuItemEditor"));
 
-// New admin pages
-const AdminBarList = lazy(() => import("./pages/AdminBarList"));
+// Admin Agent Pages
 const AdminAgentTasks = lazy(() => import("./pages/AdminAgentTasks"));
 const AdminAgentPersona = lazy(() => import("./pages/AdminAgentPersona"));
 const AdminAgentLearning = lazy(() => import("./pages/AdminAgentLearning"));
@@ -68,6 +67,9 @@ const AdminSystemLogs = lazy(() => import("./pages/AdminSystemLogs"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const AdminEntertainers = lazy(() => import("./pages/AdminEntertainers"));
 const AdminSuppliers = lazy(() => import("./pages/AdminSuppliers"));
+
+// Additional admin pages
+const AdminBarList = lazy(() => import("./pages/AdminBarList"));
 
 // TEMPORARY: Import new admin components for manual client-side testing
 import MenuImageGenerator from "@/components/admin/MenuImageGenerator";

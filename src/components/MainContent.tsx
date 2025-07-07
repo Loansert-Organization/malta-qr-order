@@ -12,8 +12,7 @@ import type {
   Order, 
   Vendor, 
   CartItem,
-  ErrorHandler,
-  ClickHandler 
+  ErrorHandler
 } from '@/types/api';
 import CartSidebar from './CartSidebar';
 import AIWaiterButton from './AIWaiterButton';
@@ -30,7 +29,7 @@ interface MainContentProps {
   cart: CartItem[];
   searchQuery: string;
   contextData: Record<string, unknown>;
-  handleHeroCtaClick: ClickHandler;
+  handleHeroCtaClick: () => void;
   handleSearch: (query: string) => void;
   addToCart: (item: MenuItem) => Promise<void>;
   removeFromCart: (itemId: string) => void;
@@ -246,14 +245,23 @@ const MainContent: React.FC<MainContentProps> = ({
 
           {/* Right Column - Cart */}
           <CartSidebar 
-            items={cart}
+            items={cart.map(item => ({
+              id: item.id,
+              name: item.menu_item?.name || 'Unknown Item',
+              price: item.unit_price,
+              quantity: item.quantity,
+              description: item.menu_item?.description || undefined
+            }))}
             isOpen={true}
             onOpenChange={() => {}}
-            onUpdateQuantity={handleRemoveFromCart}
+            onUpdateQuantity={(itemId: string, change: number) => {
+              if (change < 0) handleRemoveFromCart(itemId);
+            }}
             onRemoveItem={handleRemoveFromCart}
-            totalPrice={getTotalPrice()}
-            totalItems={getTotalItems()}
-            guestSessionId={guestSessionId}
+            currency="EUR"
+            country="Malta"
+            barId={vendor.id}
+            barName={vendor.name}
           />
         </div>
       </div>
