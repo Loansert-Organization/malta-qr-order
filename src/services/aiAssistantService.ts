@@ -620,7 +620,7 @@ class AIAssistantService {
   }
 
   // Helper Methods
-  private async evaluateTaskCode(taskData: any) {
+  private async evaluateTaskCode(taskData: Record<string, unknown>) {
     return this.evaluateCode({
       task_description: taskData.task_description,
       files_modified: taskData.files_modified,
@@ -634,7 +634,7 @@ class AIAssistantService {
     });
   }
 
-  private async checkForErrors(taskData: any) {
+  private async checkForErrors(taskData: Record<string, unknown>) {
     if (taskData.error_logs && taskData.error_logs.length > 0) {
       return this.analyzeError({
         error_message: taskData.error_logs[0],
@@ -644,7 +644,7 @@ class AIAssistantService {
     return null;
   }
 
-  private async validateUXScreens(taskData: any) {
+  private async validateUXScreens(taskData: Record<string, unknown>) {
     if (taskData.ui_screens && taskData.ui_screens.length > 0) {
       return this.getUXRecommendations({
         screen_name: taskData.ui_screens[0],
@@ -654,7 +654,7 @@ class AIAssistantService {
     return null;
   }
 
-  private generateConfidenceRecommendations(overallConfidence: number, scores: any) {
+  private generateConfidenceRecommendations(overallConfidence: number, scores: Record<string, number>) {
     const recommendations = [];
     
     if (overallConfidence < 90) {

@@ -1,9 +1,14 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+interface TestResult {
+  test: string;
+  result: Record<string, unknown>;
+  timestamp: string;
+}
+
 interface TestResultsCardProps {
-  testResults: any[];
+  testResults: TestResult[];
 }
 
 const TestResultsCard: React.FC<TestResultsCardProps> = ({ testResults }) => {

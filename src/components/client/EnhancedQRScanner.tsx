@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -306,7 +305,7 @@ const EnhancedQRScanner = () => {
           <Zap className="h-4 w-4 text-blue-600" />
           <select
             value={scanSpeed}
-            onChange={(e) => setScanSpeed(e.target.value as any)}
+            onChange={(e) => setScanSpeed(e.target.value as 'slow' | 'normal' | 'fast')}
             className="text-xs bg-transparent"
           >
             <option value="slow">Slow</option>

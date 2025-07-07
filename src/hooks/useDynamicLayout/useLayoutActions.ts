@@ -1,18 +1,19 @@
-
 import { useCallback } from 'react';
 import { contextService } from '@/services/contextService';
 import { realTimeLayoutService } from '@/services/realTimeLayoutService';
 import { LayoutRegenerationContext } from './types';
+import { DynamicLayout } from '@/types/layout';
+import { UnknownRecord } from '@/types/utilities';
 
 export const useLayoutActions = (
   vendorId: string,
-  contextData: any,
-  setLayout: (layout: any) => void,
+  contextData: UnknownRecord | null,
+  setLayout: (layout: DynamicLayout) => void,
   setLoading: (loading: boolean) => void,
   setError: (error: string | null) => void,
   initializeLayout: () => Promise<void>
 ) => {
-  const trackInteraction = useCallback(async (action: string, metadata?: any) => {
+  const trackInteraction = useCallback(async (action: string, metadata?: UnknownRecord) => {
     await contextService.trackInteraction(action, {
       layout_section: metadata?.section,
       item_id: metadata?.item_id,
@@ -22,7 +23,7 @@ export const useLayoutActions = (
     });
   }, []);
 
-  const updatePreferences = useCallback(async (preferences: any) => {
+  const updatePreferences = useCallback(async (preferences: UnknownRecord) => {
     await contextService.updatePreferences(preferences);
   }, []);
 

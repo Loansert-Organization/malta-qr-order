@@ -1,13 +1,13 @@
-
 import { useCallback } from 'react';
 import { layoutService } from '@/services/layoutService';
-import { LayoutContext } from '@/types/layout';
+import { LayoutContext, DynamicLayout } from '@/types/layout';
 import { contextService } from '@/services/contextService';
+import { UnknownRecord } from '@/types/utilities';
 
 export const useLayoutInitialization = (
   vendorId: string,
-  setLayout: (layout: any) => void,
-  setContextData: (data: any) => void,
+  setLayout: (layout: DynamicLayout) => void,
+  setContextData: (data: UnknownRecord) => void,
   setLoading: (loading: boolean) => void,
   setError: (error: string | null) => void
 ) => {

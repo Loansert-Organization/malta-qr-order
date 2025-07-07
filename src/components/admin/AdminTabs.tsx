@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminOverview from './AdminOverview';
@@ -27,9 +26,18 @@ interface AdminTabsProps {
   setActiveTab: (tab: string) => void;
 }
 
+interface Vendor {
+  id: string;
+  name: string;
+  slug: string;
+  location: string;
+  active: boolean;
+  created_at: string;
+}
+
 const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
   // Mock vendors data for now to prevent blank pages
-  const mockVendors = [
+  const mockVendors: Vendor[] = [
     {
       id: '1',
       name: 'Demo Restaurant',
@@ -44,7 +52,7 @@ const AdminTabs: React.FC<AdminTabsProps> = ({ activeTab, setActiveTab }) => {
     console.log('Toggle vendor status:', vendorId, currentStatus);
   };
 
-  const handleSelectVendor = (vendor: any) => {
+  const handleSelectVendor = (vendor: Vendor) => {
     console.log('Select vendor:', vendor);
   };
 

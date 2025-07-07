@@ -1,6 +1,12 @@
-
 import { MapPin, Star, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+
+interface NearbyBar {
+  id: string;
+  name: string;
+  rating?: number;
+  distance?: number;
+}
 
 interface LocationAwareBannerProps {
   locationContext: {
@@ -8,7 +14,7 @@ interface LocationAwareBannerProps {
     nearbyCount: number;
     avgRating: number;
   };
-  nearbyBars: any[];
+  nearbyBars: NearbyBar[];
   language: 'en' | 'mt' | 'it';
 }
 

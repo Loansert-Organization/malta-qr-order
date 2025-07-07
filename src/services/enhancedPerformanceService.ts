@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { errorTrackingService } from './errorTrackingService';
 
@@ -7,7 +6,7 @@ interface PerformanceMetric {
   method: string;
   responseTime: number;
   statusCode?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 class EnhancedPerformanceService {
@@ -124,14 +123,14 @@ class EnhancedPerformanceService {
       const result = await apiCall();
       statusCode = 200;
       return result;
-    } catch (error: any) {
-      statusCode = error.status || 500;
+    } catch (error: unknown) {
+      statusCode = error instanceof Error ? error.status || 500 : 500;
       
       await errorTrackingService.logAPIError(
         endpoint,
         method,
         statusCode,
-        error.message || 'API call failed'
+        error instanceof Error ? error.message : 'API call failed'
       );
       
       throw error;
@@ -152,7 +151,7 @@ class EnhancedPerformanceService {
     }
   }
 
-  async getPerformanceInsights(days: number = 7): Promise<any> {
+  async getPerformanceInsights(days: number = 7): Promise<unknown> {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
@@ -202,7 +201,7 @@ class EnhancedPerformanceService {
     return insights;
   }
 
-  measureComponent<T extends any[], R>(
+  measureComponent<T extends unknown[], R>(
     componentName: string,
     fn: (...args: T) => R
   ): (...args: T) => R {

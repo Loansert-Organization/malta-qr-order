@@ -1,4 +1,3 @@
-
 class OfflineService {
   private dbName = 'icupa-offline-db';
   private dbVersion = 1;
@@ -31,7 +30,7 @@ class OfflineService {
     });
   }
 
-  async cacheVendorData(vendorId: string, data: any): Promise<void> {
+  async cacheVendorData(vendorId: string, data: Record<string, unknown>): Promise<void> {
     if (!this.db) await this.init();
     
     const transaction = this.db!.transaction(['vendors'], 'readwrite');
@@ -39,7 +38,7 @@ class OfflineService {
     await store.put({ id: vendorId, data, timestamp: Date.now() });
   }
 
-  async getCachedVendorData(vendorId: string): Promise<any> {
+  async getCachedVendorData<T = unknown>(vendorId: string): Promise<T> {
     if (!this.db) await this.init();
     
     return new Promise((resolve, reject) => {
@@ -57,7 +56,7 @@ class OfflineService {
     });
   }
 
-  async cacheOrder(order: any): Promise<void> {
+  async cacheOrder(order: Record<string, unknown>): Promise<void> {
     if (!this.db) await this.init();
     
     const transaction = this.db!.transaction(['orders'], 'readwrite');
@@ -65,7 +64,7 @@ class OfflineService {
     await store.put({ ...order, timestamp: Date.now(), synced: false });
   }
 
-  async getPendingOrders(): Promise<any[]> {
+  async getPendingOrders<T = unknown>(): Promise<T[]> {
     if (!this.db) await this.init();
     
     return new Promise((resolve, reject) => {

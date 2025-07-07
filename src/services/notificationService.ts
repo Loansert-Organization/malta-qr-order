@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { errorTrackingService } from './errorTrackingService';
 
@@ -7,7 +6,7 @@ export interface NotificationTemplate {
   title: string;
   body: string;
   type: 'email' | 'push' | 'sms' | 'in_app';
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
 }
 
 export interface NotificationData {
@@ -15,7 +14,7 @@ export interface NotificationData {
   title: string;
   body: string;
   type: 'email' | 'push' | 'sms' | 'in_app';
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   templateId?: string;
 }
 
@@ -37,10 +36,11 @@ class NotificationService {
 
       if (error) throw error;
       return data.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       await errorTrackingService.logError(
         'notification_template_creation_failed',
-        error.message,
+        errMsg,
         'medium',
         { component: 'NotificationService', action: 'createTemplate' }
       );
@@ -72,10 +72,11 @@ class NotificationService {
       }
 
       return data.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       await errorTrackingService.logError(
         'notification_send_failed',
-        error.message,
+        errMsg,
         'high',
         { 
           component: 'NotificationService', 
@@ -98,10 +99,11 @@ class NotificationService {
         .eq('id', notificationId);
 
       if (error) throw error;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       await errorTrackingService.logError(
         'notification_status_update_failed',
-        error.message,
+        errMsg,
         'medium',
         { component: 'NotificationService', action: 'markAsSent' }
       );
@@ -119,17 +121,18 @@ class NotificationService {
         .eq('id', notificationId);
 
       if (error) throw error;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       await errorTrackingService.logError(
         'notification_read_update_failed',
-        error.message,
+        errMsg,
         'low',
         { component: 'NotificationService', action: 'markAsRead' }
       );
     }
   }
 
-  async getUserNotifications(userId: string, unreadOnly: boolean = false): Promise<any[]> {
+  async getUserNotifications(userId: string, unreadOnly: boolean = false): Promise<Record<string, unknown>[]> {
     try {
       let query = supabase
         .from('notifications')
@@ -145,10 +148,11 @@ class NotificationService {
       if (error) throw error;
 
       return data || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       await errorTrackingService.logError(
         'notification_fetch_failed',
-        error.message,
+        errMsg,
         'medium',
         { component: 'NotificationService', action: 'getUserNotifications' }
       );
@@ -157,7 +161,7 @@ class NotificationService {
   }
 
   // Predefined notification helpers for common ICUPA scenarios
-  async notifyOrderReceived(vendorUserId: string, orderData: any): Promise<void> {
+  async notifyOrderReceived(vendorUserId: string, orderData: Record<string, unknown>): Promise<void> {
     await this.sendNotification({
       userId: vendorUserId,
       title: 'New Order Received!',
@@ -209,7 +213,7 @@ class NotificationService {
   }
 
   // Real time notification subscription
-  subscribeToUserNotifications(userId: string, callback: (notification: any) => void): () => void {
+  subscribeToUserNotifications(userId: string, callback: (notification: Record<string, unknown>) => void): () => void {
     const channel = supabase
       .channel('user-notifications')
       .on(

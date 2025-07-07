@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { logSystemEvent } from '@/utils/systemLogs';
 
@@ -31,7 +30,7 @@ export class PerformanceAuditService {
         const startTime = performance.now();
         
         const { data, error } = await supabase
-          .from(tableName as any)
+          .from(tableName as unknown)
           .select('*')
           .limit(10);
 
@@ -166,7 +165,7 @@ export class PerformanceAuditService {
 
     try {
       // Use performance.memory API if available (Chrome)
-      const memory = (performance as any).memory;
+      const memory = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
       
       if (memory) {
         const usedMemoryMB = memory.usedJSHeapSize / (1024 * 1024);

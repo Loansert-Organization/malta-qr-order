@@ -50,15 +50,19 @@ export class ModularAuditService {
     this.auditId = `audit_${Date.now()}`;
   }
 
-  private convertToAuditIssue(issue: SecurityAuditIssue | PerformanceAuditIssue | any): AuditIssue {
+  private convertToAuditIssue(issue: SecurityAuditIssue | PerformanceAuditIssue | unknown): AuditIssue {
+    const i = issue as SecurityAuditIssue | PerformanceAuditIssue;
     return {
-      id: issue.id,
-      location: issue.endpoint || issue.table || issue.element || 'System',
-      description: issue.description,
-      severity: issue.severity,
-      category: issue.category,
-      recommendation: issue.recommendation,
-      status: issue.status,
+      id: i.id,
+      location: (typeof i === 'object' && i !== null && 'endpoint' in i && i.endpoint) ||
+                (typeof i === 'object' && i !== null && 'table' in i && i.table) ||
+                (typeof i === 'object' && i !== null && 'element' in i && i.element) ||
+                'System',
+      description: i.description,
+      severity: i.severity,
+      category: i.category,
+      recommendation: (typeof i === 'object' && i !== null && 'recommendation' in i && i.recommendation) || '',
+      status: i.status,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -350,7 +354,7 @@ export class ModularAuditService {
     
     try {
       // Check for common TypeScript issues in console
-      const errors = (window as any).__typescript_errors || [];
+      const errors = (window as unknown as { __typescript_errors?: unknown[] }).__typescript_errors || [];
       
       if (errors.length > 0) {
         issues.push({

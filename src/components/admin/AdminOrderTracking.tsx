@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +32,14 @@ interface OrderWithVendor {
       name: string;
     };
   }>;
+}
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  prefix?: string;
+  suffix?: string;
 }
 
 const AdminOrderTracking: React.FC = () => {
@@ -137,7 +144,7 @@ const AdminOrderTracking: React.FC = () => {
     return Array.from(vendors.entries());
   };
 
-  const StatCard = ({ title, value, icon: Icon, prefix = '', suffix = '' }: any) => (
+  const StatCard = ({ title, value, icon: Icon, prefix = '', suffix = '' }: StatCardProps) => (
     <Card>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">

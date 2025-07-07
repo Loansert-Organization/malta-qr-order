@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +25,14 @@ interface AdminStats {
   systemAlerts: number;
 }
 
+interface SystemAlert {
+  id: number;
+  type: string;
+  message: string;
+  severity: 'high' | 'medium' | 'info';
+  timestamp: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const { toast } = useToast();
   const [stats, setStats] = useState<AdminStats>({
@@ -37,7 +44,7 @@ const AdminDashboard: React.FC = () => {
     systemAlerts: 0
   });
   const [loading, setLoading] = useState(true);
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<SystemAlert[]>([]);
 
   useEffect(() => {
     fetchDashboardData();

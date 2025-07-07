@@ -1,6 +1,26 @@
+import { UnknownRecord } from '@/types/utilities';
+
+interface TimeContext {
+  meal_period?: string;
+}
+
+interface WeatherContext {
+  condition?: string;
+}
+
+interface AIInsights {
+  engagement_score?: number;
+}
+
+interface LayoutContext extends UnknownRecord {
+  time_context?: TimeContext;
+  weather?: WeatherContext;
+  ai_insights?: AIInsights;
+  preferences?: UnknownRecord;
+}
 
 // Helper function to determine if layout should be regenerated based on context changes
-export function shouldRegenerateLayout(oldContext: any, newContext: any): boolean {
+export function shouldRegenerateLayout(oldContext: LayoutContext | null, newContext: LayoutContext | null): boolean {
   if (!oldContext || !newContext) return false;
 
   // Check for significant time changes (meal period)

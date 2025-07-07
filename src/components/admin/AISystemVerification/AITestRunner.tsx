@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -10,9 +9,15 @@ interface SystemHealthCheck {
   details?: string;
 }
 
+interface TestResult {
+  test: string;
+  result: Record<string, unknown>;
+  timestamp: string;
+}
+
 interface AITestRunnerProps {
   updateHealthCheck: (component: string, update: Partial<SystemHealthCheck>) => void;
-  setTestResults: React.Dispatch<React.SetStateAction<any[]>>;
+  setTestResults: React.Dispatch<React.SetStateAction<TestResult[]>>;
 }
 
 export const useAITestRunner = ({ updateHealthCheck, setTestResults }: AITestRunnerProps) => {

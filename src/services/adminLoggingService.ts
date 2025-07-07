@@ -11,7 +11,7 @@ export type AdminActionType =
 export type ResourceType = 'bars' | 'menus' | 'orders' | 'payments' | 'system' | 'ai_tools';
 
 interface LogMetadata {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 class AdminLoggingService {
@@ -90,7 +90,7 @@ class AdminLoggingService {
   async logBarAction(
     action: 'create' | 'update' | 'delete',
     barId: string,
-    barData?: any
+    barData?: Record<string, unknown>
   ): Promise<void> {
     const actionType = `${action}_bar` as AdminActionType;
     await this.logSuccess(actionType, 'bars', barId, { bar: barData });
@@ -102,7 +102,7 @@ class AdminLoggingService {
   async logMenuAction(
     action: 'approve' | 'edit' | 'delete',
     menuItemId: string,
-    menuData?: any
+    menuData?: Record<string, unknown>
   ): Promise<void> {
     const actionType = action === 'approve' ? 'approve_menu' : 
                       action === 'edit' ? 'edit_menu_item' : 
@@ -131,7 +131,7 @@ class AdminLoggingService {
   /**
    * Log payment export
    */
-  async logPaymentExport(filters: any, recordCount: number): Promise<void> {
+  async logPaymentExport(filters: Record<string, unknown>, recordCount: number): Promise<void> {
     await this.logSuccess('export_payments', 'payments', undefined, {
       filters,
       record_count: recordCount,
@@ -144,8 +144,8 @@ class AdminLoggingService {
    */
   async logAIToolUsage(
     toolName: string,
-    parameters: any,
-    result?: any
+    parameters: Record<string, unknown>,
+    result?: Record<string, unknown>
   ): Promise<void> {
     await this.logSuccess('run_ai_tool', 'ai_tools', undefined, {
       tool_name: toolName,
@@ -157,7 +157,7 @@ class AdminLoggingService {
   /**
    * Get recent admin logs
    */
-  async getRecentLogs(limit: number = 50): Promise<any[]> {
+  async getRecentLogs(limit: number = 50): Promise<Record<string, unknown>[]> {
     const { data, error } = await supabase
       .from('system_logs')
       .select(`
@@ -178,7 +178,7 @@ class AdminLoggingService {
   /**
    * Get logs for a specific resource
    */
-  async getResourceLogs(resourceType: ResourceType, resourceId: string): Promise<any[]> {
+  async getResourceLogs(resourceType: ResourceType, resourceId: string): Promise<Record<string, unknown>[]> {
     const { data, error } = await supabase
       .from('system_logs')
       .select(`

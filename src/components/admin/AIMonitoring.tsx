@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +31,7 @@ interface AILog {
   message_type: string;
   ai_model_used: string;
   created_at: string;
-  processing_metadata: any;
+  processing_metadata: Record<string, unknown>;
   vendors?: { name: string };
 }
 
@@ -67,7 +66,7 @@ const AIMonitoring = () => {
       if (logs) {
         const totalInteractions = logs.length;
         const successfulLogs = logs.filter(log => {
-          const metadata = log.processing_metadata as any;
+          const metadata = log.processing_metadata as Record<string, unknown>;
           return !metadata?.error && log.message_type === 'assistant';
         });
         const successRate = totalInteractions > 0 ? (successfulLogs.length / totalInteractions) * 100 : 0;
@@ -77,10 +76,10 @@ const AIMonitoring = () => {
         const modelCount: { [key: string]: number } = {};
 
         logs.forEach(log => {
-          const metadata = log.processing_metadata as any;
+          const metadata = log.processing_metadata as Record<string, unknown>;
           if (metadata?.language) {
-            languageCount[metadata.language] = 
-              (languageCount[metadata.language] || 0) + 1;
+            languageCount[metadata.language as string] = 
+              (languageCount[metadata.language as string] || 0) + 1;
           }
           if (log.ai_model_used) {
             modelCount[log.ai_model_used] = (modelCount[log.ai_model_used] || 0) + 1;
@@ -121,7 +120,7 @@ const AIMonitoring = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      setRecentLogs((logs as any) || []);
+      setRecentLogs((logs as AILog[]) || []);
     } catch (error) {
       console.error('Error loading recent logs:', error);
     }
@@ -296,7 +295,7 @@ const AIMonitoring = () => {
         <CardContent>
           <div className="space-y-3">
             {recentLogs.map((log, index) => {
-              const metadata = log.processing_metadata as any;
+              const metadata = log.processing_metadata as Record<string, unknown>;
               const getModelBadgeColor = (model: string) => {
                 if (model.includes('gpt-4')) return 'bg-blue-100 text-blue-800';
                 if (model.includes('claude')) return 'bg-purple-100 text-purple-800';
@@ -333,7 +332,7 @@ const AIMonitoring = () => {
                     </div>
                     {metadata?.language && (
                       <div className="text-xs">
-                        {getLanguageFlag(metadata.language)} {metadata.language}
+                        {getLanguageFlag(metadata.language as string)} {metadata.language}
                       </div>
                     )}
                   </div>

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { LayoutContext, DynamicLayout } from '@/types/layout';
 
@@ -19,8 +18,8 @@ class LayoutCacheService {
     try {
       const insertData = {
         vendor_id: context.vendor_id,
-        context_data: context as any,
-        layout_config: layout as any,
+        context_data: context,
+        layout_config: layout,
         ai_model_used: 'gpt-4o'
       };
 
@@ -43,7 +42,7 @@ class LayoutCacheService {
     return diffMinutes < 30; // Cache for 30 minutes
   }
 
-  parseLayoutConfig(layoutConfig: any): DynamicLayout | null {
+  parseLayoutConfig(layoutConfig: unknown): DynamicLayout | null {
     try {
       if (typeof layoutConfig === 'string') {
         return JSON.parse(layoutConfig) as DynamicLayout;

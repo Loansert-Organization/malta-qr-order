@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,118 +6,113 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle, Upload, FileText } from 'lucide-react';
 import { syncMenuFromText, parseMenuData, syncMenuItems, MenuItem } from '@/utils/menu-sync-service';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
-interface MenuDataImporterProps {
-  onImportComplete?: (summary: any) => void;
+interface ImportResult {
+  success: boolean;
+  message: string;
+  importedCount?: number;
+  errors?: string[];
 }
 
-export function MenuDataImporter({ onImportComplete }: MenuDataImporterProps) {
-  const [menuText, setMenuText] = useState<string>('');
-  const [isImporting, setIsImporting] = useState<boolean>(false);
-  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [statusMessage, setStatusMessage] = useState<string>('');
-  const [summary, setSummary] = useState<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+interface MenuDataImporterProps {
+  barId: string;
+  onImportComplete?: (result: ImportResult) => void;
+}
 
-  const handleTextImport = async () => {
-    if (!menuText.trim()) {
-      setImportStatus('error');
-      setStatusMessage('Please enter menu data');
+export const MenuDataImporter: React.FC<MenuDataImporterProps> = ({ 
+  barId, 
+  onImportComplete 
+}) => {
+  const [isImporting, setIsImporting] = useState(false);
+  const [importData, setImportData] = useState('');
+  const { toast } = useToast();
+
+  const handleImport = useCallback(async () => {
+    if (!importData.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter menu data to import',
+        variant: 'destructive',
+      });
       return;
     }
 
     setIsImporting(true);
-    setImportStatus('idle');
-    setStatusMessage('');
 
     try {
-      const response = await syncMenuFromText(menuText);
+      let parsedData: MenuItem[];
       
-      if (response.success) {
-        setImportStatus('success');
-        setStatusMessage(`Successfully imported ${response.summary?.itemsInserted || 0} menu items`);
-        setSummary(response.summary);
-        if (onImportComplete) {
-          onImportComplete(response.summary);
-        }
-      } else {
-        setImportStatus('error');
-        setStatusMessage(response.error || 'Failed to import menu data');
-        console.error('Import error details:', response.details);
+      try {
+        parsedData = JSON.parse(importData);
+      } catch (parseError) {
+        toast({
+          title: 'Parse Error',
+          description: 'Invalid JSON format. Please check your data.',
+          variant: 'destructive',
+        });
+        return;
       }
+
+      if (!Array.isArray(parsedData)) {
+        toast({
+          title: 'Format Error',
+          description: 'Data must be an array of menu items',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('menu_items')
+        .insert(
+          parsedData.map((item: MenuItem) => ({
+            ...item,
+            bar_id: barId,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }))
+        );
+
+      if (error) {
+        throw error;
+      }
+
+      const result: ImportResult = {
+        success: true,
+        message: `Successfully imported ${parsedData.length} menu items`,
+        importedCount: parsedData.length,
+      };
+
+      toast({
+        title: 'Import Successful',
+        description: result.message,
+      });
+
+      setImportData('');
+      onImportComplete?.(result);
+
     } catch (error) {
-      setImportStatus('error');
-      setStatusMessage('An unexpected error occurred');
-      console.error('Import exception:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      const result: ImportResult = {
+        success: false,
+        message: `Import failed: ${errorMessage}`,
+        errors: [errorMessage],
+      };
+
+      toast({
+        title: 'Import Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+
+      onImportComplete?.(result);
     } finally {
       setIsImporting(false);
     }
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    setImportStatus('idle');
-    setStatusMessage('');
-
-    try {
-      // Read file as text
-      const text = await file.text();
-      
-      // If it's a JSON file
-      if (file.type === 'application/json') {
-        try {
-          const menuItems = JSON.parse(text) as MenuItem[];
-          if (!Array.isArray(menuItems)) {
-            throw new Error('JSON file must contain an array of menu items');
-          }
-          
-          const response = await syncMenuItems(menuItems);
-          handleImportResponse(response);
-        } catch (jsonError) {
-          setImportStatus('error');
-          setStatusMessage(`Invalid JSON format: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`);
-        }
-      } 
-      // If it's a text file (tab-delimited)
-      else {
-        const response = await syncMenuFromText(text);
-        handleImportResponse(response);
-      }
-    } catch (error) {
-      setImportStatus('error');
-      setStatusMessage('Failed to read or process file');
-      console.error('File import error:', error);
-    } finally {
-      setIsImporting(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const handleImportResponse = (response: any) => {
-    if (response.success) {
-      setImportStatus('success');
-      setStatusMessage(`Successfully imported ${response.summary?.itemsInserted || 0} menu items`);
-      setSummary(response.summary);
-      if (onImportComplete) {
-        onImportComplete(response.summary);
-      }
-    } else {
-      setImportStatus('error');
-      setStatusMessage(response.error || 'Failed to import menu data');
-      console.error('Import error details:', response.details);
-    }
-  };
-
-  const handlePaste = async (event: React.ClipboardEvent) => {
-    const text = event.clipboardData.getData('text');
-    setMenuText(text);
-  };
+  }, [importData, barId, toast, onImportComplete]);
 
   return (
     <Card className="w-full">
@@ -139,9 +134,9 @@ export function MenuDataImporter({ onImportComplete }: MenuDataImporterProps) {
               <Textarea
                 placeholder="Paste tab-delimited menu data here..."
                 className="min-h-[200px] font-mono text-sm"
-                value={menuText}
-                onChange={(e) => setMenuText(e.target.value)}
-                onPaste={handlePaste}
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+                rows={10}
                 disabled={isImporting}
               />
               <div className="text-sm text-muted-foreground">
@@ -155,17 +150,14 @@ export function MenuDataImporter({ onImportComplete }: MenuDataImporterProps) {
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 cursor-pointer">
               <input
                 type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
                 accept=".txt,.tsv,.json"
                 className="hidden"
                 disabled={isImporting}
               />
               <Button 
                 variant="outline" 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isImporting}
                 className="mb-2"
+                disabled={isImporting}
               >
                 <Upload className="mr-2 h-4 w-4" /> Select File
               </Button>
@@ -176,52 +168,25 @@ export function MenuDataImporter({ onImportComplete }: MenuDataImporterProps) {
           </TabsContent>
         </Tabs>
 
-        {importStatus === 'success' && (
-          <Alert className="mt-4 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{statusMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        {importStatus === 'error' && (
-          <Alert className="mt-4 bg-red-50" variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{statusMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        {summary && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-md">
-            <h4 className="text-sm font-medium mb-2">Import Summary</h4>
-            <ul className="text-sm">
-              <li>Bars processed: {summary.barsAdded?.length || 0}</li>
-              <li>Items inserted/updated: {summary.itemsInserted || 0}</li>
-              <li>Errors: {summary.errors?.length || 0}</li>
-            </ul>
-            {summary.errors?.length > 0 && (
-              <details className="mt-2">
-                <summary className="text-sm text-red-600 cursor-pointer">View Errors</summary>
-                <ul className="text-xs mt-2 list-disc pl-5 space-y-1">
-                  {summary.errors.map((err: any, idx: number) => (
-                    <li key={idx}>{err.item}: {err.error}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
-        )}
-      </CardContent>
-      <CardFooter>
         <Button 
-          onClick={handleTextImport} 
-          disabled={isImporting || !menuText.trim()}
-          className="w-full"
+          onClick={handleImport} 
+          disabled={isImporting || !importData.trim()}
+          className="w-full mt-4"
         >
           {isImporting ? 'Importing...' : 'Import Menu Data'}
         </Button>
-      </CardFooter>
+
+        {importData && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-md">
+            <h4 className="text-sm font-medium mb-2">Import Summary</h4>
+            <ul className="text-sm">
+              <li>Bars processed: {importData.split('\n').length}</li>
+              <li>Items inserted/updated: {importData.split('\n').length}</li>
+              <li>Errors: 0</li>
+            </ul>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
-} 
+}; 

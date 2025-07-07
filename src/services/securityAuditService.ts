@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { logSystemEvent } from '@/utils/systemLogs';
 
@@ -27,7 +26,7 @@ export class SecurityAuditService {
       try {
         // Test unauthorized access
         const { data, error } = await supabase
-          .from(tableName as any)
+          .from(tableName as unknown)
           .select('*')
           .limit(1);
 

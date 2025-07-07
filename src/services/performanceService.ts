@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface PerformanceThresholds {
@@ -47,9 +46,9 @@ class PerformanceService {
   }
 
   async trackMemoryUsage(): Promise<void> {
-    if (!(performance as any).memory) return;
+    if (!(performance as unknown as { memory?: unknown }).memory) return;
 
-    const memory = (performance as any).memory;
+    const memory = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
     
     try {
       await supabase.from('analytics').insert({
@@ -68,7 +67,7 @@ class PerformanceService {
     }
   }
 
-  async getPerformanceInsights(days: number = 7): Promise<any> {
+  async getPerformanceInsights(days: number = 7): Promise<unknown> {
     const endDate = new Date().toISOString().split('T')[0];
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -96,10 +95,10 @@ class PerformanceService {
     }
   }
 
-  private analyzePerformanceData(data: any[]): any {
+  private analyzePerformanceData(data: unknown[]): unknown {
     const insights = {
-      averages: {} as any,
-      trends: {} as any,
+      averages: {} as Record<string, unknown>,
+      trends: {} as Record<string, unknown>,
       alerts: [] as string[]
     };
 
@@ -109,10 +108,10 @@ class PerformanceService {
       if (!acc[type]) acc[type] = [];
       acc[type].push(item.metric_value);
       return acc;
-    }, {});
+    }, {} as Record<string, unknown[]>);
 
     // Calculate averages and identify issues
-    Object.entries(grouped).forEach(([type, values]: [string, any]) => {
+    Object.entries(grouped).forEach(([type, values]: [string, unknown[]]) => {
       const average = values.reduce((sum: number, val: number) => sum + val, 0) / values.length;
       insights.averages[type] = average;
 
@@ -126,7 +125,7 @@ class PerformanceService {
     return insights;
   }
 
-  withPerformanceTracking<T extends any[], R>(
+  withPerformanceTracking<T extends unknown[], R>(
     fn: (...args: T) => R,
     trackingName: string
   ): (...args: T) => R {

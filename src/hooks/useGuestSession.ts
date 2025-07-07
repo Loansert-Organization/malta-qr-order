@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,7 +18,7 @@ interface GuestSession {
   vendorId: string;
   createdAt: string;
   lastActivity: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
 }
 
 export const useGuestSession = (vendorId?: string) => {

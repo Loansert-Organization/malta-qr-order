@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,11 +30,7 @@ const SmartMenu: React.FC<SmartMenuProps> = ({ vendorId }) => {
   const [cart, setCart] = useState<MenuItem[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchMenuItems();
-  }, [vendorId]);
-
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = useCallback(async () => {
     try {
       const { data: items, error } = await supabase
         .from('menu_items')
@@ -50,7 +45,7 @@ const SmartMenu: React.FC<SmartMenuProps> = ({ vendorId }) => {
       if (error) throw error;
 
       if (items) {
-        setMenuItems(items as any);
+        setMenuItems(items as MenuItem[]);
         // Extract unique categories
         const uniqueCategories = ['all', ...new Set(items.map(item => item.category || '').filter(Boolean))];
         setCategories(uniqueCategories);
@@ -65,7 +60,11 @@ const SmartMenu: React.FC<SmartMenuProps> = ({ vendorId }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [vendorId, toast]);
+
+  useEffect(() => {
+    fetchMenuItems();
+  }, [fetchMenuItems]);
 
   const filteredItems = activeCategory === 'all' 
     ? menuItems 

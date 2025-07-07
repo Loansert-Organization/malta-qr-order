@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,7 @@ interface GuestPreferencesProps {
 interface Preferences {
   dietary_restrictions: string[];
   favorite_categories: string[];
-  ai_memory: Record<string, any>;
+  ai_memory: Record<string, unknown>;
 }
 
 const GuestPreferences: React.FC<GuestPreferencesProps> = ({ sessionId, vendorId }) => {
@@ -77,7 +76,7 @@ const GuestPreferences: React.FC<GuestPreferencesProps> = ({ sessionId, vendorId
           dietary_restrictions: data.dietary_restrictions || [],
           favorite_categories: data.favorite_categories || [],
           ai_memory: (data.ai_memory && typeof data.ai_memory === 'object' && !Array.isArray(data.ai_memory)) 
-            ? data.ai_memory as Record<string, any> 
+            ? data.ai_memory as Record<string, unknown> 
             : {}
         });
       }
@@ -133,7 +132,7 @@ const GuestPreferences: React.FC<GuestPreferencesProps> = ({ sessionId, vendorId
     }));
   };
 
-  const formatAIMemoryValue = (value: any): string => {
+  const formatAIMemoryValue = (value: unknown): string => {
     if (typeof value === 'string') return value;
     if (typeof value === 'number') return value.toString();
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';

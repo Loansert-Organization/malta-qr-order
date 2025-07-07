@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import AIWaiterHeader from './AIWaiterHeader';
 import AIWaiterMessage from './AIWaiterMessage';
@@ -9,17 +8,40 @@ import MaltaLanguageSelector from './MaltaLanguageSelector';
 import LocationAwareBanner from './LocationAwareBanner';
 import { Message } from '@/hooks/useMaltaAIChat';
 
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category?: string;
+  is_available?: boolean;
+}
+
+interface LocationContext {
+  area: string;
+  nearbyCount: number;
+  avgRating: number;
+}
+
+interface NearbyBar {
+  id: string;
+  name: string;
+  rating?: number;
+  distance?: number;
+}
+
 interface MaltaAIChatContainerProps {
   onClose: () => void;
-  onAddToCart: (item: any) => void;
+  onAddToCart: (item: MenuItem) => void;
   messages: Message[];
   input: string;
   setInput: (value: string) => void;
   isTyping: boolean;
   selectedLanguage: 'en' | 'mt' | 'it';
   onLanguageChange: (language: 'en' | 'mt' | 'it') => void;
-  locationContext: any;
-  nearbyBars: any[];
+  locationContext: LocationContext;
+  nearbyBars: NearbyBar[];
   onSendMessage: () => void;
   onSuggestionAdded: (itemName: string) => void;
 }

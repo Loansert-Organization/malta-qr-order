@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMaltaAIChat } from '@/hooks/useMaltaAIChat';
 import MaltaAIChatContainer from './MaltaAIChatContainer';
@@ -9,10 +8,20 @@ interface Vendor {
   location?: string;
 }
 
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category?: string;
+  is_available?: boolean;
+}
+
 interface MaltaAIWaiterChatProps {
   vendor: Vendor;
   onClose: () => void;
-  onAddToCart?: (item: any) => void;
+  onAddToCart?: (item: MenuItem) => void;
   guestSessionId?: string;
 }
 

@@ -1,14 +1,24 @@
-
 // import React from 'react'; // Unused - removed
 import { Search, Mic } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
+interface SearchContextData {
+  recentSearches?: string[];
+  popularSearches?: string[];
+  searchHistory?: Array<{
+    query: string;
+    timestamp: string;
+    results: number;
+  }>;
+  suggestions?: string[];
+}
+
 interface SearchSectionProps {
   searchQuery: string;
   onSearch: (query: string) => void;
-  contextData: any;
+  contextData: SearchContextData;
 }
 
 const SearchSection = ({ searchQuery, onSearch, contextData }: SearchSectionProps) => {
