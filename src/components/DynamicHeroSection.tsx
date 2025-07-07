@@ -55,11 +55,11 @@ const DynamicHeroSection: React.FC<DynamicHeroSectionProps> = ({ vendor }) => {
   const generateDynamicContent = () => {
     // This would typically call the AI Router edge function
     // For now, we'll simulate dynamic content based on context
-    const contextData = {
-      timeOfDay: new Date().getHours(),
-      location: vendor.location,
-      vendor: vendor.name
-    };
+    // const contextData = { // Unused - removed
+    //   timeOfDay: new Date().getHours(),
+    //   location: vendor.location,
+    //   vendor: vendor.name
+    // };
 
     // Simulate AI-generated hero variations
     const variations = [

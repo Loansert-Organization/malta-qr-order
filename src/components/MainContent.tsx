@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { supabase } from '@/integrations/supabase/client';
+// import { supabase } from '@/integrations/supabase/client'; // Unused - removed
 import { toast } from 'sonner';
 import type { 
   Bar, 
@@ -86,7 +86,7 @@ const MainContent: React.FC<MainContentProps> = ({
   const navigate = useNavigate();
   const [showAIWaiter, setShowAIWaiter] = useState(false);
   const [showAIVerification, setShowAIVerification] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false); // Unused - removed
   const [cartSummary, setCartSummary] = useState<CartSummaryItem[]>([]);
 
   // Memoized handlers to prevent unnecessary re-renders
@@ -201,13 +201,13 @@ const MainContent: React.FC<MainContentProps> = ({
         if ('id' in item && 'name' in item && 'price' in item) {
           const existingItem = acc.find(summaryItem => summaryItem.id === item.id);
           if (existingItem) {
-            existingItem.quantity += item.quantity || 1;
+            existingItem.quantity += 1; // Default to 1 since MenuItem doesn't have quantity
           } else {
             acc.push({
               id: item.id,
               name: item.name,
               price: typeof item.price === 'number' ? item.price : 0,
-              quantity: item.quantity || 1
+              quantity: 1 // Default to 1 since MenuItem doesn't have quantity
             });
           }
         }
@@ -247,14 +247,11 @@ const MainContent: React.FC<MainContentProps> = ({
           {/* Right Column - Cart */}
           <CartSection
             cart={cart}
-            onAddToCart={handleAddToCart}
-            onRemoveFromCart={handleRemoveFromCart}
+            vendor={vendor}
+            guestSessionId={guestSessionId}
+            removeFromCart={handleRemoveFromCart}
             getTotalPrice={getTotalPrice}
             getTotalItems={getTotalItems}
-            vendorId={vendor.id}
-            vendorName={vendor.name}
-            guestSessionId={guestSessionId}
-            onOrderComplete={handleOrderComplete}
           />
         </div>
       </div>

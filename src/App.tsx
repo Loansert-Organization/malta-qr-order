@@ -24,7 +24,7 @@ const OrderReview = lazy(() => import("./pages/OrderReview"));
 const OrderPayment = lazy(() => import("./pages/OrderPayment"));
 const ConfirmPage = lazy(() => import("./pages/ConfirmPage"));
 const OrderStatus = lazy(() => import("./pages/OrderStatus"));
-const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
+// const OrderSuccess = lazy(() => import("./pages/OrderSuccess")); // Unused - removed
 const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
 const VendorOrders = lazy(() => import("./pages/VendorOrders"));
 const VendorMenu = lazy(() => import("./pages/VendorMenu"));

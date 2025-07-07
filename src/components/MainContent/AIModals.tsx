@@ -2,7 +2,7 @@
 import React from 'react';
 import AIWaiterModal from '@/components/ai/AIWaiterModal';
 import AIVerificationModal from '@/components/ai/AIVerificationModal';
-import { MenuItem } from '@/hooks/useOrderDemo/types';
+import { MenuItem } from '@/types/api';
 
 interface AIModalsProps {
   vendorId: string;

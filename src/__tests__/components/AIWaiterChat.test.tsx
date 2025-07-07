@@ -1,9 +1,9 @@
 // ✨ Refactored by Cursor – Audit Phase 4: Comprehensive Test Suite
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AIWaiterChat } from '@/components/AIWaiterChat';
+import AIWaiterChat from '@/components/AIWaiterChat';
 import { useMaltaAIChat } from '@/hooks/useMaltaAIChat';
-import type { AIResponse, MenuItem } from '@/types/api';
+import type { MenuItem } from '@/types/api';
 
 // Mock the hook
 vi.mock('@/hooks/useMaltaAIChat');
