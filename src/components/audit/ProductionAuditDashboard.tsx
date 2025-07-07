@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -145,7 +145,7 @@ const ProductionAuditDashboard = () => {
         description: "Full system audit has been completed successfully",
       });
 
-    } catch (error) {
+        } catch (error: any) {
       console.error('Audit failed:', error);
       addAuditResult('System', 'fail', `Audit failed: ${error.message}`);
       
@@ -173,7 +173,7 @@ const ProductionAuditDashboard = () => {
         } else {
           addAuditResult('Database', 'pass', `Vendors table accessible`);
         }
-      } catch (error) {
+        } catch (error: any) {
         addAuditResult('Database', 'fail', `Vendors table error`, error.message);
       }
 
@@ -184,7 +184,7 @@ const ProductionAuditDashboard = () => {
         } else {
           addAuditResult('Database', 'pass', `Menus table accessible`);
         }
-      } catch (error) {
+      } catch (error: any) {
         addAuditResult('Database', 'fail', `Menus table error`, error.message);
       }
 
@@ -195,7 +195,7 @@ const ProductionAuditDashboard = () => {
         } else {
           addAuditResult('Database', 'pass', `Menu items table accessible`);
         }
-      } catch (error) {
+      } catch (error: any) {
         addAuditResult('Database', 'fail', `Menu items table error`, error.message);
       }
 
@@ -206,7 +206,7 @@ const ProductionAuditDashboard = () => {
         } else {
           addAuditResult('Database', 'pass', `Orders table accessible`);
         }
-      } catch (error) {
+      } catch (error: any) {
         addAuditResult('Database', 'fail', `Orders table error`, error.message);
       }
 
@@ -266,7 +266,7 @@ const ProductionAuditDashboard = () => {
         addAuditResult('Database', 'warning', 'Could not verify RLS policies', error.message);
       }
 
-    } catch (error) {
+        } catch (error: any) {
       addAuditResult('Database', 'fail', 'Database schema audit failed', error.message);
     }
   };

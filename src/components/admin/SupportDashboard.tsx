@@ -17,7 +17,9 @@ import {
   Send, 
   User, 
   Phone, 
-  Mail 
+  Mail,
+  Plus,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';

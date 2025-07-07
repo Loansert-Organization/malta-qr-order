@@ -853,6 +853,35 @@ export type Database = {
           },
         ]
       }
+      image_errors: {
+        Row: {
+          id: string
+          item_id: string | null
+          reason: string | null
+          timestamp: string | null
+        }
+        Insert: {
+          id?: string
+          item_id?: string | null
+          reason?: string | null
+          timestamp?: string | null
+        }
+        Update: {
+          id?: string
+          item_id?: string | null
+          reason?: string | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "image_errors_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       layout_suggestions: {
         Row: {
           ai_model_used: string | null
