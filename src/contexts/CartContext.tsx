@@ -4,34 +4,48 @@ import { useToast } from '@/hooks/use-toast';
 
 interface MenuItem {
   id: string;
-  bar_id: string;
+  bar_id?: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  image_url: string | null;
-  category: string;
-  is_available: boolean;
+  image_url?: string | null;
+  category?: string;
+  is_available?: boolean;
+  volume?: string;
 }
 
-interface CartItem extends MenuItem {
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
   quantity: number;
+  barId: string;
+  barName: string;
+  image_url?: string;
+  volume?: string;
 }
 
 interface Bar {
   id: string;
   name: string;
-  country: string;
+  country?: string;
   currency?: string;
 }
 
 interface CartContextType {
+  // Legacy alias for backward compatibility
   cart: CartItem[];
+  // Preferred alias used by new components
+  items: CartItem[];
   currentBar: Bar | null;
-  addToCart: (item: MenuItem, bar: Bar) => void;
-  updateQuantity: (itemId: string, change: number) => void;
+  // Legacy signature for existing components (MenuItem + Bar)
+  addToCart: (item: any, bar?: Bar) => void;
+  // Preferred signature used by new components
+  updateQuantity: (itemId: string, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
-  getCartTotal: () => number;
+  getTotalPrice: () => number;
+  getItemQuantity: (itemId: string) => number;
   getCartItemCount: () => number;
   isLoading: boolean;
 }
@@ -96,9 +110,31 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   }, [currentBar]);
 
-  const addToCart = (item: MenuItem, bar: Bar) => {
+  // Overloaded addToCart: supports both legacy (item, bar) and new (CartItem)
+  const addToCart = (itemOrCartItem: any, bar?: Bar) => {
+    // Determine if it's legacy call or new call
+    let item: CartItem;
+    if (bar) {
+      // Legacy call with separate bar param and MenuItem shape
+      const legacyItem = itemOrCartItem as MenuItem;
+      item = {
+        id: legacyItem.id,
+        name: legacyItem.name,
+        price: legacyItem.price,
+        quantity: 1,
+        barId: bar.id,
+        barName: bar.name,
+        image_url: legacyItem.image_url || undefined,
+        volume: legacyItem.volume
+      };
+    } else {
+      // New call passes CartItem
+      item = itemOrCartItem as CartItem;
+      bar = { id: item.barId, name: item.barName } as Bar;
+    }
+
     // If switching to a different bar, ask for confirmation
-    if (currentBar && currentBar.id !== bar.id && cart.length > 0) {
+    if (bar && currentBar && currentBar.id !== bar.id && cart.length > 0) {
       const confirmSwitch = window.confirm(
         `You have items from ${currentBar.name} in your cart. Switching to ${bar.name} will clear your current cart. Continue?`
       );
@@ -115,7 +151,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       });
     }
 
-    setCurrentBar(bar);
+    if (bar) setCurrentBar(bar);
     
     setCart(prevCart => {
       const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
@@ -135,22 +171,16 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
           title: "Added to cart",
           description: `${item.name} has been added to your cart`,
         });
-        return [...prevCart, { ...item, quantity: 1 }];
+        return [...prevCart, item];
       }
     });
   };
 
-  const updateQuantity = (itemId: string, change: number) => {
+  const updateQuantity = (itemId: string, quantity: number) => {
     setCart(prevCart => {
       return prevCart
-        .map(item => {
-          if (item.id === itemId) {
-            const newQuantity = item.quantity + change;
-            return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[];
+        .map(item => (item.id === itemId ? { ...item, quantity } : item))
+        .filter(item => item.quantity > 0);
     });
   };
 
@@ -170,8 +200,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     localStorage.removeItem('currentBar');
   };
 
-  const getCartTotal = () => {
+  const getTotalPrice = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const getItemQuantity = (itemId: string) => {
+    return cart.find(item => item.id === itemId)?.quantity || 0;
   };
 
   const getCartItemCount = () => {
@@ -180,15 +214,26 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const value: CartContextType = {
     cart,
+    items: cart,
     currentBar,
     addToCart,
     updateQuantity,
     removeFromCart,
     clearCart,
-    getCartTotal,
+    getTotalPrice,
+    getItemQuantity,
     getCartItemCount,
     isLoading
-  };
+  } as any;
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider value={{
+      ...value,
+      // legacy aliases
+      getCartTotal: getTotalPrice,
+      getCartItemCount: value.getCartItemCount
+    } as any}>
+      {children}
+    </CartContext.Provider>
+  );
 }; 

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { ConsolidatedSessionProvider } from "@/providers/ConsolidatedSessionProvider";
 import { lazy, Suspense, useEffect } from "react";
 import LoadingState from "@/components/LoadingState";
@@ -15,9 +15,13 @@ import { CartProvider } from '@/contexts/CartContext';
 const WelcomeWizard = lazy(() => import("./components/WelcomeWizard"));
 const Index = lazy(() => import("./pages/Index"));
 const ClientHome = lazy(() => import("./pages/ClientHome"));
+const BarDetail = lazy(() => import("./pages/BarDetail"));
+const MenuCategory = lazy(() => import("./pages/MenuCategory"));
 // const ClientOrder = lazy(() => import("./pages/ClientOrder")); // DEPRECATED
 const MenuPage = lazy(() => import("./pages/MenuPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+const OrderReview = lazy(() => import("./pages/OrderReview"));
+const OrderPayment = lazy(() => import("./pages/OrderPayment"));
 const ConfirmPage = lazy(() => import("./pages/ConfirmPage"));
 const OrderStatus = lazy(() => import("./pages/OrderStatus"));
 const OrderSuccess = lazy(() => import("./pages/OrderSuccess"));
@@ -41,6 +45,7 @@ const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
+const VendorOrderDetail = lazy(() => import("./pages/VendorOrderDetail"));
 
 // TEMPORARY: Import new admin components for manual client-side testing
 import MenuImageGenerator from "@/components/admin/MenuImageGenerator";
@@ -99,16 +104,22 @@ const RoutesWithAnimation = () => {
         {/* Landing page moved to /landing */}
         <Route path="/landing" element={<PageTransition><Index /></PageTransition>} />
         {/* Client App Routes */}
+        <Route path="/basket" element={<PageTransition><CartPage /></PageTransition>} />
         <Route path="/home" element={<PageTransition><ClientHome /></PageTransition>} />
         <Route path="/client" element={<PageTransition><ClientHome /></PageTransition>} />
         <Route path="/client/home" element={<PageTransition><ClientHome /></PageTransition>} />
+        <Route path="/bars/:barId" element={<PageTransition><BarDetail /></PageTransition>} />
+        <Route path="/bars/:barId/menu/:category" element={<PageTransition><MenuCategory /></PageTransition>} />
         <Route path="/menu/:barId" element={<PageTransition><MenuPage /></PageTransition>} />
         <Route path="/checkout/:barId" element={<PageTransition><CheckoutPage /></PageTransition>} />
         <Route path="/order" element={<PageTransition><CheckoutPage /></PageTransition>} />
+        <Route path="/order/review" element={<PageTransition><OrderReview /></PageTransition>} />
+        <Route path="/order/payment" element={<PageTransition><OrderPayment /></PageTransition>} />
         <Route path="/confirm/:orderId" element={<PageTransition><ConfirmPage /></PageTransition>} />
+        {/* Order status primary route */}
         <Route path="/order-status/:orderId" element={<PageTransition><OrderStatus /></PageTransition>} />
-        <Route path="/order-success/:orderId" element={<PageTransition><OrderSuccess /></PageTransition>} />
-        <Route path="/confirmed/:orderId" element={<PageTransition><ConfirmPage /></PageTransition>} />
+        {/* Alias route for legacy deep links */}
+        <Route path="/order/:orderId/status" element={<PageTransition><OrderStatus /></PageTransition>} />
         {/* <Route path="/order/:vendorSlug" element={<PageTransition><ClientOrder /></PageTransition>} /> */} {/* DEPRECATED */}
         <Route path="/order/tracking/:orderId" element={<PageTransition><OrderTracking /></PageTransition>} />
         <Route path="/rate-order/:orderId" element={<PageTransition><OrderRating /></PageTransition>} />
@@ -120,6 +131,8 @@ const RoutesWithAnimation = () => {
         {/* Vendor App Routes */}
         <Route path="/vendor" element={<PageTransition><VendorDashboard /></PageTransition>} />
         <Route path="/vendor/orders" element={<PageTransition><VendorOrders /></PageTransition>} />
+        <Route path="/vendor/orders/incoming" element={<PageTransition><VendorOrders /></PageTransition>} />
+        <Route path="/vendor/orders/:orderId" element={<PageTransition><VendorOrderDetail /></PageTransition>} />
         <Route path="/vendor/menu" element={<PageTransition><VendorMenu /></PageTransition>} />
         <Route path="/vendor/payments" element={<PageTransition><VendorPayments /></PageTransition>} />
         <Route path="/vendor/settings" element={<PageTransition><VendorSettings /></PageTransition>} />

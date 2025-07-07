@@ -270,13 +270,22 @@ const ClientHome = () => {
                     )}
                   </div>
                   
-                  <Button
-                    onClick={() => navigate(`/menu/${bar.id}?name=${encodeURIComponent(bar.name)}`)}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Menu
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => navigate(`/bars/${bar.id}`)}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      onClick={() => navigate(`/menu/${bar.id}?name=${encodeURIComponent(bar.name)}`)}
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View Menu
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
