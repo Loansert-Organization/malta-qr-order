@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Home, Search, Plus, Edit, Power, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { adminLogger } from '@/services/adminLoggingService';
 import {
   Table,
   TableBody,
@@ -46,13 +45,23 @@ import {
 interface Bar {
   id: string;
   name: string;
+  address: string | null;
+  contact_number: string | null;
   country: string;
+  city: string | null;
   is_active: boolean;
   is_onboarded: boolean;
-  google_rating: number | null;
+  rating: number | null;
+  review_count: number | null;
+  website_url: string | null;
+  google_place_id: string | null;
+  has_menu: boolean;
   momo_code: string | null;
   revolut_link: string | null;
+  categories: string[] | null;
+  features: string[] | null;
   created_at: string;
+  updated_at: string | null;
 }
 
 const AdminBars = () => {
@@ -131,9 +140,6 @@ const AdminBars = () => {
         .eq('id', selectedBar.id);
 
       if (error) throw error;
-
-      // Log the action
-      await adminLogger.logBarAction('update', selectedBar.id, formData);
 
       toast({
         title: "Success",
@@ -348,7 +354,7 @@ const AdminBars = () => {
                           {bar.is_onboarded ? 'Completed' : 'Pending'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{bar.google_rating || 'N/A'}</TableCell>
+                      <TableCell>{bar.rating || 'N/A'}</TableCell>
                       <TableCell>
                         {bar.country === 'Rwanda' 
                           ? (bar.momo_code ? 'MoMo ✓' : 'MoMo ✗')
