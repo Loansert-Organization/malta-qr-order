@@ -1,17 +1,39 @@
-
 import { Bot, User } from 'lucide-react';
+
+interface Suggestion {
+  id: string;
+  name: string;
+  description?: string;
+  price?: number;
+  action?: string;
+}
+
+interface LayoutHint {
+  type: 'menu' | 'cart' | 'payment' | 'navigation';
+  data?: Record<string, string | number>;
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category?: string;
+  is_available?: boolean;
+}
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  suggestions?: any[];
-  layoutHints?: any;
+  suggestions?: Suggestion[];
+  layoutHints?: LayoutHint;
 }
 
 interface AIWaiterMessageProps {
   message: Message;
-  onAddToCart: (item: any) => void;
+  onAddToCart: (item: MenuItem) => void;
   onSuggestionAdded: (itemName: string) => void;
 }
 

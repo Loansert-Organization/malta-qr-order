@@ -5,11 +5,36 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Star } from 'lucide-react';
 
+interface Layout {
+  heroSection: {
+    title: string;
+    ctaText: string;
+  };
+}
+
+interface Vendor {
+  name: string;
+  logo_url?: string;
+  location?: string;
+}
+
+interface WeatherData {
+  temperature?: number;
+  condition?: string;
+  humidity?: number;
+}
+
+interface ContextData {
+  isHappyHour?: boolean;
+  timeOfDay?: string;
+  specialOffers?: string[];
+}
+
 interface HeroSectionProps {
-  layout: any;
-  vendor: any;
-  weatherData: any;
-  contextData: any;
+  layout: Layout;
+  vendor: Vendor;
+  weatherData: WeatherData;
+  contextData: ContextData;
   onCtaClick: () => void;
 }
 

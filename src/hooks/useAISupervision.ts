@@ -1,10 +1,15 @@
-
 import { useState } from 'react';
+
+interface ReviewOptions {
+  priority?: 'low' | 'medium' | 'high';
+  category?: string;
+  metadata?: Record<string, string>;
+}
 
 export const useAISupervision = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const reviewTask = async (taskName: string, data: string, options?: any) => {
+  const reviewTask = async (taskName: string, data: string, options?: ReviewOptions) => {
     setIsLoading(true);
     try {
       console.log('AI Task Review:', taskName, data, options);

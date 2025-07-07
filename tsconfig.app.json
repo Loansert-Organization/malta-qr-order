@@ -16,8 +16,6 @@
 
     /* Linting - ENABLING STRICT MODE */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
@@ -25,8 +23,13 @@
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
 
     "baseUrl": ".",
     "paths": {

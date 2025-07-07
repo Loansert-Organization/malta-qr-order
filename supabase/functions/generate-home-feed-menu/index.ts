@@ -80,7 +80,7 @@ serve(async (req) => {
 
     // 5. Get user's current cart count (if session provided)
     const sessionId = req.headers.get('x-session-id');
-    let cartInfo = { itemCount: 0, total: 0 };
+    const cartInfo = { itemCount: 0, total: 0 };
     
     if (sessionId) {
       const { data: cartData } = await supabase

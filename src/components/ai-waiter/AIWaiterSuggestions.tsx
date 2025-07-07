@@ -4,10 +4,35 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+interface Suggestion {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  popular?: boolean;
+  action?: string;
+}
+
+interface LayoutHint {
+  cardStyle?: 'horizontal' | 'vertical';
+  highlight?: 'popular' | 'price';
+  animation?: 'subtle' | 'none';
+}
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category?: string;
+  is_available?: boolean;
+}
+
 interface AIWaiterSuggestionsProps {
-  suggestions: any[];
-  layoutHints: any;
-  onAddToCart: (item: any) => void;
+  suggestions: Suggestion[];
+  layoutHints: LayoutHint;
+  onAddToCart: (item: MenuItem) => void;
   onSuggestionAdded: (itemName: string) => void;
   language?: 'en' | 'mt' | 'it';
 }
