@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -15,6 +14,12 @@ interface SystemHealthCheck {
   details?: string;
 }
 
+interface TestResult {
+  test: string;
+  result: Record<string, unknown>;
+  timestamp: string;
+}
+
 const AISystemVerification = () => {
   const [healthChecks, setHealthChecks] = useState<SystemHealthCheck[]>([
     { component: 'AI System Health', status: 'testing' },
@@ -23,7 +28,7 @@ const AISystemVerification = () => {
     { component: 'Smart Menu System', status: 'testing' }
   ]);
   const [isRunning, setIsRunning] = useState(false);
-  const [testResults, setTestResults] = useState<any[]>([]);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
 
   const updateHealthCheck = (component: string, update: Partial<SystemHealthCheck>) => {
     setHealthChecks(prev => prev.map(check => 

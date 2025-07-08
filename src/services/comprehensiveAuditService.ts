@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AuditCategory {
@@ -213,7 +212,7 @@ class ComprehensiveAuditService {
       const criticalTables = ['vendors', 'orders', 'menu_items', 'payments'];
       for (const table of criticalTables) {
         const { count, error } = await supabase
-          .from(table as any)
+          .from(table as unknown)
           .select('*', { count: 'exact', head: true });
 
         if (error) {

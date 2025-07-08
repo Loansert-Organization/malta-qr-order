@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { sanitizeAIPrompt } from '@/utils/sanitizeInput';
 
@@ -8,10 +7,23 @@ interface AIServiceOptions {
   fallbackMessage?: string;
 }
 
+interface AIResponseData {
+  message?: string;
+  content?: string;
+  suggestions?: string[];
+  [key: string]: string | string[] | undefined;
+}
+
 interface AIResponse {
-  data: any;
+  data: AIResponseData | null;
   error: string | null;
   loading: boolean;
+}
+
+interface AdditionalData {
+  context?: string;
+  userPreferences?: Record<string, string>;
+  [key: string]: string | Record<string, string> | undefined;
 }
 
 export const useAIService = (options: AIServiceOptions = {}) => {
@@ -27,7 +39,7 @@ export const useAIService = (options: AIServiceOptions = {}) => {
     fallbackMessage = "I'm sorry, I'm having trouble processing your request right now. Please try again."
   } = options;
 
-  const callAI = useCallback(async (prompt: string, additionalData?: any) => {
+  const callAI = useCallback(async (prompt: string, additionalData?: AdditionalData) => {
     const sanitizedPrompt = sanitizeAIPrompt(prompt);
     
     if (!sanitizedPrompt.trim()) {
@@ -64,7 +76,7 @@ export const useAIService = (options: AIServiceOptions = {}) => {
           throw new Error(`AI Service Error: ${response.status}`);
         }
 
-        const data = await response.json();
+        const data = await response.json() as AIResponseData;
         
         setResponse({
           data,

@@ -1,14 +1,14 @@
-
 import { useCallback, useEffect } from 'react';
 import { realTimeLayoutService } from '@/services/realTimeLayoutService';
 import { contextService } from '@/services/contextService';
 import { DynamicLayout } from '@/types/layout';
 import { shouldRegenerateLayout } from './layoutUtils';
+import { UnknownRecord } from '@/types/utilities';
 
 export const useRealTimeSubscriptions = (
   vendorId: string,
-  contextData: any,
-  setContextData: (data: any) => void,
+  contextData: UnknownRecord | null,
+  setContextData: (data: UnknownRecord) => void,
   setIsRealTimeActive: (active: boolean) => void,
   initializeLayout: () => Promise<void>,
   triggerLayoutRegeneration: () => Promise<void>

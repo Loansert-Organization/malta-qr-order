@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export type LogLevel = 'info' | 'warning' | 'error';
@@ -8,7 +7,7 @@ export interface SystemLogParams {
   component: string;
   message: string;
   severity?: LogLevel;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export async function logSystemEvent(params: SystemLogParams) {

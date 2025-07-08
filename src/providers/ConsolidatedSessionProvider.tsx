@@ -1,6 +1,12 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+interface SessionMetadata {
+  created_from?: string;
+  user_agent?: string;
+  fallback?: boolean;
+  [key: string]: string | boolean | undefined;
+}
 
 interface SessionData {
   id: string;
@@ -8,7 +14,7 @@ interface SessionData {
   vendorId?: string;
   createdAt: string;
   lastActivity: string;
-  metadata: Record<string, any>;
+  metadata: SessionMetadata;
 }
 
 interface SessionContextType {
@@ -39,17 +45,17 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getStoredSessionId = () => {
+  const getStoredSessionId = (): string | null => {
     return localStorage.getItem('icupa_session_id');
   };
 
-  const createNewSession = () => {
+  const createNewSession = (): string => {
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     localStorage.setItem('icupa_session_id', sessionId);
     return sessionId;
   };
 
-  const initializeSession = async () => {
+  const initializeSession = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -92,7 +98,7 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
           vendorId: vendorId || existingSession.vendor_id,
           createdAt: existingSession.created_at,
           lastActivity: new Date().toISOString(),
-          metadata: (existingSession.metadata as Record<string, any>) || {}
+          metadata: (existingSession.metadata as SessionMetadata) || {}
         };
       } else {
         // Create new session in database
@@ -120,7 +126,7 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
           vendorId: vendorId,
           createdAt: new Date().toISOString(),
           lastActivity: new Date().toISOString(),
-          metadata: (newSession?.metadata as Record<string, any>) || { fallback: true }
+          metadata: (newSession?.metadata as SessionMetadata) || { fallback: true }
         };
       }
 
@@ -144,7 +150,7 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
     }
   };
 
-  const updateSession = (data: Partial<SessionData>) => {
+  const updateSession = (data: Partial<SessionData>): void => {
     if (session) {
       const updatedSession = { ...session, ...data };
       setSession(updatedSession);
@@ -163,7 +169,7 @@ export const ConsolidatedSessionProvider: React.FC<Props> = ({ children, vendorI
     }
   };
 
-  const clearSession = () => {
+  const clearSession = (): void => {
     localStorage.removeItem('icupa_session_id');
     setSession(null);
   };

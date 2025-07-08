@@ -16,7 +16,7 @@ export interface GuestSession {
     action: string;
     item_id?: string;
     category?: string;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
   }>;
   preferences: {
     dietary_restrictions?: string[];
@@ -96,7 +96,7 @@ class ContextService {
     return await this.initializeGuestSession(vendorId);
   }
 
-  async trackInteraction(action: string, metadata?: any) {
+  async trackInteraction(action: string, metadata?: Record<string, unknown>) {
     if (!this.currentSession) return;
 
     const interaction = {
@@ -340,9 +340,9 @@ class ContextService {
         session_id: session.session_id,
         vendor_id: session.vendor_id,
         device_fingerprint: session.device_fingerprint,
-        location_context: session.location_context as any,
-        interaction_history: session.interaction_history as any,
-        preferences: session.preferences as any
+        location_context: session.location_context as unknown,
+        interaction_history: session.interaction_history as unknown,
+        preferences: session.preferences as unknown
       });
     } catch (error) {
       console.error('Failed to save guest session:', error);
@@ -356,8 +356,8 @@ class ContextService {
       await supabase
         .from('guest_ui_sessions')
         .update({
-          interaction_history: this.currentSession.interaction_history as any,
-          preferences: this.currentSession.preferences as any,
+          interaction_history: this.currentSession.interaction_history as unknown,
+          preferences: this.currentSession.preferences as unknown,
           updated_at: new Date().toISOString()
         })
         .eq('session_id', this.currentSession.session_id);

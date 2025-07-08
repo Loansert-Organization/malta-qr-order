@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,13 +12,50 @@ import {
   CloudRain,
   MessageCircle
 } from 'lucide-react';
+import { UnknownRecord } from '@/types/utilities';
+
+interface VendorData {
+  business_name?: string;
+}
+
+interface WeatherData {
+  weather?: Array<{ main: string }>;
+  main?: { temp: number };
+}
+
+interface ContextData {
+  timeOfDay?: string;
+}
+
+interface MenuItem {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  image: string;
+}
+
+interface HeroContent {
+  title: string;
+  subtitle: string;
+  background: string;
+  cta: string;
+}
+
+interface PromoContent {
+  type: string;
+  title: string;
+  description: string;
+  timeLeft: string;
+  urgent: boolean;
+}
 
 interface DynamicHomePageProps {
-  vendorData: any;
-  weatherData: any;
-  contextData: any;
+  vendorData: VendorData;
+  weatherData: WeatherData;
+  contextData: ContextData;
   onCategorySelect: (category: string) => void;
-  onItemSelect: (item: any) => void;
+  onItemSelect: (item: MenuItem) => void;
   onOpenAIWaiter: () => void;
 }
 
@@ -31,15 +67,11 @@ const DynamicHomePage: React.FC<DynamicHomePageProps> = ({
   onItemSelect,
   onOpenAIWaiter
 }) => {
-  const [heroContent, setHeroContent] = useState<any>(null);
-  const [promoSection, setPromoSection] = useState<any>(null);
-  const [featuredItems, setFeaturedItems] = useState<any[]>([]);
+  const [heroContent, setHeroContent] = useState<HeroContent | null>(null);
+  const [promoSection, setPromoSection] = useState<PromoContent | null>(null);
+  const [featuredItems, setFeaturedItems] = useState<MenuItem[]>([]);
 
-  useEffect(() => {
-    generateDynamicContent();
-  }, [vendorData, weatherData, contextData]);
-
-  const generateDynamicContent = () => {
+  const generateDynamicContent = useCallback(() => {
     const timeOfDay = contextData?.timeOfDay || 'evening';
     const isHappyHour = checkHappyHour();
     const weatherCondition = weatherData?.weather?.[0]?.main || 'Clear';
@@ -55,7 +87,11 @@ const DynamicHomePage: React.FC<DynamicHomePageProps> = ({
     // Generate featured items
     const featured = generateFeaturedItems(timeOfDay, weatherCondition);
     setFeaturedItems(featured);
-  };
+  }, [vendorData, weatherData, contextData]);
+
+  useEffect(() => {
+    generateDynamicContent();
+  }, [generateDynamicContent]);
 
   const checkHappyHour = () => {
     const now = new Date();
@@ -63,7 +99,7 @@ const DynamicHomePage: React.FC<DynamicHomePageProps> = ({
     return hour >= 17 && hour <= 19; // 5 PM to 7 PM
   };
 
-  const generateHeroContent = (timeOfDay: string, weather: string, isHappyHour: boolean) => {
+  const generateHeroContent = (timeOfDay: string, weather: string, isHappyHour: boolean): HeroContent => {
     if (isHappyHour) {
       return {
         title: "🍹 Happy Hour Active!",
@@ -99,7 +135,7 @@ const DynamicHomePage: React.FC<DynamicHomePageProps> = ({
     };
   };
 
-  const generatePromoContent = (timeOfDay: string, isHappyHour: boolean) => {
+  const generatePromoContent = (timeOfDay: string, isHappyHour: boolean): PromoContent | null => {
     if (isHappyHour) {
       return {
         type: "happy_hour",
@@ -123,9 +159,9 @@ const DynamicHomePage: React.FC<DynamicHomePageProps> = ({
     return null;
   };
 
-  const generateFeaturedItems = (timeOfDay: string, weather: string) => {
+  const generateFeaturedItems = (timeOfDay: string, weather: string): MenuItem[] => {
     // Mock featured items based on context
-    const baseItems = [
+    const baseItems: MenuItem[] = [
       { id: 1, name: "Maltese Ftira", price: 8.50, category: "local", image: "🥖" },
       { id: 2, name: "Mediterranean Salad", price: 12.00, category: "healthy", image: "🥗" },
       { id: 3, name: "Kinnie Cocktail", price: 7.50, category: "drinks", image: "🍹" },

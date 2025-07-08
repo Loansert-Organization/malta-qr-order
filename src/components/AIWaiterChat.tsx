@@ -1,9 +1,18 @@
-
 import MaltaAIWaiterChat from './ai-waiter/MaltaAIWaiterChat';
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  image_url?: string;
+  category?: string;
+  is_available?: boolean;
+}
 
 interface AIWaiterChatProps {
   onClose: () => void;
-  onAddToCart: (item: any) => void;
+  onAddToCart: (item: MenuItem) => void;
   vendorSlug: string;
   guestSessionId: string;
 }

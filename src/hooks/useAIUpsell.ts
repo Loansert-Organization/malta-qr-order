@@ -8,9 +8,20 @@ interface Suggestion {
   description: string;
 }
 
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  barId: string;
+  barName: string;
+  image_url?: string;
+  volume?: string;
+}
+
 export const useAIUpsell = (
   barId: string,
-  cart: any[],
+  cart: CartItem[],
   idle: boolean
 ) => {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -360,8 +359,8 @@ class ICUPAProductionSystem {
   // Support service wrapper
   getSupport() {
     return {
-      createTicket: async (ticketData: any): Promise<string> => {
-        return this.createSupportTicket(ticketData);
+      createTicket: async (ticketData: Record<string, unknown>): Promise<string> => {
+        return this.createSupportTicket(ticketData as Omit<SupportTicket, 'id' | 'created_at' | 'updated_at'>);
       },
       updateTicketStatus: async (ticketId: string, status: SupportTicket['status']): Promise<void> => {
         await supabase
@@ -377,7 +376,7 @@ class ICUPAProductionSystem {
     console.log('Initializing production environment...');
   }
 
-  async recordSystemMetric(name: string, value: number, tags?: Record<string, any>): Promise<void> {
+  async recordSystemMetric(name: string, value: number, tags?: Record<string, unknown>): Promise<void> {
     try {
       await supabase
         .from('system_metrics')

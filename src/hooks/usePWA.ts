@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 interface PWAInstallPrompt {
@@ -26,14 +25,14 @@ export const usePWA = (): PWAHook => {
     // Check if app is already installed
     const checkInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isInWebAppiOS = (window.navigator as any).standalone === true;
+      const isInWebAppiOS = (window.navigator as unknown as { standalone?: boolean }).standalone === true;
       setIsInstalled(isStandalone || isInWebAppiOS);
     };
 
     // Handle beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as any);
+      setDeferredPrompt(e as unknown as PWAInstallPrompt);
       setIsInstallable(true);
       
       // Show install prompt after a delay if not installed

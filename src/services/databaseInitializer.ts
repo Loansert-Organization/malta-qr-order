@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { googleMapsService } from './googleMapsIntegration';
 
 export class DatabaseInitializer {
-  async initializeCompleteBackend(): Promise<{ success: boolean; details: any }> {
+  async initializeCompleteBackend(): Promise<{ success: boolean; details: unknown }> {
     console.log('🚀 Initializing complete backend database integration...');
     
     const results = {
@@ -121,7 +121,7 @@ export class DatabaseInitializer {
     }
   }
 
-  async testBackendIntegration(): Promise<{ success: boolean; tests: any }> {
+  async testBackendIntegration(): Promise<{ success: boolean; tests: unknown }> {
     const tests = {
       database_connection: false,
       bars_table: false,

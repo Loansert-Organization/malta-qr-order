@@ -189,19 +189,38 @@ export const clearCart = async (sessionId: string) => {
   }
 };
 
-// Helper: create order from cart
-export const createOrder = async (sessionId: string, customerInfo: {
+interface CartItem {
+  id: string;
+  qty: number;
+  menu_items: {
+    price_local: number;
+    currency: string;
+  };
+}
+
+interface CustomerInfo {
   name?: string;
   phone?: string;
   tableNumber?: string;
   specialRequests?: string;
-}) => {
+}
+
+interface EdgeFunctionPayload {
+  message?: string;
+  sessionId?: string;
+  cartItems?: CartItem[];
+  queryType?: string;
+  [key: string]: string | CartItem[] | undefined;
+}
+
+// Helper: create order from cart
+export const createOrder = async (sessionId: string, customerInfo: CustomerInfo) => {
   const { data: cart } = await fetchCart(sessionId);
   if (!cart || !cart.cart_items || cart.cart_items.length === 0) {
     throw new Error('Cart is empty');
   }
 
-  const total = cart.cart_items.reduce((sum: number, item: any) => 
+  const total = cart.cart_items.reduce((sum: number, item: CartItem) => 
     sum + (item.qty * item.menu_items.price_local), 0
   );
 
@@ -244,7 +263,7 @@ export const fetchOrders = (sessionId: string) => {
 };
 
 // Edge function helpers
-export const callEdgeFunction = async (functionName: string, payload: any) => {
+export const callEdgeFunction = async (functionName: string, payload: EdgeFunctionPayload) => {
   const response = await fetch(
     `${supabase.supabaseUrl}/functions/v1/${functionName}`,
     {
@@ -266,7 +285,7 @@ export const callEdgeFunction = async (functionName: string, payload: any) => {
 };
 
 // AI Sommelier helper
-export const askAISommelier = (message: string, cartItems: any[] = []) => {
+export const askAISommelier = (message: string, cartItems: CartItem[] = []) => {
   return callEdgeFunction('ai-sommelier', {
     message,
     sessionId: getSessionId(),

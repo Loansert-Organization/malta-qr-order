@@ -15,6 +15,22 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface CleanupDetails {
+  duplicate_groups?: Array<{
+    bars: Array<{
+      id: string;
+      name: string;
+      address: string;
+    }>;
+    kept_bar: string;
+  }>;
+  sample_bars_with_images?: Array<{
+    id: string;
+    name: string;
+    photo_url: string;
+  }>;
+}
+
 interface CleanupResult {
   success: boolean;
   duplicates_removed: number;
@@ -22,7 +38,7 @@ interface CleanupResult {
   images_restored: number;
   remaining_bars: number;
   bars_with_images: number;
-  details?: any;
+  details?: CleanupDetails;
 }
 
 const BarsCleanupTool = () => {
@@ -43,7 +59,7 @@ const BarsCleanupTool = () => {
       }, 500);
 
       toast({
-        title: "�� Starting Cleanup",
+        title: "Starting Cleanup",
         description: "Removing duplicates and restoring images...",
       });
 

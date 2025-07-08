@@ -1,11 +1,16 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Zap, MapPin, Clock } from 'lucide-react';
 
+interface Vendor {
+  name: string;
+  logo_url?: string;
+  location?: string;
+}
+
 interface HeaderProps {
-  vendor: any;
+  vendor: Vendor;
   onAIWaiterClick: () => void;
   onAIVerificationClick: () => void;
 }

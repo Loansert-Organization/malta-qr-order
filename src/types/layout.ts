@@ -1,3 +1,4 @@
+import { UnknownRecord } from '@/types/utilities';
 
 export interface LayoutContext {
   vendor_id: string;
@@ -11,7 +12,7 @@ export interface LayoutContext {
     favorite_categories?: string[];
     price_sensitivity?: 'low' | 'medium' | 'high';
   };
-  order_history?: any[];
+  order_history?: UnknownRecord[];
 }
 
 export interface DynamicLayout {
@@ -44,7 +45,7 @@ export interface DynamicLayout {
 export interface AIRouterRequest {
   model: string;
   task: string;
-  context: any;
+  context: UnknownRecord;
   prompt: string;
   config: {
     temperature: number;

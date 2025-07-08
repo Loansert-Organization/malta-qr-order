@@ -173,6 +173,14 @@ const MALTA_BARS = [
   "CUBA Restaurant, Shoreline Mall, Kalkara"
 ];
 
+interface ExtractionResult {
+  bar: string;
+  status: 'matched' | 'not_found';
+  matched_name?: string;
+  items?: number;
+  reason?: string;
+}
+
 async function runWoltExtraction() {
   console.log('🚀 Starting Wolt Malta menu extraction...');
   console.log(`📋 Processing ${MALTA_BARS.length} bars\n`);
@@ -224,7 +232,7 @@ async function runWoltExtraction() {
       matchedBars: 0,
       unmatchedBars: 0,
       totalMenuItems: 0,
-      details: [] as any[]
+      details: [] as ExtractionResult[]
     };
 
     for (let i = 0; i < MALTA_BARS.length; i += batchSize) {

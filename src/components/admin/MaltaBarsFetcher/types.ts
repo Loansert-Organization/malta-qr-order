@@ -1,4 +1,3 @@
-
 export interface Bar {
   id: string;
   name: string;
@@ -51,3 +50,70 @@ export interface HealthMetrics {
 }
 
 export type TabType = 'bars' | 'logs' | 'scheduling' | 'health' | 'management' | 'testing' | 'analytics';
+
+export interface BarData {
+  id: string;
+  name: string;
+  address: string;
+  phone?: string;
+  website?: string;
+  rating?: number;
+  user_ratings_total?: number;
+  types?: string[];
+  photos?: string[];
+  place_id: string;
+  geometry: {
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  formatted_address: string;
+  international_phone_number?: string;
+  opening_hours?: {
+    open_now: boolean;
+    weekday_text?: string[];
+  };
+  price_level?: number;
+  reviews?: Array<{
+    author_name: string;
+    rating: number;
+    text: string;
+    time: number;
+  }>;
+}
+
+export interface GoogleMapsResponse {
+  results: BarData[];
+  status: string;
+  next_page_token?: string;
+}
+
+export interface FetchBarsParams {
+  query: string;
+  location?: string;
+  radius?: number;
+  type?: string;
+  maxResults?: number;
+}
+
+export interface BarFetchResult {
+  success: boolean;
+  data?: BarData[];
+  error?: string;
+  totalResults?: number;
+  error_details?: { message: string; code?: string; stack?: string };
+}
+
+export interface BarProcessingOptions {
+  includePhotos: boolean;
+  includeReviews: boolean;
+  includeOpeningHours: boolean;
+  maxPhotos?: number;
+  maxReviews?: number;
+  config?: {
+    apiKey?: string;
+    language?: string;
+    region?: string;
+  };
+}

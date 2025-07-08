@@ -151,7 +151,7 @@ class ProductionAuditService {
       for (const tableName of criticalTables) {
         try {
           const { count, error } = await supabase
-            .from(tableName as any)
+            .from(tableName as unknown)
             .select('*', { count: 'exact', head: true });
 
           if (error) {

@@ -2,17 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Vendor, MenuItem, CartItem } from './useOrderDemo/types';
 import { Json } from '@/integrations/supabase/types';
+import { 
+  isArray, 
+  isString, 
+  safeArray, 
+  UnknownRecord,
+  UnknownValue 
+} from '@/types/utilities';
 
 // Transform function to convert database JSON to proper types
-const transformMenuItem = (dbItem: any): MenuItem => {
+const transformMenuItem = (dbItem: UnknownRecord): MenuItem => {
   let allergens: string[] = [];
   
-  if (Array.isArray(dbItem.allergens)) {
+  if (isArray(dbItem.allergens)) {
     allergens = dbItem.allergens as string[];
-  } else if (typeof dbItem.allergens === 'string') {
+  } else if (isString(dbItem.allergens)) {
     try {
       const parsed = JSON.parse(dbItem.allergens);
-      allergens = Array.isArray(parsed) ? parsed : [];
+      allergens = isArray(parsed) ? parsed : [];
     } catch {
       allergens = [];
     }
@@ -21,26 +28,56 @@ const transformMenuItem = (dbItem: any): MenuItem => {
   }
 
   return {
-    id: dbItem.id,
-    name: dbItem.name,
-    description: dbItem.description,
-    price: dbItem.price,
-    image_url: dbItem.image_url,
-    category: dbItem.category,
-    subcategory: dbItem.subcategory,
-    popular: dbItem.popular,
-    prep_time: dbItem.prep_time,
-    available: dbItem.available,
-    is_vegetarian: dbItem.is_vegetarian,
+    id: dbItem.id as string,
+    name: dbItem.name as string,
+    description: dbItem.description as string,
+    price: dbItem.price as number,
+    image_url: dbItem.image_url as string,
+    category: dbItem.category as string,
+    subcategory: dbItem.subcategory as string,
+    popular: dbItem.popular as boolean,
+    prep_time: dbItem.prep_time as string,
+    available: dbItem.available as boolean,
+    is_vegetarian: dbItem.is_vegetarian as boolean,
     allergens
   };
 };
 
 interface OrderDemoState {
-  vendor: Vendor | Record<string, unknown> | null;
-  menuItems: MenuItem[] | Record<string, unknown>[];
+  vendor: Vendor | UnknownRecord | null;
+  menuItems: MenuItem[] | UnknownRecord[];
   loading: boolean;
   error: string | null;
+}
+
+interface WeatherData {
+  temperature?: number;
+  condition?: string;
+  humidity?: number;
+  windSpeed?: number;
+}
+
+interface LayoutSection {
+  id: string;
+  title: string;
+  items: MenuItem[];
+}
+
+interface LayoutData {
+  heroSection: {
+    title: string;
+    subtitle: string;
+    ctaText: string;
+    backgroundImage: string | null;
+  };
+  sections: LayoutSection[];
+}
+
+interface ContextData {
+  timeOfDay: string;
+  isHappyHour: boolean;
+  location: string;
+  weather: string;
 }
 
 export const useOrderDemo = (vendorSlug?: string) => {
@@ -53,7 +90,7 @@ export const useOrderDemo = (vendorSlug?: string) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [layoutLoading, setLayoutLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [weatherData, setWeatherData] = useState<any>(null);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [guestSessionId] = useState(() => {
     const existing = localStorage.getItem('icupa_guest_session');
     if (existing) return existing;
@@ -64,7 +101,7 @@ export const useOrderDemo = (vendorSlug?: string) => {
   });
 
   // Layout and context data
-  const [layout, setLayout] = useState({
+  const [layout, setLayout] = useState<LayoutData>({
     heroSection: {
       title: "Welcome to Great Food!",
       subtitle: "Discover amazing dishes crafted with love",
@@ -78,7 +115,7 @@ export const useOrderDemo = (vendorSlug?: string) => {
     ]
   });
 
-  const [contextData, setContextData] = useState({
+  const [contextData, setContextData] = useState<ContextData>({
     timeOfDay: 'evening',
     isHappyHour: false,
     location: 'Malta',
@@ -121,7 +158,7 @@ export const useOrderDemo = (vendorSlug?: string) => {
 
       setState({
         vendor,
-        menuItems: menuItems || [],
+        menuItems: safeArray(menuItems, []),
         loading: false,
         error: null
       });
@@ -204,10 +241,11 @@ export const useOrderDemo = (vendorSlug?: string) => {
     cart,
     layoutLoading,
     searchQuery,
-    layout,
     weatherData,
-    contextData,
     guestSessionId,
+    layout,
+    contextData,
+    refreshData,
     handleSearch,
     handleHeroCtaClick,
     addToCart,
@@ -216,6 +254,8 @@ export const useOrderDemo = (vendorSlug?: string) => {
     clearCart,
     getTotalPrice,
     getTotalItems,
-    refreshData
+    setLayout,
+    setContextData,
+    setWeatherData
   };
 };

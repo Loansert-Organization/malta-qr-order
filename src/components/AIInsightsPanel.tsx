@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +13,43 @@ interface AIInsight {
   confidence: number;
 }
 
+interface ContextData {
+  userBehavior?: {
+    preferences: string[];
+    orderHistory: Array<{
+      id: string;
+      items: string[];
+      total: number;
+      date: string;
+    }>;
+    favoriteItems: string[];
+  };
+  marketTrends?: {
+    popularItems: string[];
+    seasonalTrends: string[];
+    priceChanges: Array<{
+      item: string;
+      oldPrice: number;
+      newPrice: number;
+    }>;
+  };
+  systemMetrics?: {
+    performance: {
+      loadTime: number;
+      errorRate: number;
+      uptime: number;
+    };
+    usage: {
+      activeUsers: number;
+      ordersPerHour: number;
+      peakHours: string[];
+    };
+  };
+}
+
 interface AIInsightsPanelProps {
   vendorId: string;
-  contextData: any;
+  contextData: ContextData;
   onInsightClick: (insight: AIInsight) => void;
 }
 

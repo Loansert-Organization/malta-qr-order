@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ErrorContext {
@@ -12,7 +11,7 @@ export interface ErrorContext {
   method?: string;
   statusCode?: number;
   success?: boolean;
-  additionalData?: Record<string, any>;
+  additionalData?: Record<string, unknown>;
 }
 
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
@@ -130,7 +129,7 @@ class ErrorTrackingService {
     }
   }
 
-  async getErrorStats(days: number = 7): Promise<any> {
+  async getErrorStats(days: number = 7): Promise<unknown> {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
@@ -156,7 +155,7 @@ class ErrorTrackingService {
   }
 
   async resolveError(errorId: string, notes?: string): Promise<void> {
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       resolved: true,
       resolved_at: new Date().toISOString()
     };

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,7 +27,7 @@ interface ItemModifierModalProps {
   item: MenuItem | null;
   isOpen: boolean;
   onClose: () => void;
-  onAddToCart: (item: MenuItem, modifiers: any[], quantity: number) => void;
+  onAddToCart: (item: MenuItem, modifiers: Array<{ id: string; value: unknown }>, quantity: number) => void;
 }
 
 const ItemModifierModal: React.FC<ItemModifierModalProps> = ({
@@ -37,12 +36,12 @@ const ItemModifierModal: React.FC<ItemModifierModalProps> = ({
   onClose,
   onAddToCart
 }) => {
-  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, any>>({});
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, unknown>>({});
   const [quantity, setQuantity] = useState(1);
 
   if (!item) return null;
 
-  const handleModifierChange = (modifierId: string, value: any) => {
+  const handleModifierChange = (modifierId: string, value: unknown) => {
     setSelectedModifiers(prev => ({
       ...prev,
       [modifierId]: value

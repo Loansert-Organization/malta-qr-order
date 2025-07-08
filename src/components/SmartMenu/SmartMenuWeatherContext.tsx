@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 
 export interface WeatherData {
@@ -8,10 +7,39 @@ export interface WeatherData {
   windSpeed?: number;
 }
 
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  image_url?: string;
+  available: boolean;
+  weatherTags?: string[];
+  seasonal?: boolean;
+}
+
+interface WeatherContextData {
+  userPreferences?: {
+    temperature: 'hot' | 'cold' | 'moderate';
+    weatherConditions: string[];
+    seasonalPreferences: string[];
+  };
+  locationData?: {
+    city: string;
+    country: string;
+    timezone: string;
+  };
+  historicalData?: {
+    seasonalTrends: string[];
+    popularItems: string[];
+  };
+}
+
 interface SmartMenuWeatherContextProps {
   weatherData: WeatherData;
-  contextData?: any;
-  menuItems?: any[];
+  contextData?: WeatherContextData;
+  menuItems?: MenuItem[];
 }
 
 export const SmartMenuWeatherContext = ({ weatherData, contextData, menuItems }: SmartMenuWeatherContextProps) => {

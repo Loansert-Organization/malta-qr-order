@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 interface BackupManifest {
@@ -31,7 +30,7 @@ class BackupService {
     for (const table of this.BACKUP_TABLES) {
       try {
         const { data, error } = await supabase
-          .from(table as any)
+          .from(table as unknown)
           .select('*');
 
         if (error) {
@@ -146,7 +145,7 @@ class BackupService {
     }
   }
 
-  private generateChecksum(data: any): string {
+  private generateChecksum(data: unknown): string {
     return btoa(JSON.stringify(data)).slice(0, 16);
   }
 

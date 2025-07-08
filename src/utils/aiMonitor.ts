@@ -3,7 +3,7 @@ interface AIError {
   timestamp: string;
   component: string;
   error: string;
-  context?: any;
+  context?: Record<string, unknown>;
   severity: 'low' | 'medium' | 'high' | 'critical';
   resolved: boolean;
 }
@@ -12,7 +12,7 @@ class AIMonitor {
   private errors: AIError[] = [];
   private maxErrors = 100;
 
-  logError(component: string, error: Error, context?: any) {
+  logError(component: string, error: Error, context?: Record<string, unknown>) {
     const aiError: AIError = {
       id: `ai-error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
@@ -110,12 +110,12 @@ class AIMonitor {
 export const aiMonitor = new AIMonitor();
 
 // Convenience function for components
-export const logAIError = (component: string, error: Error, context?: any) => {
+export const logAIError = (component: string, error: Error, context?: Record<string, unknown>) => {
   aiMonitor.logError(component, error, context);
 };
 
 // React error boundary helper
-export const handleComponentError = (error: Error, errorInfo: any, componentName: string) => {
+export const handleComponentError = (error: Error, errorInfo: Record<string, unknown>, componentName: string) => {
   logAIError(componentName, error, { errorInfo });
 };
 

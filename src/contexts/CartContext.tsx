@@ -32,6 +32,9 @@ interface Bar {
   currency?: string;
 }
 
+// Union type for addToCart parameter
+type AddToCartItem = MenuItem | CartItem;
+
 interface CartContextType {
   // Legacy alias for backward compatibility
   cart: CartItem[];
@@ -39,7 +42,7 @@ interface CartContextType {
   items: CartItem[];
   currentBar: Bar | null;
   // Legacy signature for existing components (MenuItem + Bar)
-  addToCart: (item: any, bar?: Bar) => void;
+  addToCart: (item: AddToCartItem, bar?: Bar) => void;
   // Preferred signature used by new components
   updateQuantity: (itemId: string, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
@@ -111,7 +114,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   }, [currentBar]);
 
   // Overloaded addToCart: supports both legacy (item, bar) and new (CartItem)
-  const addToCart = (itemOrCartItem: any, bar?: Bar) => {
+  const addToCart = (itemOrCartItem: AddToCartItem, bar?: Bar) => {
     // Determine if it's legacy call or new call
     let item: CartItem;
     if (bar) {
@@ -224,15 +227,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     getItemQuantity,
     getCartItemCount,
     isLoading
-  } as any;
+  };
 
   return (
-    <CartContext.Provider value={{
-      ...value,
-      // legacy aliases
-      getCartTotal: getTotalPrice,
-      getCartItemCount: value.getCartItemCount
-    } as any}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

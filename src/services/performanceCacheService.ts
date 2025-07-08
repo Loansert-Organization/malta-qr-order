@@ -1,9 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
-interface CacheEntry {
+interface CacheEntry<T = unknown> {
   key: string;
-  data: any;
+  data: T;
   timestamp: number;
   ttl: number; // Time to live in milliseconds
 }
@@ -16,7 +15,7 @@ class PerformanceCacheService {
     return Date.now() - entry.timestamp > entry.ttl;
   }
 
-  set(key: string, data: any, ttl: number = this.DEFAULT_TTL): void {
+  set<T = unknown>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
     this.cache.set(key, {
       key,
       data,
@@ -25,19 +24,16 @@ class PerformanceCacheService {
     });
   }
 
-  get(key: string): any | null {
+  get<T = unknown>(key: string): T | null {
     const entry = this.cache.get(key);
-    
     if (!entry) {
       return null;
     }
-
     if (this.isExpired(entry)) {
       this.cache.delete(key);
       return null;
     }
-
-    return entry.data;
+    return entry.data as T;
   }
 
   async getOrFetch<T>(
@@ -45,14 +41,12 @@ class PerformanceCacheService {
     fetchFn: () => Promise<T>,
     ttl: number = this.DEFAULT_TTL
   ): Promise<T> {
-    const cached = this.get(key);
-    
+    const cached = this.get<T>(key);
     if (cached !== null) {
       return cached;
     }
-
     const data = await fetchFn();
-    this.set(key, data, ttl);
+    this.set<T>(key, data, ttl);
     return data;
   }
 

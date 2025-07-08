@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,10 +14,22 @@ import {
   ShoppingCart
 } from 'lucide-react';
 
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image_url?: string;
+  popular?: boolean;
+  dietary_tags?: string[];
+  available: boolean;
+}
+
 interface MenuBrowsePageProps {
-  menuItems: any[];
+  menuItems: MenuItem[];
   categories: string[];
-  onAddToCart: (item: any) => void;
+  onAddToCart: (item: MenuItem) => void;
   onBack: () => void;
   cartItemsCount: number;
   searchQuery: string;

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { LayoutContext, DynamicLayout, AIRouterRequest } from '@/types/layout';
 import { vendorConfigService } from './vendorConfigService';
@@ -17,7 +16,7 @@ class LayoutGeneratorService {
     return data;
   }
 
-  buildLayoutPrompt(context: LayoutContext, vendorConfig: any): string {
+  buildLayoutPrompt(context: LayoutContext, vendorConfig: Record<string, unknown>): string {
     let prompt = `Generate a dynamic menu layout for a restaurant in Malta. Current context:
 - Time: ${context.time_of_day} on ${context.day_of_week}
 - Location: ${context.location || 'Malta'}`;

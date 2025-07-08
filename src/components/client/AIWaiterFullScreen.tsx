@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,20 +13,40 @@ import {
   Sparkles,
   Plus
 } from 'lucide-react';
+import { UnknownRecord } from '@/types/utilities';
+
+interface MenuItem {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+}
+
+interface Suggestion {
+  text?: string;
+  category?: string;
+  id?: number;
+  name?: string;
+  price?: number;
+}
 
 interface Message {
   id: string;
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
-  suggestions?: any[];
+  suggestions?: Suggestion[];
+}
+
+interface VendorData {
+  business_name?: string;
 }
 
 interface AIWaiterFullScreenProps {
   onBack: () => void;
-  onAddToCart: (item: any) => void;
-  vendorData: any;
-  menuItems: any[];
+  onAddToCart: (item: MenuItem) => void;
+  vendorData: VendorData;
+  menuItems: MenuItem[];
 }
 
 const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
@@ -112,7 +131,7 @@ const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
     }
   };
 
-  const generateAIResponse = async (userInput: string): Promise<{text: string, suggestions?: any[]}> => {
+  const generateAIResponse = async (userInput: string): Promise<{text: string, suggestions?: Suggestion[]}> => {
     // Mock AI responses based on user input
     const input = userInput.toLowerCase();
     
@@ -159,18 +178,18 @@ const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
     };
   };
 
-  const handleSuggestionClick = (suggestion: any) => {
+  const handleSuggestionClick = (suggestion: Suggestion) => {
     if (suggestion.id) {
       // It's a menu item suggestion
       const message = `Tell me more about the ${suggestion.name}`;
       sendMessage(message);
     } else {
       // It's a text suggestion
-      sendMessage(suggestion.text);
+      sendMessage(suggestion.text || '');
     }
   };
 
-  const handleAddToCart = (item: any) => {
+  const handleAddToCart = (item: MenuItem) => {
     onAddToCart(item);
     
     const confirmMessage: Message = {
@@ -190,7 +209,7 @@ const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
 
   const startVoiceRecognition = () => {
     if ('webkitSpeechRecognition' in window) {
-      const recognition = new (window as any).webkitSpeechRecognition();
+      const recognition = new (window as UnknownRecord).webkitSpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'en-US';
@@ -199,7 +218,7 @@ const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
         setIsListening(true);
       };
       
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInputMessage(transcript);
         setIsListening(false);
@@ -290,11 +309,11 @@ const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
                           <div className="flex items-center justify-between">
                             <div>
                               <h4 className="font-medium text-white">{suggestion.name}</h4>
-                              <p className="text-green-400 text-sm">€{suggestion.price.toFixed(2)}</p>
+                              <p className="text-green-400 text-sm">€{suggestion.price?.toFixed(2) || ''}</p>
                             </div>
                             <Button
                               size="sm"
-                              onClick={() => handleAddToCart(suggestion)}
+                              onClick={() => handleAddToCart(suggestion as MenuItem)}
                               className="bg-blue-600 hover:bg-blue-700"
                             >
                               <Plus className="h-3 w-3 mr-1" />
@@ -308,10 +327,10 @@ const AIWaiterFullScreen: React.FC<AIWaiterFullScreenProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSuggestionClick(suggestion)}
+                        onClick={() => handleSuggestionClick(suggestion as Suggestion)}
                         className="text-gray-300 border-gray-600 hover:bg-gray-700"
                       >
-                        {suggestion.text}
+                        {suggestion.text || ''}
                       </Button>
                     )}
                   </div>

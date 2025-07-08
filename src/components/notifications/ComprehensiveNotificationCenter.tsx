@@ -27,20 +27,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface NotificationMetadata {
+  orderId?: string;
+  barId?: string;
+  itemId?: string;
+  action?: string;
+  timestamp?: string;
+  priority?: 'low' | 'medium' | 'high';
+  category?: 'order' | 'payment' | 'system' | 'promo';
+}
+
+type NotificationType = 'info' | 'success' | 'warning' | 'error' | 'order' | 'promo' | 'system' | 'payment';
+
 interface Notification {
   id: string;
   title: string;
-  body: string;
-  type: 'order' | 'promotion' | 'system' | 'payment' | 'reminder';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'unread' | 'read' | 'archived';
-  timestamp: string;
-  actionUrl?: string;
-  actionText?: string;
-  metadata?: Record<string, any>;
-  icon?: string;
-  image?: string;
-  soundEnabled?: boolean;
+  message: string;
+  type: NotificationType;
+  timestamp: Date;
+  read: boolean;
+  metadata?: NotificationMetadata;
 }
 
 interface Promotion {
@@ -154,13 +160,10 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
       const promoNotifications: Notification[] = promotions.map(promo => ({
         id: `promo-${promo.id}`,
         title: `🎉 ${promo.title}`,
-        body: promo.description,
-        type: 'promotion',
-        priority: 'medium',
-        status: 'unread',
-        timestamp: new Date().toISOString(),
-        icon: '🎉',
-        actionText: 'View Offer',
+        message: promo.description,
+        type: 'promo',
+        timestamp: new Date(),
+        read: false,
         metadata: { 
           promotionId: promo.id,
           discount: promo.discount_percentage || promo.discount_amount,
@@ -202,14 +205,10 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
         return {
           id: `order-${order.id}`,
           title: 'Order Update',
-          body: statusMessages[order.status],
-          type: 'order' as const,
-          priority: priorities[order.status],
-          status: 'unread' as const,
-          timestamp: order.updated_at,
-          icon: order.status === 'ready' ? '🔔' : '🍽️',
-          actionText: 'View Order',
-          actionUrl: `/orders/${order.id}`,
+          message: statusMessages[order.status],
+          type: 'order',
+          timestamp: new Date(order.updated_at),
+          read: false,
           metadata: {
             orderId: order.id,
             status: order.status,
@@ -253,13 +252,10 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
           {
             id: '1',
             title: 'Welcome to ICUPA! 🎉',
-            body: 'Your notification center is ready. Order updates and promotions will appear here.',
+            message: 'Your notification center is ready. Order updates and promotions will appear here.',
             type: 'system',
-            priority: 'medium',
-            status: 'unread',
-            timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-            icon: '🚀',
-            soundEnabled: false,
+            timestamp: new Date(Date.now() - 5 * 60 * 1000),
+            read: false,
             metadata: { setupStatus: 'complete' }
           }
         ];
@@ -269,15 +265,10 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
         const transformedNotifications: Notification[] = realNotifications.map(dbNotif => ({
           id: dbNotif.id,
           title: dbNotif.title,
-          body: dbNotif.body,
-          type: dbNotif.type as any,
-          priority: (dbNotif.priority || 'medium') as any,
-          status: dbNotif.read_at ? 'read' : 'unread',
-          timestamp: dbNotif.created_at,
-          actionUrl: dbNotif.action_url,
-          actionText: dbNotif.action_text || 'View',
-          icon: dbNotif.icon,
-          soundEnabled: true,
+          message: dbNotif.body,
+          type: dbNotif.type as NotificationType,
+          timestamp: new Date(dbNotif.created_at),
+          read: dbNotif.read_at ? true : false,
           metadata: dbNotif.metadata || {}
         }));
 
@@ -337,14 +328,10 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
       const orderNotification: Notification = {
         id: `realtime-order-${order.id}`,
         title: 'Order Update',
-        body: `Your order status: ${order.status}`,
+        message: `Your order status: ${order.status}`,
         type: 'order',
-        priority: order.status === 'ready' ? 'high' : 'medium',
-        status: 'unread',
-        timestamp: new Date().toISOString(),
-        icon: order.status === 'ready' ? '🔔' : '🍽️',
-        actionText: 'View Order',
-        actionUrl: `/orders/${order.id}`,
+        timestamp: new Date(),
+        read: false,
         metadata: { orderId: order.id, status: order.status },
         soundEnabled: order.status === 'ready'
       };
@@ -382,7 +369,7 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
   const markAsRead = (notificationId: string) => {
     setNotifications(prev =>
       prev.map(notif =>
-        notif.id === notificationId ? { ...notif, status: 'read' } : notif
+        notif.id === notificationId ? { ...notif, read: true } : notif
       )
     );
   };
@@ -390,7 +377,7 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
   const markAsUnread = (notificationId: string) => {
     setNotifications(prev =>
       prev.map(notif =>
-        notif.id === notificationId ? { ...notif, status: 'unread' } : notif
+        notif.id === notificationId ? { ...notif, read: false } : notif
       )
     );
   };
@@ -401,7 +388,7 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
 
   const markAllAsRead = () => {
     setNotifications(prev =>
-      prev.map(notif => ({ ...notif, status: 'read' as const }))
+      prev.map(notif => ({ ...notif, read: true }))
     );
   };
 
@@ -410,25 +397,23 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
   };
 
   const filteredNotifications = notifications.filter(notif => {
-    if (activeTab === 'unread' && notif.status !== 'unread') return false;
+    if (activeTab === 'unread' && notif.read) return false;
     if (filter !== 'all' && notif.type !== filter) return false;
     return true;
   });
 
-  const unreadCount = notifications.filter(n => n.status === 'unread').length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const getNotificationIcon = (notification: Notification) => {
-    if (notification.icon) return notification.icon;
+    if (notification.metadata?.icon) return notification.metadata.icon;
     
     switch (notification.type) {
       case 'order':
         return <ShoppingCart className="h-5 w-5 text-blue-600" />;
-      case 'promotion':
+      case 'promo':
         return <Gift className="h-5 w-5 text-green-600" />;
       case 'payment':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case 'reminder':
-        return <Clock className="h-5 w-5 text-orange-600" />;
       case 'system':
         return <Info className="h-5 w-5 text-blue-600" />;
       default:
@@ -449,15 +434,14 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
+  const formatTimestamp = (timestamp: Date) => {
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor((now.getTime() - timestamp.getTime()) / (1000 * 60));
 
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleDateString();
+    return timestamp.toLocaleDateString();
   };
 
   const updateSettings = (key: keyof NotificationSettings, value: any) => {
@@ -557,7 +541,7 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className={`border-l-4 rounded-lg p-4 ${getPriorityColor(notification.priority)}`}
+                        className={`border-l-4 rounded-lg p-4 ${getPriorityColor(notification.metadata?.priority || 'medium')}`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-3 flex-1">
@@ -573,13 +557,13 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                                 <Badge variant="outline" className="text-xs">
                                   {notification.type}
                                 </Badge>
-                                {notification.status === 'unread' && (
+                                {notification.read && (
                                   <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                                 )}
                               </div>
                               
                               <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                                {notification.body}
+                                {notification.message}
                               </p>
                               
                               <div className="flex items-center justify-between mt-2">
@@ -588,14 +572,14 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                                 </span>
                                 
                                 <div className="flex items-center space-x-2">
-                                  {notification.actionUrl && (
+                                  {notification.metadata?.orderId && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       className="text-xs"
-                                      onClick={() => window.location.href = notification.actionUrl!}
+                                      onClick={() => window.location.href = `/orders/${notification.metadata.orderId}`}
                                     >
-                                      {notification.actionText}
+                                      View Order
                                     </Button>
                                   )}
                                   
@@ -603,13 +587,13 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => 
-                                      notification.status === 'read' 
+                                      notification.read 
                                         ? markAsUnread(notification.id)
                                         : markAsRead(notification.id)
                                     }
                                     className="text-xs"
                                   >
-                                    {notification.status === 'read' ? (
+                                    {notification.read ? (
                                       <MarkAsUnread className="h-3 w-3" />
                                     ) : (
                                       <Check className="h-3 w-3" />
@@ -658,7 +642,7 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className={`border-l-4 rounded-lg p-4 ${getPriorityColor(notification.priority)}`}
+                        className={`border-l-4 rounded-lg p-4 ${getPriorityColor(notification.metadata?.priority || 'medium')}`}
                       >
                         {/* Same content as "all" tab */}
                         <div className="flex items-start justify-between">
@@ -679,7 +663,7 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                               </div>
                               
                               <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                                {notification.body}
+                                {notification.message}
                               </p>
                               
                               <div className="flex items-center justify-between mt-2">
@@ -688,14 +672,14 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                                 </span>
                                 
                                 <div className="flex items-center space-x-2">
-                                  {notification.actionUrl && (
+                                  {notification.metadata?.orderId && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       className="text-xs"
-                                      onClick={() => window.location.href = notification.actionUrl!}
+                                      onClick={() => window.location.href = `/orders/${notification.metadata.orderId}`}
                                     >
-                                      {notification.actionText}
+                                      View Order
                                     </Button>
                                   )}
                                   
@@ -821,13 +805,11 @@ const ComprehensiveNotificationCenter: React.FC<ComprehensiveNotificationCenterP
                         const testNotification: Notification = {
                           id: Date.now().toString(),
                           title: 'Test Notification 🧪',
-                          body: 'This is a test to check your notification settings',
+                          message: 'This is a test to check your notification settings',
                           type: 'system',
-                          priority: 'medium',
-                          status: 'unread',
-                          timestamp: new Date().toISOString(),
-                          icon: '🧪',
-                          soundEnabled: true
+                          timestamp: new Date(),
+                          read: false,
+                          metadata: {}
                         };
                         
                         setNotifications(prev => [testNotification, ...prev]);
@@ -865,7 +847,7 @@ export const useNotificationBadge = (notifications: Notification[]) => {
   const [unseenCount, setUnseenCount] = useState(0);
   
   useEffect(() => {
-    const unreadCount = notifications.filter(n => n.status === 'unread').length;
+    const unreadCount = notifications.filter(n => !n.read).length;
     setUnseenCount(unreadCount);
   }, [notifications]);
   

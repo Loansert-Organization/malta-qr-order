@@ -1,16 +1,16 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { DynamicLayout } from '@/types/layout';
 import { useLayoutInitialization } from './useLayoutInitialization';
 import { useRealTimeSubscriptions } from './useRealTimeSubscriptions';
 import { useLayoutActions } from './useLayoutActions';
 import { DynamicLayoutHookReturn } from './types';
+import { UnknownRecord } from '@/types/utilities';
 
 export const useDynamicLayout = (vendorId: string): DynamicLayoutHookReturn => {
   const [layout, setLayout] = useState<DynamicLayout | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [contextData, setContextData] = useState<any>(null);
+  const [contextData, setContextData] = useState<UnknownRecord | null>(null);
   const [isRealTimeActive, setIsRealTimeActive] = useState(false);
 
   // Initialize layout functionality

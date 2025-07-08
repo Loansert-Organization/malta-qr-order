@@ -355,7 +355,7 @@ const MainContent: React.FC<MainContentProps> = ({
         showAIVerification={showAIVerification}
         onCloseAIWaiter={() => setShowAIWaiter(false)}
         onCloseAIVerification={() => setShowAIVerification(false)}
-        onAddToCart={(item: any) => handleAddToCart(item)}
+        onAddToCart={(item: MenuItem) => handleAddToCart(item)}
         vendorId={vendor.id}
         vendorName={vendor.name}
         guestSessionId={guestSessionId}

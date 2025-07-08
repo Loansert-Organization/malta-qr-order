@@ -1,15 +1,29 @@
-
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AIErrorBoundary } from '@/components/ErrorBoundaries/AIErrorBoundary';
 import { useAIService } from '@/hooks/useAIService';
 import { useSession } from '@/providers/ConsolidatedSessionProvider';
 import MaltaAIWaiterChat from './MaltaAIWaiterChat';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { X, Send, Bot, User } from 'lucide-react';
+
+interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  image_url?: string;
+  available: boolean;
+}
 
 interface SafeAIWaiterChatProps {
   vendorSlug: string;
-  menuItems?: any[];
+  menuItems?: MenuItem[];
   onClose?: () => void;
-  onAddToCart: (item: any) => void;
+  onAddToCart: (item: MenuItem) => void;
 }
 
 const SafeAIWaiterChat: React.FC<SafeAIWaiterChatProps> = ({ 

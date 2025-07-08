@@ -113,7 +113,7 @@ export class GoogleMapsIntegrationService {
     }
   }
 
-  async initializeDatabaseWithBars(): Promise<{ success: boolean; details: any }> {
+  async initializeDatabaseWithBars(): Promise<{ success: boolean; details: unknown }> {
     try {
       const result = await this.addSampleMaltaBars();
       

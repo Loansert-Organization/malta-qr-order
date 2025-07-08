@@ -47,7 +47,7 @@ export class WoltMenuExtractor {
       const response = await fetch('/api/wolt-proxy/restaurants');
       const data = await response.json();
       
-      return data.restaurants.map((r: any) => ({
+      return data.restaurants.map((r: WoltRestaurant) => ({
         name: r.name,
         slug: r.slug,
         url: `${this.WOLT_BASE_URL}/restaurant/${r.slug}`

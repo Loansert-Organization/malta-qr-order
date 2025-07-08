@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -42,12 +41,12 @@ export const usePerformance = () => {
         }
         
         if (entry.entryType === 'first-input') {
-          const fid = (entry as any).processingStart - entry.startTime;
+          const fid = (entry as unknown as { processingStart: number }).processingStart - entry.startTime;
           setMetrics(prev => prev ? { ...prev, firstInputDelay: fid } : null);
         }
         
         if (entry.entryType === 'layout-shift') {
-          const cls = (entry as any).value;
+          const cls = (entry as unknown as { value: number }).value;
           setMetrics(prev => prev ? { ...prev, cumulativeLayoutShift: cls } : null);
         }
       }
