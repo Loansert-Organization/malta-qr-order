@@ -216,9 +216,9 @@ const CheckoutPage = () => {
       localStorage.removeItem(`cart_${barId}`);
       clearCart();
 
-      // Navigate to confirmation page
+      // Redirect to order history page
       setTimeout(() => {
-        navigate(`/confirm/${order.id}`);
+        navigate('/orders/history');
       }, 2000);
 
     } catch (error) {

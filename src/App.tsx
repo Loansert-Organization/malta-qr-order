@@ -40,6 +40,7 @@ const AdminTools = lazy(() => import("./pages/AdminTools"));
 const AdminAccessibility = lazy(() => import("./pages/AdminAccessibility"));
 const ProductionAudit = lazy(() => import("./pages/ProductionAudit"));
 const OrderTracking = lazy(() => import("./pages/OrderTracking"));
+const OrderHistory = lazy(() => import("./pages/OrderHistory"));
 const OrderRating = lazy(() => import("./pages/OrderRating"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
@@ -106,7 +107,7 @@ const AnonymousAuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// TEMPORARY: Component to host the admin tools for client-side testing
+// Bar Onboarding Pages
 const TempAdminToolsPage = () => (
   <PageTransition>
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -117,7 +118,9 @@ const TempAdminToolsPage = () => (
     </div>
   </PageTransition>
 );
-
+const UploadMenuCSV = lazy(() => import('./pages/admin/bar-onboarding/UploadMenuCSV'));
+const BarPaymentsForm = lazy(() => import('./pages/admin/bar-onboarding/BarPaymentsForm'));
+const BarMenuQR = lazy(() => import('./pages/admin/bar-onboarding/BarMenuQR'));
 const RoutesWithAnimation = () => {
   const location = useLocation();
   return (
@@ -147,6 +150,10 @@ const RoutesWithAnimation = () => {
         <Route path="/order/:orderId/status" element={<PageTransition><OrderStatus /></PageTransition>} />
         {/* <Route path="/order/:vendorSlug" element={<PageTransition><ClientOrder /></PageTransition>} /> */} {/* DEPRECATED */}
         <Route path="/order/tracking/:orderId" element={<PageTransition><OrderTracking /></PageTransition>} />
+        <Route path="/admin/bar-onboarding/upload-menu" element={<PageTransition><UploadMenuCSV /></PageTransition>} />
+        <Route path="/admin/bar-onboarding/payments" element={<PageTransition><BarPaymentsForm /></PageTransition>} />
+        <Route path="/admin/bar-onboarding/qrcode" element={<PageTransition><BarMenuQR /></PageTransition>} />
+        <Route path="/orders/history" element={<PageTransition><OrderHistory /></PageTransition>} />
         <Route path="/rate-order/:orderId" element={<PageTransition><OrderRating /></PageTransition>} />
         <Route path="/payment-success" element={<PageTransition><PaymentSuccess /></PageTransition>} />
         <Route path="/favorites" element={<PageTransition><FavoritesPage /></PageTransition>} />

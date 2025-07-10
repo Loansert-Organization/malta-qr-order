@@ -24,10 +24,16 @@ const ConfirmPage = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
     if (orderId) {
+      // preload and play confirmation sound
+      if (!audioRef.current) {
+        audioRef.current = new Audio('/sounds/order-confirm.mp3');
+        audioRef.current.load();
+      }
+      audioRef.current.play().catch(() => {});
       fetchOrder();
-      // Trigger confetti animation
       triggerConfetti();
     }
   }, [orderId]);
@@ -122,7 +128,9 @@ const ConfirmPage = () => {
                 <div className="flex justify-between font-medium">
                   <span>Total</span>
                   <span>
-                    {order.items[0]?.country === 'Rwanda' ? 'RWF' : '€'} {order.total_amount.toFixed(2)}
+                    {order.currency === 'RWF' ? 'RWF' : '€'}
+                    {' '}
+                    {order.total_amount.toFixed(order.currency === 'RWF' ? 0 : 2)}
                   </span>
                 </div>
               </div>

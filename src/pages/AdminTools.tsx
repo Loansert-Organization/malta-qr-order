@@ -625,6 +625,15 @@ const AdminTools = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Bar Onboarding Links */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-2">Bar Onboarding</h3>
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => navigate('/admin/bar-onboarding/upload-menu')}>Upload Menu (CSV)</Button>
+          <Button onClick={() => navigate('/admin/bar-onboarding/payments')}>Bar Payments Form</Button>
+          <Button onClick={() => navigate('/admin/bar-onboarding/qrcode')}>Bar Menu QR Code</Button>
+        </div>
+      </div>
     </div>
   );
 };

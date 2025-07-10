@@ -189,6 +189,68 @@ export const clearCart = async (sessionId: string) => {
   }
 };
 
+/**
+ * Place an order and its associated items in Supabase.
+ */
+export const placeOrder = async ({
+  bar_id,
+  total,
+  currency,
+  items
+}: {
+  bar_id: string;
+  total: number;
+  currency: string;
+  items: { item_id: string; item_name: string; price: number; quantity: number }[];
+}) => {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const user_id = user?.id;
+  if (!user_id) throw new Error('User not logged in');
+
+  const { data: order, error } = await supabase
+    .from('orders')
+    .insert([{ bar_id, total, currency, user_id }])
+    .select()
+    .single();
+  if (error) throw error;
+
+  const orderItems = items.map(i => ({
+    order_id: order.id,
+    menu_item_id: i.item_id,
+    item_name: i.item_name,
+    quantity: i.quantity,
+    price: i.price
+  }));
+
+  const { error: itemsError } = await supabase
+    .from('order_items')
+    .insert(orderItems);
+  if (itemsError) throw itemsError;
+
+  return order;
+};
+
+/**
+ * Fetch orders for the currently logged-in user, including items.
+ */
+export const fetchUserOrders = async () => {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  const user_id = user?.id;
+  if (!user_id) throw new Error('User not logged in');
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .eq('user_id', user_id)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+};
+
 interface CartItem {
   id: string;
   qty: number;

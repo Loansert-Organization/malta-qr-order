@@ -358,7 +358,7 @@ const MenuPageEnhanced = () => {
                               </span>
 
                               {/* Quantity Controls */}
-                              {getItemQuantityInCart(item.id) > 0 ? (
+                          {getItemQuantityInCart(item.id) > 0 ? (
                                 <div className="flex items-center gap-2">
                               <Button
                                 size="sm"
@@ -381,14 +381,16 @@ const MenuPageEnhanced = () => {
                               </Button>
                             </div>
                           ) : (
-                            <Button 
-                                  size="sm"
-                              onClick={() => handleAddToCart(item)}
-                                  className="gap-2"
-                            >
-                                  <Plus className="h-4 w-4" />
-                                  Add
-                            </Button>
+                            <motion.div whileTap={{ scale: 0.9 }}>
+                              <Button
+                                size="sm"
+                                onClick={() => handleAddToCart(item)}
+                                className="gap-2"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add
+                              </Button>
+                            </motion.div>
                           )}
                             </div>
                           </div>
