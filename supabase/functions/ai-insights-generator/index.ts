@@ -26,7 +26,7 @@ serve(async (req) => {
     // Fetch vendor data for context
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
-      .select('name, location, description')
+      .select('name, business_name')
       .eq('id', vendor_id)
       .single();
 
@@ -70,8 +70,7 @@ serve(async (req) => {
     const dataContext = {
       vendor: {
         name: vendor.name,
-        location: vendor.location,
-        description: vendor.description
+        business_name: vendor.business_name
       },
       recent_performance: {
         total_orders: recentOrders?.length || 0,
@@ -129,7 +128,7 @@ serve(async (req) => {
             
             ${JSON.stringify(dataContext, null, 2)}
             
-            Generate specific, actionable recommendations that this ${vendor.location} restaurant can implement immediately.`
+            Generate specific, actionable recommendations that this restaurant can implement immediately.`
           }
         ],
         max_tokens: 1000,

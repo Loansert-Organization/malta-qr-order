@@ -33,7 +33,6 @@ interface Bar {
   name: string;
   address?: string;
   contact_number?: string;
-  logo_url?: string;
 }
 
 const OrderSuccess = () => {
@@ -177,17 +176,9 @@ const OrderSuccess = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {bar?.logo_url ? (
-                    <img
-                      src={bar.logo_url}
-                      alt={bar.name}
-                      className="h-12 w-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                      <ChefHat className="h-6 w-6 text-gray-400" />
-                    </div>
-                  )}
+                  <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
+                    <ChefHat className="h-6 w-6 text-gray-400" />
+                  </div>
                   <div>
                     <CardTitle>{bar?.name}</CardTitle>
                     {bar?.address && (

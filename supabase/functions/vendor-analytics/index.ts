@@ -36,7 +36,7 @@ serve(async (req) => {
     // Fetch vendor data
     const { data: vendor } = await supabase
       .from('vendors')
-      .select('business_name, category')
+      .select('business_name')
       .eq('id', vendorId)
       .single();
 

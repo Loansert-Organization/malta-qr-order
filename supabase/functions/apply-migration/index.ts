@@ -12,27 +12,20 @@ serve(async (req) => {
   }
 
   try {
-    console.log('🔧 Applying country migration to bars table...');
+    console.log('🔧 Applying schema cleanup migration...');
 
     // Execute migration steps one by one
     const migrationSteps = [
-      // Add country column
-      `ALTER TABLE bars ADD COLUMN IF NOT EXISTS country text DEFAULT 'Malta';`,
+      // Remove deprecated fields from users table (bars)
+      `ALTER TABLE users DROP COLUMN IF EXISTS revolut_link;`,
+      `ALTER TABLE users DROP COLUMN IF EXISTS logo_url;`,
+      `ALTER TABLE users DROP COLUMN IF EXISTS website_url;`,
       
-      // Update Malta bars
-      `UPDATE bars SET country = 'Malta' WHERE address ILIKE '%Malta%';`,
-      
-      // Update Rwanda bars
-      `UPDATE bars SET country = 'Rwanda' WHERE address ILIKE '%Rwanda%' OR address ILIKE '%Kigali%';`,
-      
-      // Add index
-      `CREATE INDEX IF NOT EXISTS idx_bars_country ON bars(country);`,
-      
-      // Drop existing policy
-      `DROP POLICY IF EXISTS "Allow public read on bars" ON bars;`,
-      
-      // Create new policy
-      `CREATE POLICY "Allow public read on bars" ON bars FOR SELECT USING (true);`
+      // Remove deprecated fields from menu_items table
+      `ALTER TABLE menu_items DROP COLUMN IF EXISTS description;`,
+      `ALTER TABLE menu_items DROP COLUMN IF EXISTS preparation_time;`,
+      `ALTER TABLE menu_items DROP COLUMN IF EXISTS rating;`,
+      `ALTER TABLE menu_items DROP COLUMN IF EXISTS popularity;`
     ];
 
     const results = [];
@@ -41,52 +34,35 @@ serve(async (req) => {
       try {
         console.log(`Executing step ${index + 1}: ${sql.substring(0, 50)}...`);
         
-        // Use raw SQL execution - we'll handle this differently
-        if (sql.includes('ALTER TABLE')) {
-          // For ALTER TABLE, we'll try to update a dummy record to test if column exists
-          const { error: testError } = await supabase
-            .from('bars')
-            .select('country')
-            .limit(1);
+        // For DROP COLUMN operations, we'll use a different approach
+        // since Supabase client doesn't support raw SQL
+        if (sql.includes('DROP COLUMN')) {
+          const tableName = sql.includes('users') ? 'users' : 'menu_items';
+          const columnName = sql.match(/DROP COLUMN IF EXISTS (\w+)/)?.[1];
           
-          if (testError && testError.message.includes('does not exist')) {
-            results.push({ step: index + 1, action: 'Need to add country column manually', status: 'pending' });
-          } else {
-            results.push({ step: index + 1, action: 'Column already exists', status: 'skipped' });
-          }
-        } else if (sql.includes('UPDATE')) {
-          // Handle updates
-          if (sql.includes('Malta')) {
-            const { data, error } = await supabase
-              .from('bars')
-              .update({ country: 'Malta' })
-              .ilike('address', '%Malta%')
-              .select('id');
+          if (columnName) {
+            // Try to select the column to see if it exists
+            const { error: testError } = await supabase
+              .from(tableName)
+              .select(columnName)
+              .limit(1);
             
-            results.push({ 
-              step: index + 1, 
-              action: 'Update Malta bars', 
-              status: error ? 'error' : 'success',
-              count: data?.length || 0,
-              error: error?.message
-            });
-          } else if (sql.includes('Rwanda')) {
-            const { data, error } = await supabase
-              .from('bars')
-              .update({ country: 'Rwanda' })
-              .or('address.ilike.%Rwanda%,address.ilike.%Kigali%')
-              .select('id');
-            
-            results.push({ 
-              step: index + 1, 
-              action: 'Update Rwanda bars', 
-              status: error ? 'error' : 'success',
-              count: data?.length || 0,
-              error: error?.message
-            });
+            if (testError && testError.message.includes('does not exist')) {
+              results.push({ 
+                step: index + 1, 
+                action: `Column ${columnName} already removed from ${tableName}`, 
+                status: 'skipped' 
+              });
+            } else {
+              results.push({ 
+                step: index + 1, 
+                action: `Column ${columnName} exists in ${tableName} - needs manual removal`, 
+                status: 'pending' 
+              });
+            }
           }
         } else {
-          results.push({ step: index + 1, action: 'Skipped (INDEX/POLICY)', status: 'skipped' });
+          results.push({ step: index + 1, action: 'Unknown operation', status: 'skipped' });
         }
       } catch (error) {
         results.push({ 
@@ -99,25 +75,24 @@ serve(async (req) => {
     }
 
     // Get stats
-    const { data: maltaBars } = await supabase
-      .from('bars')
+    const { data: users } = await supabase
+      .from('users')
       .select('id')
-      .ilike('address', '%Malta%');
+      .limit(100);
     
-    const { data: rwandaBars } = await supabase
-      .from('bars')
+    const { data: menuItems } = await supabase
+      .from('menu_items')
       .select('id')
-      .or('address.ilike.%Rwanda%,address.ilike.%Kigali%');
+      .limit(100);
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Migration completed (with fallback approach)',
+      message: 'Schema cleanup migration analysis completed',
       data: {
         migration_steps: results,
-        estimated_bars: {
-          malta: maltaBars?.length || 0,
-          rwanda: rwandaBars?.length || 0,
-          total: (maltaBars?.length || 0) + (rwandaBars?.length || 0)
+        table_stats: {
+          users: users?.length || 0,
+          menu_items: menuItems?.length || 0
         }
       }
     }), {

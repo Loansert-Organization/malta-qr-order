@@ -337,12 +337,10 @@ serve(async (req) => {
               contact_number: phoneNumber || null,
               rating: details.rating || null,
               review_count: details.user_ratings_total || null,
-              website_url: photoUrls[0] || null, // Primary photo in website_url field
               google_place_id: place.place_id,
               latitude: details.geometry?.location?.lat || null,
               longitude: details.geometry?.location?.lng || null,
               country: barInfo.country,
-              photos: photoUrls, // All photos as JSON array
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }

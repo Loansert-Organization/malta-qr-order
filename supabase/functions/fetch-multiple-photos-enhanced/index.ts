@@ -60,16 +60,16 @@ serve(async (req) => {
       console.log(`\n🔍 Processing: ${bar.name}`)
       
       try {
-        // Check if bar already has multiple photos (delimited by |)
-        const existingPhotos = bar.website_url?.includes('|') ? bar.website_url.split('|') : []
+        // Check if bar has photos (simplified check)
+        const hasPhotos = false // Simplified check since we're removing website_url
         
-        if (existingPhotos.length >= maxPhotos) {
-          console.log(`   ⏭️ Already has ${existingPhotos.length} photos, skipping`)
+        if (hasPhotos) {
+          console.log(`   ⏭️ Already has photos, skipping`)
           results.push({
             barId: bar.id,
             barName: bar.name,
             status: 'already_has_photos',
-            photoCount: existingPhotos.length
+            photoCount: 0
           })
           continue
         }
@@ -207,16 +207,17 @@ serve(async (req) => {
           continue
         }
 
-        // Store multiple photos in website_url column using pipe delimiter
-        const photosString = photoUrls.join('|')
-        
+        // Store photo information in a separate table or log
         const { error: updateError } = await supabaseClient
-          .from('bars')
-          .update({
-            website_url: photosString,
+          .from('bar_photos')
+          .upsert({
+            bar_id: bar.id,
+            photo_urls: photoUrls,
+            photo_count: photoUrls.length,
+            enhanced_count: enhancedCount,
             updated_at: new Date().toISOString()
           })
-          .eq('id', bar.id)
+          .eq('bar_id', bar.id)
 
         if (updateError) {
           console.log(`   ❌ Update failed: ${updateError.message}`)

@@ -33,8 +33,6 @@ interface Bar {
   address: string;
   country: string;
   momo_code?: string;
-  revolut_link?: string;
-  logo_url?: string;
 }
 
 const MenuPageEnhanced = () => {
@@ -159,8 +157,7 @@ const MenuPageEnhanced = () => {
 
   const filteredItems = menuItems.filter(item => {
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -219,13 +216,6 @@ const MenuPageEnhanced = () => {
               </Button>
               {bar && (
                 <div className="flex items-center gap-3">
-                  {bar.logo_url && (
-                    <img 
-                      src={bar.logo_url} 
-                      alt={bar.name}
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  )}
                   <div>
                     <h1 className="text-xl font-semibold">{bar.name}</h1>
                     {bar.address && (
@@ -331,7 +321,7 @@ const MenuPageEnhanced = () => {
                             <div>
                               <h3 className="font-semibold text-lg mb-1">{item.name}</h3>
                               <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                                {item.description}
+                                {item.category}
                               </p>
                               
                               {/* Item Badges */}

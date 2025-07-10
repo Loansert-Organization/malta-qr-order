@@ -33,11 +33,10 @@ Deno.serve(async (req) => {
       const menuItems = restaurant.menu.map((item: any) => ({
         bar_id: bar.id,
         name: item.item,
-        description: item.description,
         price: item.price,
         category: item.class,
         subcategory: item.subcategory,
-        is_available: true,
+        available: true,
       }));
 
       if (menuItems.length > 0) {

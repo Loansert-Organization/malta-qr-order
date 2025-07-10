@@ -78,10 +78,8 @@ serve(async (req) => {
             .insert({
               bar_id: bar_id,
               name: item.name,
-              description: item.description,
               price: item.price,
               category: item.category,
-              source_url: menuLink,
               image_url: item.image_url
             })
           totalItems++;
@@ -213,7 +211,6 @@ async function extractMenuWithGPT4o(content: string, sourceUrl: string): Promise
             Return a JSON array of items with this structure:
             {
               "name": "Item name",
-              "description": "Brief description",
               "price": 12.50,
               "category": "starter|main|drink|dessert|other"
             }

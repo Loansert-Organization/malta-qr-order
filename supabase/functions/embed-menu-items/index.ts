@@ -35,7 +35,7 @@ serve(async (req) => {
     // Fetch menu items to embed
     let query = supabase
       .from('menu_items')
-      .select('id, name, description, category, price, dietary_tags, allergens')
+      .select('id, name, category, price')
       .eq('available', true);
 
     if (vendorId !== 'all') {
@@ -78,11 +78,8 @@ serve(async (req) => {
         const textContents = batch.map(item => {
           const parts = [
             item.name,
-            item.description || '',
             item.category || '',
-            `Price: €${item.price}`,
-            item.dietary_tags ? `Tags: ${item.dietary_tags.join(', ')}` : '',
-            item.allergens ? `Allergens: ${item.allergens.join(', ')}` : ''
+            `Price: €${item.price}`
           ].filter(Boolean);
           
           return parts.join(' | ');

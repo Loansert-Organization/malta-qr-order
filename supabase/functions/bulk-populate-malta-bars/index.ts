@@ -60,7 +60,6 @@ serve(async (req) => {
         rating: bar.rating,
         review_count: bar.review_count,
         google_place_id: bar.google_place_id,
-        website_url: bar.website_url, // REAL Google Maps photo
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
@@ -100,8 +99,7 @@ serve(async (req) => {
         sample_establishments: maltaData.slice(0, 10).map(bar => ({
           name: bar.name,
           rating: bar.rating,
-          reviews: bar.review_count,
-          has_photo: !!bar.website_url
+          reviews: bar.review_count
         }))
       }),
       { 

@@ -53,11 +53,9 @@ interface Bar {
   is_onboarded: boolean;
   rating: number | null;
   review_count: number | null;
-  website_url: string | null;
   google_place_id: string | null;
   has_menu: boolean;
   momo_code: string | null;
-  revolut_link: string | null;
   categories: string[] | null;
   features: string[] | null;
   created_at: string;
@@ -79,8 +77,7 @@ const AdminBars = () => {
   const [formData, setFormData] = useState({
     name: '',
     country: '',
-    momo_code: '',
-    revolut_link: ''
+    momo_code: ''
   });
 
   useEffect(() => {
@@ -119,8 +116,7 @@ const AdminBars = () => {
     setFormData({
       name: bar.name,
       country: bar.country,
-      momo_code: bar.momo_code || '',
-      revolut_link: bar.revolut_link || ''
+      momo_code: bar.momo_code || ''
     });
     setShowEditDialog(true);
   };
@@ -134,8 +130,7 @@ const AdminBars = () => {
         .update({
           name: formData.name,
           country: formData.country,
-          momo_code: formData.momo_code || null,
-          revolut_link: formData.revolut_link || null
+          momo_code: formData.momo_code || null
         })
         .eq('id', selectedBar.id);
 
@@ -358,7 +353,7 @@ const AdminBars = () => {
                       <TableCell>
                         {bar.country === 'Rwanda' 
                           ? (bar.momo_code ? 'MoMo ✓' : 'MoMo ✗')
-                          : (bar.revolut_link ? 'Revolut ✓' : 'Revolut ✗')
+                          : 'N/A'
                         }
                       </TableCell>
                       <TableCell>
@@ -430,7 +425,7 @@ const AdminBars = () => {
                 </SelectContent>
               </Select>
             </div>
-            {formData.country === 'Rwanda' ? (
+            {formData.country === 'Rwanda' && (
               <div>
                 <Label htmlFor="edit-momo">MoMo Code</Label>
                 <Input
@@ -438,16 +433,6 @@ const AdminBars = () => {
                   value={formData.momo_code}
                   onChange={(e) => setFormData({ ...formData, momo_code: e.target.value })}
                   placeholder="182*1*1001"
-                />
-              </div>
-            ) : (
-              <div>
-                <Label htmlFor="edit-revolut">Revolut Link</Label>
-                <Input
-                  id="edit-revolut"
-                  value={formData.revolut_link}
-                  onChange={(e) => setFormData({ ...formData, revolut_link: e.target.value })}
-                  placeholder="https://revolut.me/barname"
                 />
               </div>
             )}

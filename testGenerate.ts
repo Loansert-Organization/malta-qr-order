@@ -1,4 +1,4 @@
-import { generateMenuImage } from "./generateMenuImage";
+import { generateMenuImage } from "./generateMenuImage.ts";
 
 (async () => {
   const prompt = "A delicious Margherita pizza on a wooden table with fresh basil and mozzarella";

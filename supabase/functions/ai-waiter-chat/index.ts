@@ -101,7 +101,7 @@ serve(async (req) => {
     // Get vendor and menu context
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
-      .select('id, name, description, opening_hours')
+      .select('id, name, business_name')
       .eq('id', body.vendor_id)
       .single();
 
@@ -113,7 +113,7 @@ serve(async (req) => {
     const { data: menuItems, error: menuError } = await supabase
       .from('menu_items')
       .select(`
-        id, name, description, price, category, dietary_tags, available,
+        id, name, price, category, available,
         menus!inner(vendor_id)
       `)
       .eq('menus.vendor_id', body.vendor_id)
@@ -129,11 +129,11 @@ serve(async (req) => {
 
 VENDOR INFO:
 - Name: ${vendor.name}
-- Description: ${vendor.description || 'A great restaurant in Malta'}
+- Business Name: ${vendor.business_name || vendor.name}
 
 AVAILABLE MENU ITEMS:
 ${(menuItems || []).map(item => 
-  `- ${item.name} (€${item.price}) - ${item.description || 'No description'} [Category: ${item.category || 'General'}] ${item.dietary_tags?.length ? `[${item.dietary_tags.join(', ')}]` : ''}`
+  `- ${item.name} (€${item.price}) [Category: ${item.category || 'General'}]`
 ).join('\n')}
 
 Guidelines:
@@ -223,7 +223,7 @@ User's message: "${body.message}"`;
         type: 'menu_item',
         item_id: item.id,
         title: item.name,
-        description: item.description || `Delicious ${item.category || 'dish'}`,
+        description: `Delicious ${item.category || 'dish'}`,
         price: item.price
       }));
 

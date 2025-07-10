@@ -41,7 +41,6 @@ interface MenuItem {
   id: string;
   bar_id: string;
   name: string;
-  description: string;
   price: number;
   category: string;
   image_url: string | null;
@@ -75,7 +74,6 @@ const VendorMenu = () => {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
     price: '',
     category: '',
     image_url: ''
@@ -125,7 +123,6 @@ const VendorMenu = () => {
     if (editingItem) {
       setFormData({
         name: editingItem.name,
-        description: editingItem.description || '',
         price: editingItem.price.toString(),
         category: editingItem.category,
         image_url: editingItem.image_url || ''
@@ -133,7 +130,6 @@ const VendorMenu = () => {
     } else {
       setFormData({
         name: '',
-        description: '',
         price: '',
         category: '',
         image_url: ''
@@ -149,7 +145,6 @@ const VendorMenu = () => {
       const itemData = {
         bar_id: barId,
         name: formData.name,
-        description: formData.description,
         price: parseFloat(formData.price),
         category: formData.category,
         image_url: formData.image_url || null,
@@ -372,10 +367,6 @@ const VendorMenu = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {item.description && (
-                    <p className="text-sm text-gray-600 mb-4">{item.description}</p>
-                  )}
-                  
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
                       <Switch
@@ -433,15 +424,7 @@ const VendorMenu = () => {
                 placeholder="e.g., Classic Mojito"
               />
             </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="e.g., Fresh mint, lime, rum, soda water"
-              />
-            </div>
+
             <div>
               <Label htmlFor="price">Price (€)</Label>
               <Input

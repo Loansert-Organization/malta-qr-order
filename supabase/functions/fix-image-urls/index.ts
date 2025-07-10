@@ -20,12 +20,11 @@ serve(async (req) => {
     console.log('🔧 FIXING BROKEN IMAGE URLS')
     console.log('===========================')
 
-    // 1. Get all bars with website_url
-    console.log('1. 📋 FETCHING BARS WITH URLS...')
+    // 1. Get all bars
+    console.log('1. 📋 FETCHING BARS...')
     const { data: barsData, error } = await supabaseClient
       .from('bars')
-      .select('id, name, website_url')
-      .not('website_url', 'is', null)
+      .select('id, name')
 
     if (error) {
       console.error('❌ Error fetching bars:', error)
@@ -35,149 +34,79 @@ serve(async (req) => {
       })
     }
 
-    console.log(`📊 Found ${barsData.length} bars with website_urls`)
+    console.log(`📊 Found ${barsData.length} bars`)
 
-    // 2. Fix malformed URLs
-    console.log('2. 🔧 FIXING MALFORMED URLS...')
+    // 2. Health check bars
+    console.log('2. 🔧 PERFORMING HEALTH CHECK...')
     
-    let fixedCount = 0
-    let skippedCount = 0
+    let healthyCount = 0
+    let totalCount = barsData.length
     const results = []
     
     for (const bar of barsData) {
-      if (!bar.website_url) continue
+      console.log(`🔧 Checking: ${bar.name}`)
       
-      // Clean the URL by removing line breaks and extra spaces
-      const originalUrl = bar.website_url
-      const cleanedUrl = originalUrl
-        .replace(/\s+/g, '') // Remove all whitespace including line breaks
-        .replace(/\n/g, '')  // Remove newlines specifically
-        .replace(/\r/g, '')  // Remove carriage returns
-        .trim()
+      // Simple health check - verify bar data exists
+      const { data: barCheck, error: checkError } = await supabaseClient
+        .from('bars')
+        .select('id, name, address')
+        .eq('id', bar.id)
+        .single()
 
-      // Check if URL was malformed
-      if (originalUrl !== cleanedUrl) {
-        console.log(`🔧 Fixing: ${bar.name}`)
-        console.log(`   Original length: ${originalUrl.length}`)
-        console.log(`   Cleaned length: ${cleanedUrl.length}`)
-        
-        // Update the bar with cleaned URL
-        const { error: updateError } = await supabaseClient
-          .from('bars')
-          .update({ website_url: cleanedUrl })
-          .eq('id', bar.id)
-
-        if (updateError) {
-          console.log(`   ❌ Update failed: ${updateError.message}`)
-          results.push({
-            bar: bar.name,
-            status: 'failed',
-            error: updateError.message
-          })
-        } else {
-          console.log(`   ✅ Fixed successfully`)
-          fixedCount++
-          results.push({
-            bar: bar.name,
-            status: 'fixed',
-            originalLength: originalUrl.length,
-            cleanedLength: cleanedUrl.length
-          })
-        }
+      if (checkError) {
+        console.log(`   ❌ Health check failed: ${checkError.message}`)
+        results.push({
+          bar: bar.name,
+          status: 'failed',
+          error: checkError.message
+        })
       } else {
-        skippedCount++
+        console.log(`   ✅ Bar data healthy`)
+        healthyCount++
+        results.push({
+          bar: bar.name,
+          status: 'healthy',
+          hasAddress: !!barCheck.address
+        })
       }
     }
 
     console.log(`📈 RESULTS:`)
-    console.log(`✅ Fixed URLs: ${fixedCount}`)
-    console.log(`⏭️ Already clean: ${skippedCount}`)
+    console.log(`✅ Healthy bars: ${healthyCount}`)
+    console.log(`📊 Total bars: ${totalCount}`)
 
-    // 3. Test sample URLs
-    console.log('3. 🧪 TESTING SAMPLE FIXED URLS...')
+    // 3. Generate statistics
+    console.log('3. 📊 GENERATING STATISTICS...')
     
-    const { data: testBars, error: testError } = await supabaseClient
-      .from('bars')
-      .select('id, name, website_url')
-      .not('website_url', 'is', null)
-      .limit(5)
-
-    const testResults = []
-    if (!testError && testBars) {
-      for (const bar of testBars) {
-        console.log(`🔗 Testing: ${bar.name}`)
-        
-        try {
-          const response = await fetch(bar.website_url, { 
-            method: 'HEAD',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; ICUPA/1.0)'
-            }
-          })
-          
-          const result = {
-            bar: bar.name,
-            url: bar.website_url,
-            status: response.status,
-            accessible: response.status === 200
-          }
-          
-          testResults.push(result)
-          console.log(`   ✅ Status: ${response.status} ${response.statusText}`)
-          
-          if (response.status === 200) {
-            console.log(`   🎉 IMAGE ACCESSIBLE!`)
-          }
-        } catch (error) {
-          console.log(`   ❌ Fetch Error: ${error.message}`)
-          testResults.push({
-            bar: bar.name,
-            url: bar.website_url,
-            error: error.message,
-            accessible: false
-          })
-        }
-      }
-    }
-
-    // 4. Final statistics
-    console.log('4. 📊 GENERATING FINAL STATISTICS...')
     const { data: finalStats, error: statsError } = await supabaseClient
       .from('bars')
-      .select('website_url, address')
+      .select('address')
 
     let statistics = {}
     if (!statsError && finalStats) {
       const totalBars = finalStats.length
-      const withUrls = finalStats.filter(bar => bar.website_url).length
-      const googleUrls = finalStats.filter(bar => 
-        bar.website_url && bar.website_url.includes('googleusercontent.com')
-      ).length
+      const withAddress = finalStats.filter(bar => bar.address).length
       
       statistics = {
         totalBars,
-        withUrls,
-        googleUrls,
-        percentageWithUrls: ((withUrls/totalBars)*100).toFixed(1),
-        percentageGoogleUrls: ((googleUrls/totalBars)*100).toFixed(1)
+        withAddress,
+        percentageWithAddress: ((withAddress/totalBars)*100).toFixed(1)
       }
       
       console.log(`📊 Total bars: ${totalBars}`)
-      console.log(`🌐 With image URLs: ${withUrls} (${statistics.percentageWithUrls}%)`)
-      console.log(`🗺️ Google Maps photos: ${googleUrls} (${statistics.percentageGoogleUrls}%)`)
+      console.log(`📍 With addresses: ${withAddress} (${statistics.percentageWithAddress}%)`)
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Image URLs fixed successfully',
+        message: 'Bar health check completed successfully',
         summary: {
-          fixedCount,
-          skippedCount,
+          healthyCount,
+          totalCount,
           totalProcessed: barsData.length
         },
         results,
-        testResults,
         statistics
       }),
       {

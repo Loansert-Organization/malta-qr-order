@@ -21,10 +21,10 @@ serve(async (req) => {
     const { data: menuItems } = await supabase
       .from('menu_items')
       .select(`
-        *,
+        id, name, price, category, available,
         menu_categories(name)
       `)
-      .eq('is_available', true);
+      .eq('available', true);
 
     // Get user's current cart context
     let cartContext = '';
@@ -36,7 +36,7 @@ serve(async (req) => {
 
     // Build menu context for AI
     const menuContext = menuItems?.map(item => 
-      `${item.name} (${item.menu_categories?.name}) - ${item.price_local} RWF - ${item.description || 'No description'} - Tags: ${item.tags?.join(', ') || 'none'}`
+      `${item.name} (${item.menu_categories?.name}) - ${item.price} RWF`
     ).join('\n') || 'No menu available';
 
     let aiResponse = '';
@@ -113,7 +113,7 @@ Respond in a friendly, knowledgeable tone. Keep responses concise but helpful. I
       suggestedItems = menuItems?.filter(item => 
         responseWords.some(word => 
           item.name.toLowerCase().includes(word) || 
-          item.description?.toLowerCase().includes(word)
+          (item.category && item.category.toLowerCase().includes(word))
         )
       ).slice(0, 3) || [];
     }
