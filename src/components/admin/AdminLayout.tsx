@@ -63,6 +63,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Menu Review', href: '/admin/menus', icon: Menu },
       { label: 'Menu Import', href: '/admin/menu-import', icon: Menu },
+      { label: 'MenuMT1 Import', href: '/admin/menumt1-import', icon: Menu },
       { label: 'Menu Editor', href: '/admin/menus/editor', icon: Menu },
     ]
   },

@@ -1,37 +1,39 @@
-import React, { useState } from 'react';
-import Papa from 'papaparse';
-import { supabase } from '@/lib/api';
+import React, { useState } from 'react'
+import Papa from 'papaparse'
+import { supabase } from '@/integrations/supabase/client'
 
 export default function UploadMenuCSV() {
-  const [csvData, setCsvData] = useState<any[]>([]);
+  const [barId, setBarId] = useState('')
+  const [csvFile, setCsvFile] = useState<File | null>(null)
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    Papa.parse(file, {
+  const handleUpload = () => {
+    if (!csvFile || !barId) return alert('Missing file or bar ID')
+
+    Papa.parse(csvFile, {
       header: true,
-      complete: async results => {
-        const data = results.data as any[];
-        setCsvData(data);
-        const formatted = data.map(row => ({
-          bar_id: row.bar_id,
+      complete: async (results) => {
+        const items = (results.data as any[]).map(row => ({
+          bar_id: barId,
           name: row.name,
           description: row.description,
           price: parseFloat(row.price),
           category: row.category,
+          subcategory: row.subcategory,
           image_url: row.image_url || null
-        }));
-        const { error } = await supabase.from('menu_items').insert(formatted);
-        if (error) window.alert('Upload failed');
-        else window.alert('Upload complete');
+        }))
+        const { error } = await supabase.from('menu_items').insert(items)
+        if (error) alert('Error: ' + error.message)
+        else alert('Upload Complete ✅')
       }
-    });
-  };
+    })
+  }
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-semibold mb-2">Upload Menu (CSV)</h2>
-      <input type="file" accept=".csv" onChange={handleFile} />
+    <div>
+      <h2>CSV Menu Upload</h2>
+      <input type="text" placeholder="Bar ID" onChange={e => setBarId(e.target.value)} />
+      <input type="file" accept=".csv" onChange={e => setCsvFile(e.target.files?.[0] || null)} />
+      <button onClick={handleUpload}>Upload Menu</button>
     </div>
-  );
+  )
 }

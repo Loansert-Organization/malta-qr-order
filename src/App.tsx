@@ -52,6 +52,7 @@ const SupplierDirectory = lazy(() => import("./components/marketplace/SupplierDi
 const EntertainerDirectory = lazy(() => import("./components/marketplace/EntertainerDirectory"));
 const BarOnboardingWizard = lazy(() => import("./components/admin/BarOnboardingWizard"));
 const MenuImportWizard = lazy(() => import("./components/admin/MenuImportWizard"));
+const AdminMenuMT1Import = lazy(() => import("./pages/AdminMenuMT1Import"));
 
 // New missing pages
 const BarList = lazy(() => import("./pages/BarList"));
@@ -119,7 +120,7 @@ const TempAdminToolsPage = () => (
   </PageTransition>
 );
 const UploadMenuCSV = lazy(() => import('./pages/admin/bar-onboarding/UploadMenuCSV'));
-const BarPaymentsForm = lazy(() => import('./pages/admin/bar-onboarding/BarPaymentsForm'));
+// const BarPaymentsForm = lazy(() => import('./pages/admin/bar-onboarding/BarPaymentsForm')); // File deleted
 const BarMenuQR = lazy(() => import('./pages/admin/bar-onboarding/BarMenuQR'));
 const RoutesWithAnimation = () => {
   const location = useLocation();
@@ -151,7 +152,7 @@ const RoutesWithAnimation = () => {
         {/* <Route path="/order/:vendorSlug" element={<PageTransition><ClientOrder /></PageTransition>} /> */} {/* DEPRECATED */}
         <Route path="/order/tracking/:orderId" element={<PageTransition><OrderTracking /></PageTransition>} />
         <Route path="/admin/bar-onboarding/upload-menu" element={<PageTransition><UploadMenuCSV /></PageTransition>} />
-        <Route path="/admin/bar-onboarding/payments" element={<PageTransition><BarPaymentsForm /></PageTransition>} />
+        {/* <Route path="/admin/bar-onboarding/payments" element={<PageTransition><BarPaymentsForm /></PageTransition>} /> */}
         <Route path="/admin/bar-onboarding/qrcode" element={<PageTransition><BarMenuQR /></PageTransition>} />
         <Route path="/orders/history" element={<PageTransition><OrderHistory /></PageTransition>} />
         <Route path="/rate-order/:orderId" element={<PageTransition><OrderRating /></PageTransition>} />
@@ -189,6 +190,7 @@ const RoutesWithAnimation = () => {
         <Route path="/admin/accessibility" element={<PageTransition><AdminAccessibility /></PageTransition>} />
         <Route path="/admin/bar-onboarding" element={<PageTransition><BarOnboardingWizard /></PageTransition>} />
         <Route path="/admin/menu-import" element={<PageTransition><MenuImportWizard /></PageTransition>} />
+        <Route path="/admin/menumt1-import" element={<PageTransition><AdminMenuMT1Import /></PageTransition>} />
         
         {/* New Admin Routes */}
         <Route path="/admin/agents/tasks" element={<PageTransition><AdminAgentTasks /></PageTransition>} />
