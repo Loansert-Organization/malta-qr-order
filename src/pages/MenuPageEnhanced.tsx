@@ -39,7 +39,7 @@ const MenuPageEnhanced = () => {
   const { barId } = useParams<{ barId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { cart, currentBar, addToCart, updateQuantity, getCartTotal, getCartItemCount } = useCart();
+  const { cart, currentBar, addToCart, updateQuantity, getTotalPrice, getCartItemCount } = useCart();
   
   const [bar, setBar] = useState<Bar | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -143,15 +143,17 @@ const MenuPageEnhanced = () => {
 
   const handleQuantityChange = (itemId: string, change: number) => {
     const currentQuantity = getItemQuantityInCart(itemId);
-    if (currentQuantity + change === 0) {
-      updateQuantity(itemId, change);
+    const newQuantity = currentQuantity + change;
+    
+    if (newQuantity === 0) {
+      updateQuantity(itemId, 0);
     } else if (currentQuantity === 0 && change > 0) {
       const item = menuItems.find(i => i.id === itemId);
       if (item && bar) {
         handleAddToCart(item);
       }
     } else {
-      updateQuantity(itemId, change);
+      updateQuantity(itemId, newQuantity);
     }
   };
 
@@ -177,7 +179,7 @@ const MenuPageEnhanced = () => {
       items: cart,
       currency: bar?.country === 'Rwanda' ? 'RWF' : 'EUR',
       country: bar?.country,
-      subtotal: getCartTotal()
+      subtotal: getTotalPrice()
     };
 
     localStorage.setItem('pendingOrder', JSON.stringify(orderData));
@@ -414,7 +416,7 @@ const MenuPageEnhanced = () => {
               <div>
                 <p className="text-sm text-gray-600">Total ({getCartItemCount()} items)</p>
                 <p className="text-xl font-bold">
-                  {bar?.country === 'Rwanda' ? 'RWF' : '€'} {getCartTotal().toFixed(bar?.country === 'Rwanda' ? 0 : 2)}
+                  {bar?.country === 'Rwanda' ? 'RWF' : '€'} {getTotalPrice().toFixed(bar?.country === 'Rwanda' ? 0 : 2)}
                 </p>
               </div>
             <Button
